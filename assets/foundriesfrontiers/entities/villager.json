@@ -348,6 +348,13 @@
 						maxcooldown: 12000
 					},
 					{
+						// Highest of the ambient tasks: an order to be somewhere beats
+						// pottering about. Real work will sit above this again.
+						code: "ffgoto",
+						priority: 2.0,
+						priorityForCancel: 2.0
+					},
+					{
 						code: "ffloiter",
 						priority: 0.8,
 						chance: 0.15
