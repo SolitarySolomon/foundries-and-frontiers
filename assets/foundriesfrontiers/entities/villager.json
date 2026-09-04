@@ -1,0 +1,364 @@
+{
+	code: "villager",
+	class: "FFVillager",
+	tags: ["humanoid", "villager", "human", "habitat-land"],
+	weight: 80,
+	canClimb: false,
+	hitboxSize: { x: 0.6, y: 1.85 },
+	deadHitboxSize: { x: 0.75, y: 0.5 },
+	eyeHeight: 1.7,
+	variantgroups: [
+		{ code: "gender", states: ["male", "female"] },
+		{ code: "trade", states: ["forager", "builder", "lumberjack", "farmer", "herder"] }
+	],
+	attributes: {
+		pathfinder: {
+			minTurnAnglePerSec: 720,
+			maxTurnAnglePerSec: 1440
+		},
+
+		// Lifted from the base game's playerbot, with every asset path explicitly
+		// prefixed "game:" - all skin part textures and shapes live in the game domain.
+		// The extraskinnable behavior randomises these per villager on first spawn,
+		// so every villager comes out looking like a different person for free.
+		skinnableParts: [
+		{
+		code: "baseskin",
+		type: "texture", 
+		variants: [
+		{ code: "skin1", texture: "game:entity/humanoid/seraphskinparts/body/skin1" },
+		{ code: "skin2", texture: "game:entity/humanoid/seraphskinparts/body/skin2" },
+		{ code: "skin3", texture: "game:entity/humanoid/seraphskinparts/body/skin3" },
+		{ code: "skin4", texture: "game:entity/humanoid/seraphskinparts/body/skin4" },
+		{ code: "skin5", texture: "game:entity/humanoid/seraphskinparts/body/skin5" },
+		{ code: "skin6", texture: "game:entity/humanoid/seraphskinparts/body/skin6" },
+		{ code: "skin7", texture: "game:entity/humanoid/seraphskinparts/body/skin7" },
+		{ code: "skin8", texture: "game:entity/humanoid/seraphskinparts/body/skin8" },
+		{ code: "skin9", texture: "game:entity/humanoid/seraphskinparts/body/skin9" },
+		{ code: "skin10", texture: "game:entity/humanoid/seraphskinparts/body/skin10" },
+		{ code: "skin11", texture: "game:entity/humanoid/seraphskinparts/body/skin11" },
+		{ code: "skin12", texture: "game:entity/humanoid/seraphskinparts/body/skin12" },
+		{ code: "skin13", texture: "game:entity/humanoid/seraphskinparts/body/skin13" },
+		{ code: "skin14", texture: "game:entity/humanoid/seraphskinparts/body/skin14" },
+		{ code: "skin15", texture: "game:entity/humanoid/seraphskinparts/body/skin15" },
+		{ code: "skin16", texture: "game:entity/humanoid/seraphskinparts/body/skin16" },
+		{ code: "skin17", texture: "game:entity/humanoid/seraphskinparts/body/skin17" },
+		{ code: "skin18", texture: "game:entity/humanoid/seraphskinparts/body/skin18" },
+		{ code: "skin19", texture: "game:entity/humanoid/seraphskinparts/body/skin19" },
+		{ code: "skin20", texture: "game:entity/humanoid/seraphskinparts/body/skin20" },
+		],
+		},
+		{
+		code: "eyecolor",
+		type: "texture", 
+		textureRenderTo: { x: 109, y: 0},
+		variants: [
+		{ code: "acid-green", texture: "game:entity/humanoid/seraphskinparts/eyes/acid-green" },
+		{ code: "aquamarine", texture: "game:entity/humanoid/seraphskinparts/eyes/aquamarine" },
+		{ code: "azure", texture: "game:entity/humanoid/seraphskinparts/eyes/azure" },
+		{ code: "bitter-lemon", texture: "game:entity/humanoid/seraphskinparts/eyes/bitter-lemon" },
+		{ code: "cadmium-orange", texture: "game:entity/humanoid/seraphskinparts/eyes/cadmium-orange" },
+		{ code: "citron", texture: "game:entity/humanoid/seraphskinparts/eyes/citron" },
+		{ code: "dark-green", texture: "game:entity/humanoid/seraphskinparts/eyes/dark-green" },
+		{ code: "forest-green", texture: "game:entity/humanoid/seraphskinparts/eyes/forest-green" },
+		{ code: "goldenrod", texture: "game:entity/humanoid/seraphskinparts/eyes/goldenrod" },
+		{ code: "jade", texture: "game:entity/humanoid/seraphskinparts/eyes/jade" },
+		{ code: "lavander", texture: "game:entity/humanoid/seraphskinparts/eyes/lavander" },
+		{ code: "malachite", texture: "game:entity/humanoid/seraphskinparts/eyes/malachite" },
+		{ code: "mantis", texture: "game:entity/humanoid/seraphskinparts/eyes/mantis" },
+		{ code: "midnight", texture: "game:entity/humanoid/seraphskinparts/eyes/midnight" },
+		{ code: "phthalo-blue", texture: "game:entity/humanoid/seraphskinparts/eyes/phthalo-blue" },
+		{ code: "purple", texture: "game:entity/humanoid/seraphskinparts/eyes/purple" },
+		{ code: "sand", texture: "game:entity/humanoid/seraphskinparts/eyes/sand" },
+		{ code: "sapphire", texture: "game:entity/humanoid/seraphskinparts/eyes/sapphire" }
+		],
+		},
+		{
+		code: "underwear",
+		type: "texture", 
+		useDropDown: true,
+		textureRenderTo: { x: 0, y: 0},
+		variants: [
+		{ code: "twopiece", texture: "game:entity/humanoid/seraphskinparts/underwear/twopiece" },
+		{ code: "leotard", texture: "game:entity/humanoid/seraphskinparts/underwear/leotard" },
+		{ code: "breeches", texture: "game:entity/humanoid/seraphskinparts/underwear/breeches" }
+		],
+		},
+		{
+		code: "voicetype",
+		type: "voice", 
+		useDropDown: true,
+		variants: [
+		{ code: "altoflute", sound: "sounds/voice/altoflute" },
+		{ code: "harmonica", sound: "sounds/voice/harmonica" },
+		{ code: "oboe", sound: "sounds/voice/oboe" },
+		{ code: "clarinete", sound: "sounds/voice/clarinete" },
+		{ code: "accordion", sound: "sounds/voice/accordion" },
+		{ code: "trumpet", sound: "sounds/voice/trumpet" },
+		{ code: "tuba", sound: "sounds/voice/tuba" }
+		],
+		},
+		{
+		code: "voicepitch",
+		type: "voice", 
+		colbreak: true,
+		useDropDown: true,
+		variants: [
+		{ code: "verylow" },
+		{ code: "low" },
+		{ code: "medium" },
+		{ code: "high" },
+		{ code: "veryhigh" }
+		],
+		},
+		{
+		code: "hairbase",
+		type: "shape",
+		shapeTemplate: { base: "game:entity/humanoid/seraphskinparts/hair-base/{code}" },
+		variants: [
+		{ code: "bald" },
+		{ code: "balding" },
+		{ code: "afro" },
+		{ code: "combed" },
+		{ code: "dreadlocks" },
+		{ code: "indigenousbalding" },
+		{ code: "iroquois" },
+		{ code: "kniaz" },
+		{ code: "layered" },
+		{ code: "longflowing" },
+		{ code: "longwithstrands" },
+		{ code: "mediumlength-bangs" },
+		{ code: "messy" },
+		{ code: "messy2" },
+		{ code: "classic" },
+		{ code: "short" },
+		{ code: "short-parted" },
+		{ code: "shortspiky" },
+		{ code: "short-trimmed" },
+		{ code: "tonsure" },
+		],
+		},
+		{ 
+		code: "hairextra",
+		type: "shape", 
+		shapeTemplate: { base: "game:entity/humanoid/seraphskinparts/hair-extra/{code}" },
+		variants: [
+		{ code: "none" },
+		{ code: "backbun" },
+		{ code: "braidedup" },
+		{ code: "elaboratestickbun" },
+		{ code: "headsidebraid" },
+		{ code: "largestickbun" },
+		{ code: "neatbraid" },
+		{ code: "classicponytail" },
+		{ code: "ponytail" },
+		{ code: "rolledbraidwithbun" },
+		{ code: "shortmessybraid" },
+		{ code: "sidebraids" },
+		{ code: "sidebuns" },
+		{ code: "siderolls" },
+		{ code: "snood" },
+		{ code: "thicklongfrenchbraid" },
+		{ code: "tiedback" },
+		{ code: "tieddreads" },
+		{ code: "tiedtopknot" },
+		{ code: "topbun" },
+		{ code: "topknot" },
+		{ code: "unkempt" },
+		{ code: "vikingtopbraid" }
+		]
+		},
+		{
+		code: "facialexpression",
+		type: "shape",
+		variants: [
+		{ code: "angry", shape: { base: "game:entity/humanoid/seraphskinparts/face/angry" } },
+		{ code: "grin", shape: { base: "game:entity/humanoid/seraphskinparts/face/grin" } },
+		{ code: "smirk", shape: { base: "game:entity/humanoid/seraphskinparts/face/smirk" } },
+		{ code: "kind", shape: { base: "game:entity/humanoid/seraphskinparts/face/kind" } },
+		{ code: "upset", shape: { base: "game:entity/humanoid/seraphskinparts/face/upset" } },
+		{ code: "neutral", shape: { base: "game:entity/humanoid/seraphskinparts/face/neutral" } },
+		{ code: "sad", shape: { base: "game:entity/humanoid/seraphskinparts/face/sad" } },
+		{ code: "serious", shape: { base: "game:entity/humanoid/seraphskinparts/face/serious" } },
+		{ code: "tired", shape: { base: "game:entity/humanoid/seraphskinparts/face/tired" } },
+		{ code: "very-sad", shape: { base: "game:entity/humanoid/seraphskinparts/face/very-sad" } },
+		]
+		},
+		{ 
+		code: "mustache",
+		type: "shape", 
+		shapeTemplate: { base: "game:entity/humanoid/seraphskinparts/hair-face/{code}" },
+		variants: [
+		{ code: "none" },
+		{ code: "mst-line01-pencil" },
+		{ code: "mst-line05-seargent" },
+		{ code: "mst-line10-sheriff" },
+		{ code: "mst-line15-eccentric" },
+		{ code: "mst-line20-seagull" },
+		{ code: "mst-u01-horseshoe" },
+		{ code: "mst-u05-stirrups" },
+		{ code: "mst-walrus05-neat" },
+		{ code: "mst-walrus30-fat" },
+		{ code: "mst-whiskbroom" }
+		]
+		},
+		{ 
+		code: "beard",
+		type: "shape", 
+		shapeTemplate: { base: "game:entity/humanoid/seraphskinparts/hair-face/{code}" },
+		variants: [
+		{ code: "none" },
+		{ code: "brd-stubble" },
+		{ code: "brd-box05-anchor" },
+		{ code: "brd-box01-chincurtain" },
+		{ code: "brd-box07-ducktail" },
+		{ code: "brd-box10-short" },
+		{ code: "brd-box20-full" },
+		{ code: "brd-chin01-mouche" },
+		{ code: "brd-chin05-chinpatch" },
+		{ code: "brd-chin10-chinpuff" },
+		{ code: "brd-chin15-goatee" },
+		{ code: "brd-chin20-goateehorns" },
+		{ code: "brd-full01-trimmedfull" },
+		{ code: "brd-full05-cleanfull" },
+		{ code: "brd-full10-shaggy" },
+		{ code: "brd-mut05-friendly" },
+		{ code: "brd-mut10-muttonchops" },
+		{ code: "brd-mut15-wildchops" },
+		{ code: "brd-side05-sideburns" },
+		{ code: "brd-side15-sidewhiskers" },
+		{ code: "brd-wisp10-wiseman" }
+		]
+		},
+		{ 
+		code: "haircolor",
+		type: "texture",
+		textureTarget: "hair",
+		textureTemplate: "game:entity/humanoid/seraphskinparts/hair/{code}",
+		variants: [
+		{ code: "lightgray" },
+		{ code: "silverchalice" },
+		{ code: "slategray" },
+		{ code: "eerieblack" },
+		{ code: "mossgreen" },
+		{ code: "seagreen" },
+		{ code: "wintergreendream" },
+		{ code: "steelblue" },
+		{ code: "queenblue" },
+		{ code: "indigodye" },
+		{ code: "heliotropegray" },
+		{ code: "palatinatepurple" },
+		{ code: "darkpurple" },
+		{ code: "wheat" },
+		{ code: "ecru" },
+		{ code: "sanddune" },
+		{ code: "harvestgold" },
+		{ code: "cordovan" },
+		{ code: "rosewood" },
+		{ code: "russet" },
+		{ code: "liver" },
+		{ code: "oldburgundy" }
+		]
+		}
+		]
+	},
+	client: {
+		renderer: "Shape",
+		pitchStep: false,
+
+		// The player's own model. seraph-faceless is correct here rather than plain
+		// seraph: the face is supplied as a skin part, and using the shape that bakes
+		// one in leaves a detached head floating at the model origin.
+		shape: { base: "game:entity/humanoid/seraph-faceless" },
+		texture: { base: "game:entity/humanoid/seraph-naked-hairless" },
+
+		behaviors: [
+			{ code: "nametag", showtagonlywhentargeted: false },
+			{ code: "repulseagents" },
+			{ code: "controlledphysics", stepHeight: 1.05 },
+			{ code: "interpolateposition" },
+			{ code: "seraphinventory" },
+			{ code: "extraskinnable" }
+		],
+		animations: [
+			{ code: "idle",   animation: "idle1",   blendMode: "Average", triggeredBy: { defaultAnim: true } },
+			// Deliberately NOT mulWithWalkSpeed. That flag ties animation rate to movement
+			// speed, so any mismatch between the two shows up as sliding feet. The base
+			// game's own villagers avoid it for exactly this reason - a fixed rate always
+			// reads as walking even when the speed changes.
+			{ code: "walk",   animation: "walk",    blendMode: "Average", animationSpeed: 1.0 },
+			{ code: "run",    animation: "sprint",  blendMode: "Average", animationSpeed: 1.0 },
+			{ code: "hurt",   animation: "hit",     blendMode: "AddAverage", animationSpeed: 2 },
+			{ code: "die",    animation: "die",     blendMode: "AddAverage", animationSpeed: 1.5, weight: 10 },
+			{ code: "sleep",  animation: "lie",     blendMode: "Add" },
+			{ code: "sit",    animation: "sitidle", blendMode: "Average" },
+
+			// Work animations, waiting for the AI tasks that will drive them.
+			{ code: "hammer", animation: "hammerhit", blendMode: "AddAverage" },
+			{ code: "mine",   animation: "pickaxe",   blendMode: "AddAverage" },
+			{ code: "smith",  animation: "smithing",  blendMode: "AddAverage" }
+		]
+	},
+	server: {
+		attributes: {
+			pathfinder: {
+				minTurnAnglePerSec: 720,
+				maxTurnAnglePerSec: 1440
+			}
+		},
+		behaviors: [
+			{ code: "nametag", showtagonlywhentargeted: false },
+			{ code: "repulseagents" },
+			{ code: "controlledphysics", stepHeight: 1.05 },
+			{ code: "health", currenthealth: 20, maxhealth: 20 },
+			{ code: "breathe" },
+			{ code: "seraphinventory" },
+			{ code: "extraskinnable" },
+			{ code: "ffchatter" },
+			{
+				code: "taskai",
+				aiCreatureType: "HumanoidCreature",
+				aitasks: [
+					{
+						code: "wander",
+						priority: 1.0,
+						movespeed: 0.030,
+
+						// Tether. Villagers belong somewhere and should not drift off across
+						// the map between jobs. Anchored to their spawn point for now; once
+						// villages exist this becomes the claim centre, and leaving it will
+						// require an actual reason - a job, a caravan, a raid.
+						maxDistanceToSpawn: 24,
+						wanderRangeMin: 3,
+						wanderRangeMax: 12,
+
+						preferredLightLevel: 12,
+						maxHeight: 5,
+						minTurnAnglePerSec: 120,
+						maxTurnAnglePerSec: 360,
+						mincooldown: 8000,
+						maxcooldown: 25000,
+						animation: "walk",
+						animationSpeed: 1.0
+					},
+					{
+						code: "lookaround",
+						priority: 0.5,
+						mincooldown: 4000,
+						maxcooldown: 12000
+					},
+					{
+						code: "ffloiter",
+						priority: 0.8,
+						chance: 0.15
+					}
+				]
+			}
+		]
+	},
+	sounds: {
+		hurt: "game:player/hurt",
+		death: "game:player/death"
+	},
+	idleSoundChance: 0
+}

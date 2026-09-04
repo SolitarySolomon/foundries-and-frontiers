@@ -1,0 +1,22 @@
+# Build output
+bin/
+obj/
+dist/
+
+# Vintage Story game assemblies. Not redistributable - see README for the list
+# to copy in from your own install.
+refs/
+
+# Editor and OS noise
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Scratch
+*.tmp
+_*.txt

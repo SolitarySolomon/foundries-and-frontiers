@@ -1,0 +1,17 @@
+{
+  "type": "code",
+  "modid": "foundriesfrontiers",
+  "name": "Foundries & Frontiers",
+  "authors": [
+    "Corey"
+  ],
+  "description": "Villages that grow on their own - foraging, farming, forging and building their way up a tech ladder, whether or not anyone is watching. Villager pathfinding adapted from VS Village by G3rste and contributors (MIT). Uses Vintage Story's own seraph model, skin parts and voices by Anego Studios. Full credits in the mod's README, or type /ff credits in game.",
+  "version": "0.0.1",
+  "dependencies": {
+    "game": "1.22.7",
+    "survival": ""
+  },
+  "side": "universal",
+  "requiredOnClient": true,
+  "networkVersion": "1.0.0"
+}

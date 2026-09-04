@@ -1,0 +1,252 @@
+{
+  "norman": {
+    "displayName": "Norman",
+    "maleNames": [
+      "Aldric",
+      "Baldwin",
+      "Bertrand",
+      "Drogo",
+      "Everard",
+      "Fulk",
+      "Gilbert",
+      "Godfrey",
+      "Guy",
+      "Hamon",
+      "Herbert",
+      "Hugh",
+      "Ivo",
+      "Jocelyn",
+      "Lambert",
+      "Maurice",
+      "Miles",
+      "Odo",
+      "Osbert",
+      "Ralph",
+      "Reynold",
+      "Robert",
+      "Roger",
+      "Serlo",
+      "Thurstan",
+      "Waleran",
+      "Walter",
+      "Warin",
+      "William"
+    ],
+    "femaleNames": [
+      "Adela",
+      "Agnes",
+      "Alice",
+      "Aveline",
+      "Beatrix",
+      "Cecily",
+      "Constance",
+      "Edith",
+      "Eleanor",
+      "Emma",
+      "Gundred",
+      "Hawise",
+      "Isabel",
+      "Joan",
+      "Juliana",
+      "Mabel",
+      "Margery",
+      "Matilda",
+      "Maud",
+      "Millicent",
+      "Petronilla",
+      "Rohese",
+      "Sibyl"
+    ],
+    "familyNames": [
+      "of the Mill",
+      "Carter",
+      "Fletcher",
+      "Marchand",
+      "Beaumont",
+      "Aumary",
+      "Reeve",
+      "Tanner",
+      "of Longfield",
+      "Cordier",
+      "Mason",
+      "Chandler",
+      "Belhome",
+      "Fossard"
+    ],
+    "lines": {
+      "greet": [
+        "Well met.",
+        "Good day to you.",
+        "You're a stranger here.",
+        "Mind how you go.",
+        "Morning."
+      ],
+      "remark": [
+        "Ground's hard this year.",
+        "The roof wants seeing to.",
+        "Aye, that's the way of it.",
+        "Not before the harvest, mind.",
+        "It'll hold another winter.",
+        "Same as it ever was."
+      ],
+      "laugh": [
+        "Ha! You would say so.",
+        "That's a good one.",
+        "Get on with you."
+      ],
+      "shrug": [
+        "Can't say I know.",
+        "That's the reeve's business, not mine.",
+        "Who's to say."
+      ],
+      "complain": [
+        "We're short again.",
+        "No one's come by in weeks.",
+        "It's never enough, is it."
+      ]
+    },
+    "wardrobe": {
+      "upperbody": [
+        "clothes-upperbody-linen-tunic",
+        "clothes-upperbody-peasent-shirt",
+        "clothes-upperbody-lackey-shirt",
+        "clothes-upperbody-merchant-shirt"
+      ],
+      "lowerbody": [
+        "clothes-lowerbody-dirty-linen-trousers",
+        "clothes-lowerbody-lackey-breeches",
+        "clothes-lowerbody-fine-trousers",
+        "clothes-lowerbody-squire-pants"
+      ],
+      "foot": [
+        "clothes-foot-peasent-slippers",
+        "clothes-foot-lackey-shoes",
+        "clothes-foot-high-leather-boots"
+      ]
+    }
+  },
+  "norse": {
+    "displayName": "Norse",
+    "maleNames": [
+      "Arni",
+      "Asgeir",
+      "Bjorn",
+      "Brandr",
+      "Egill",
+      "Eirik",
+      "Finnr",
+      "Gunnar",
+      "Hakon",
+      "Halfdan",
+      "Hallr",
+      "Ingvar",
+      "Ivarr",
+      "Ketill",
+      "Leifr",
+      "Njall",
+      "Olafr",
+      "Ormr",
+      "Ragnarr",
+      "Sigurdr",
+      "Skarde",
+      "Snorri",
+      "Steinarr",
+      "Sveinn",
+      "Thorbjorn",
+      "Thorfinn",
+      "Ulfr",
+      "Vigdis"
+    ],
+    "femaleNames": [
+      "Alfdis",
+      "Asa",
+      "Astrid",
+      "Bergljot",
+      "Dagny",
+      "Freydis",
+      "Groa",
+      "Gudrun",
+      "Halla",
+      "Helga",
+      "Hildr",
+      "Ingrid",
+      "Jorunn",
+      "Katla",
+      "Ragnhild",
+      "Sigrid",
+      "Signy",
+      "Solveig",
+      "Svanhild",
+      "Thora",
+      "Thorunn",
+      "Unnr",
+      "Yrsa"
+    ],
+    "familyNames": [
+      "Ashwood",
+      "the Quiet",
+      "Longstride",
+      "Coldhand",
+      "Storrsdottir",
+      "Nettlebeard",
+      "of the Grey Shore",
+      "Ironhewer",
+      "Farwalker",
+      "Saltbeard",
+      "the Younger",
+      "Crowfoot"
+    ],
+    "lines": {
+      "greet": [
+        "You've come far.",
+        "Hm. You.",
+        "Keep your hands where I see them.",
+        "Aye.",
+        "Cold one, isn't it."
+      ],
+      "remark": [
+        "Wood's wet through.",
+        "Nets were light again.",
+        "It'll do.",
+        "Sooner it's built, sooner we're warm.",
+        "That wind's turning.",
+        "Not worth the walk."
+      ],
+      "laugh": [
+        "Hah!",
+        "You've a mouth on you.",
+        "That's worth a drink."
+      ],
+      "shrug": [
+        "Ask another.",
+        "Not for me to say.",
+        "Hm."
+      ],
+      "complain": [
+        "Stores are thin.",
+        "We'll not see spring at this rate.",
+        "Someone ought to do something."
+      ]
+    },
+    "wardrobe": {
+      "upperbody": [
+        "clothes-upperbody-hunter-shirt",
+        "clothes-upperbody-reindeer-herder-collared-shirt",
+        "clothes-upperbody-great-steppe-shirt",
+        "clothes-upperbody-earth-toned-robe"
+      ],
+      "lowerbody": [
+        "clothes-lowerbody-raw-hide-trousers",
+        "clothes-lowerbody-warm-woolen-pants",
+        "clothes-lowerbody-reindeer-herder-trousers",
+        "clothes-lowerbody-nomad-trousers"
+      ],
+      "foot": [
+        "clothes-foot-knee-high-fur-boots",
+        "clothes-foot-fur-lined-reindeer-herder-shoes",
+        "clothes-foot-shepherd-sandals",
+        "clothes-foot-high-leather-boots"
+      ]
+    }
+  }
+}

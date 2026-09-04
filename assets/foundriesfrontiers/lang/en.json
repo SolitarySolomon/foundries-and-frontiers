@@ -1,0 +1,15 @@
+{
+  "foundriesfrontiers:modname": "Foundries & Frontiers",
+  "foundriesfrontiers:moddesc": "Villages that grow on their own.",
+
+  "foundriesfrontiers:item-creature-villager-male-forager": "Forager",
+  "foundriesfrontiers:item-creature-villager-female-forager": "Forager",
+  "foundriesfrontiers:item-creature-villager-male-builder": "Builder",
+  "foundriesfrontiers:item-creature-villager-female-builder": "Builder",
+  "foundriesfrontiers:item-creature-villager-male-lumberjack": "Lumberjack",
+  "foundriesfrontiers:item-creature-villager-female-lumberjack": "Lumberjack",
+  "foundriesfrontiers:item-creature-villager-male-farmer": "Farmer",
+  "foundriesfrontiers:item-creature-villager-female-farmer": "Farmer",
+  "foundriesfrontiers:item-creature-villager-male-herder": "Herder",
+  "foundriesfrontiers:item-creature-villager-female-herder": "Herder"
+}
