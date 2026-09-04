@@ -1,0 +1,10 @@
+# Everything in this repo is stored with LF endings. The project is edited from
+# both Windows and Linux, and without this a Windows editor silently rewrites a
+# whole file's line endings, turning a two-line change into a 700-line diff.
+* text=auto eol=lf
+
+# Binary assets: never touched, never diffed as text.
+*.png binary
+*.ogg binary
+*.zip binary
+*.dll binary
