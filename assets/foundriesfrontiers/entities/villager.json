@@ -317,7 +317,7 @@
 			{ code: "ffchatter" },
 			{
 				code: "taskai",
-				aiCreatureType: "HumanoidCreature",
+				aiCreatureType: "Humanoid",
 				aitasks: [
 					{
 						code: "wander",
