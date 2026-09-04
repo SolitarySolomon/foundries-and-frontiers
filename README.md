@@ -1,14 +1,15 @@
 # Foundries & Frontiers
 
-A Vintage Story mod: villages that grow on their own — foraging, farming, forging and
-building their way up a tech ladder, whether or not anyone is watching.
+A Vintage Story mod that adds villages which grow on their own. Villagers forage, farm,
+build and eventually forge, working their way up a tech ladder whether or not a player is
+around to watch it happen.
 
-Targets **Vintage Story 1.22.7** (`net10.0`).
+Built against Vintage Story 1.22.7 (`net10.0`).
 
 ## Building
 
-The project references Vintage Story's game assemblies, which are not redistributable and
-are therefore not committed. Drop these into `refs/` from your own install:
+The game's assemblies are not redistributable, so they are not in this repo. Copy these
+out of your own install into `refs/`:
 
     VintagestoryAPI.dll   VintagestoryLib.dll     (game root)
     VSSurvivalMod.dll     VSEssentials.dll        (game Mods/)
@@ -16,34 +17,40 @@ are therefore not committed. Drop these into `refs/` from your own install:
     Newtonsoft.Json.dll   protobuf-net.dll        (game Lib/)
     0Harmony.dll          cairo-sharp.dll  SkiaSharp.dll
 
-Then:
+Then run:
 
     ./build.sh
 
-Produces `dist/foundriesfrontiers_<version>.zip`. Drop that in `VintagestoryData/Mods/`.
+That gives you `dist/foundriesfrontiers_<version>.zip`. Drop it in `VintagestoryData/Mods/`.
 
 ## Status
 
-Pre-alpha — Phase A. Villagers exist and have personalities; nothing is simulated yet.
+Pre-alpha. Phase A is finished, which means villagers exist and act like people, but there
+is no village simulation behind them yet.
 
-Full sequence and current state: **[docs/BUILD_ORDER.md](docs/BUILD_ORDER.md)**
+The full plan and where it currently stands lives in
+[docs/BUILD_ORDER.md](docs/BUILD_ORDER.md).
 
-Done so far:
+Working so far:
 
-- Toolchain — cloud build, zip packaging, deploy
-- Villager entity on the seraph model, randomized appearance, gendered voices and hair
-- Cultures as data — Norman and Norse names, spoken lines, nametags
-- Ambient social behaviour — greetings and villager conversations
-- Dev tooling — state dump, time skip, live debug labels, counters
-- AI task framework with staggered thinking and distance culling
-- Pathfinding (adapted from VS Village, MIT) and a goto task
-- Carrying loads and tools, with tool tier driving work rate
+- Build, packaging and deploy
+- Villager entity built on the seraph player model, with randomized appearance and voices
+  and hair that match the villager's gender
+- Cultures kept as data rather than code. Norman and Norse so far, each with their own
+  names, spoken lines and nametags
+- Greetings and short conversations between villagers as they go about their day
+- Dev tooling: state dump, time skip, live debug labels, counters
+- An AI task framework that staggers thinking across villagers and skips work when nobody
+  is nearby to see it
+- Pathfinding adapted from VS Village, and a goto task built on it
+- Carrying tools and loads, with tool tier feeding into how fast work gets done
 
-**Phase A is complete.** Next: **Phase B** — the village object, ledger, storehouse and the first producing jobs.
+Phase B is next: the village object itself, its ledger, a storehouse, and the first jobs
+that actually produce something.
 
 ## Commands
 
-All require `controlserver` privilege.
+All of these need the `controlserver` privilege.
 
 | Command | Does |
 |---------|------|
@@ -64,66 +71,70 @@ All require `controlserver` privilege.
 
 ## Configuration
 
-Settings live in `VintagestoryData/ModConfig/foundriesfrontiers.json`, written with
-defaults on first run. Edit it and run `/ff config reload` — no restart needed for most
-values.
+Settings live in `VintagestoryData/ModConfig/foundriesfrontiers.json`, written out with
+defaults the first time the mod runs. Edit the file and run `/ff config reload`. Most
+values take effect right away with no restart.
 
-The dial to reach for first on a struggling server is
-`Performance.ThinkIntervalMultiplier`: raise it above 1 and villagers think less often and
-cost less. `Performance.UnobservedThrottle` controls how much work is skipped when no
-player is nearby.
+If a server is struggling, the first setting to reach for is
+`Performance.ThinkIntervalMultiplier`. Anything above 1 makes villagers think less often
+and cost less. `Performance.UnobservedThrottle` controls how much work gets skipped when
+there is no player around.
 
-If villagers are too chatty for your taste, lower `Chatter.IdleTalkChance` or set
-`Chatter.SpeechInChat` to false. Values baked into the entity JSON — wander speed and the
-tether distance — still need a game restart to change.
+If the villagers are too chatty for you, turn down `Chatter.IdleTalkChance` or set
+`Chatter.SpeechInChat` to false.
 
-## Licence
+A few things are baked into the entity JSON instead of the config, like wander speed and
+the tether distance. Those still need a game restart.
 
-MIT — see [LICENSE](LICENSE). Use it, fork it, borrow from it; just keep the copyright
-notice. The same terms this mod's own borrowed pathfinding came under.
+## License
+
+MIT, see [LICENSE](LICENSE). Use it, fork it, take pieces out of it. Just keep the
+copyright notice. It's the same license the borrowed pathfinding came under.
 
 ## Credits and attribution
 
-This mod does not build everything from scratch, and everything it borrows is listed here.
-If you think something is used without proper credit, please open an issue — it will be
-fixed.
+Not everything in here was written from scratch, and anything borrowed is listed below.
+If you think something has been used without proper credit, open an issue and it will
+get fixed.
 
-### Vintage Story — Anego Studios
+### Vintage Story, by Anego Studios
 
-The game itself, and a great deal of what makes this mod look and sound like it belongs in
-it. Foundries & Frontiers **references** these assets by path at runtime and does not
-redistribute any of them:
+The game itself, plus most of what makes these villagers look and sound like they belong
+in it. The mod points at these assets by path at runtime and does not ship copies of any
+of them:
 
 | Used | From |
 |------|------|
-| The seraph model and its animation set — walk, sprint, idle, sit, lie, hammer, pickaxe, smithing | `game:entity/humanoid/seraph-faceless` |
-| Skin parts — skin tones, eyes, hair, beards, facial expressions, underwear | `game:entity/humanoid/seraphskinparts/*` |
-| Instrument voices used for villager speech | `game:sounds/voice/*` |
-| Clothing worn by villagers | `survival:clothes-*` |
-| The skin-part table structure | Adapted from the base game's `playerbot` entity |
+| The seraph model and its animations: walk, sprint, idle, sit, lie, hammer, pickaxe, smithing | `game:entity/humanoid/seraph-faceless` |
+| Skin parts: skin tones, eyes, hair, beards, facial expressions, underwear | `game:entity/humanoid/seraphskinparts/*` |
+| The instrument voices villagers speak with | `game:sounds/voice/*` |
+| Clothing the villagers wear | `survival:clothes-*` |
+| The structure of the skin part table | Adapted from the base game's `playerbot` entity |
 
-The game's assemblies are referenced to compile against and are likewise not redistributed —
-see the build instructions above.
+The game's assemblies are referenced at compile time and are not redistributed either.
+See the build steps above.
 
-### VS Village — G3rste and contributors
+### VS Village, by G3rste and contributors
 
-The villager pathfinding stack — a custom A\* over a waypoint graph, with door handling —
-is **adapted from [VS Village](https://github.com/G3rste/vsvillage)** and used under the
-MIT licence.
+The villager pathfinding is adapted from
+[VS Village](https://github.com/G3rste/vsvillage) and used under the MIT license. It's a
+custom A\* over a waypoint graph with door handling, and it's the hardest single piece of
+this mod. Writing it from scratch would have taken weeks and the result would have been
+worse.
 
-This is the hardest single piece of the mod and it would have taken weeks to write badly.
-The files live in [`src/ThirdParty/Pathfinding/`](src/ThirdParty/Pathfinding/) with the
-full licence text in [`src/ThirdParty/LICENSE-vsvillage.txt`](src/ThirdParty/LICENSE-vsvillage.txt),
-every modification marked `CHANGED FROM UPSTREAM` in the source:
+Those files live in [`src/ThirdParty/Pathfinding/`](src/ThirdParty/Pathfinding/), with the
+full license text in
+[`src/ThirdParty/LICENSE-vsvillage.txt`](src/ThirdParty/LICENSE-vsvillage.txt). Every
+change is marked `CHANGED FROM UPSTREAM` in the source:
 
-- `VillagerAStarNew.cs` · `WaypointAStar.cs` · `VillagerPathNode.cs` · `VillagerPathfind.cs`
+- `VillagerAStarNew.cs`, `WaypointAStar.cs`, `VillagerPathNode.cs`, `VillagerPathfind.cs`
 
-Changes made: the namespace, replacing VS Village's own village types with an interface
-this mod owns, and adding instrumentation. The algorithm is theirs.
+What changed: the namespace, swapping VS Village's own village types for an interface this
+mod owns, and some added instrumentation. The algorithm is theirs.
 
-VS Village is an excellent mod in its own right and is worth playing.
+VS Village is a good mod in its own right and worth playing.
 
 ### Everything else
 
-All other code, design, configuration and content in this repository is original to this
+The rest of the code, design, configuration and content in this repo is original to this
 mod.

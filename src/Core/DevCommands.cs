@@ -177,7 +177,7 @@ namespace FoundriesFrontiers
             if (type == null)
             {
                 mod.Warn("Entity type {0} did not resolve. Is the entity JSON loading?", code);
-                return TextCommandResult.Error("Entity type " + code + " not found — check the log.");
+                return TextCommandResult.Error("Entity type " + code + " not found. Check the log.");
             }
 
             Entity entity = sapi.World.ClassRegistry.CreateEntity(type);
@@ -292,7 +292,7 @@ namespace FoundriesFrontiers
             }
 
             return TextCommandResult.Success(
-                "Debug labels " + (mod.DebugLabels ? "ON — villagers now show live state" : "OFF"));
+                "Debug labels " + (mod.DebugLabels ? "ON, villagers now show live state" : "OFF"));
         }
 
         /// <summary>

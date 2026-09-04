@@ -8,7 +8,7 @@ namespace FoundriesFrontiers
     /// Counters for the things this mod intends to drive toward zero.
     ///
     /// The design calls for villagers that walk rather than teleport, and builds that
-    /// finish rather than stall. Neither is verifiable by watching — they need a number
+    /// finish rather than stall. Neither is verifiable by watching, so they need a number
     /// that trends. Instrumented from the first day rather than bolted on once something
     /// already feels wrong.
     /// </summary>

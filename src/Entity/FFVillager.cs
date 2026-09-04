@@ -454,7 +454,7 @@ namespace FoundriesFrontiers
         /// whole point.
         ///
         /// `extraskinnable` randomises its parts at the end of its own Initialize, but its
-        /// real setup — `init()` — does not run until OnEntitySpawn. Applying our
+        /// real setup, `init()`, does not run until OnEntitySpawn. Applying our
         /// overrides during Initialize therefore landed in a window where they could be
         /// undone, which showed up as villagers spawning with the wrong hair, no
         /// underwear, or a randomly-gendered voice, seemingly at random.
