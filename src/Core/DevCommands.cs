@@ -544,6 +544,9 @@ namespace FoundriesFrontiers
                 "\n" +
                 "Everything else is original to this mod. Full details in the README.\n" +
                 "\n" +
+                "Parts of this mod are written with AI assistance. Design, testing\n" +
+                "and what ships are the author's own.\n" +
+                "\n" +
                 "This mod is free. If you want to support the work:\n" +
                 "ko-fi.com/coreypiazza");
         }

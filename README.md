@@ -90,8 +90,13 @@ the tether distance. Those still need a game restart.
 
 ## Support
 
-This mod is free and it stays free. If you get some hours out of it and want to chip in,
-it buys me time to keep building it.
+This mod is free and it stays free. There is no paid version, nothing held back and no
+perks for paying. If you want to help anyway, Ko-fi is the place.
+
+What support actually buys is hours. A mod like this is not a weekend project, it is a
+long list of systems that each take real time to build and test. Anything that comes in
+is time I can put into this instead of something else, which means features land sooner
+and bugs get fixed faster. That is the whole pitch.
 
 [![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/coreypiazza)
 
@@ -99,6 +104,16 @@ it buys me time to keep building it.
 
 MIT, see [LICENSE](LICENSE). Use it, fork it, take pieces out of it. Just keep the
 copyright notice. It's the same license the borrowed pathfinding came under.
+
+## A note on AI
+
+Parts of this mod are written with AI assistance. I use Claude to write and refactor code
+so development moves faster than I could manage on my own with the time I have. The
+design, the direction, the testing and the decision about what actually ships are mine.
+
+I am saying so plainly because you deserve to know what went into something before you
+install it, and because I would rather tell you than have you find out later and wonder
+what else I left out.
 
 ## Credits and attribution
 

@@ -111,7 +111,7 @@ Rules that apply to every step, because retrofitting any of them is painful.
 
 Nothing in Phase D can place a building until this exists.
 
-- [ ] **C1 · Placeholder schematics:** *Corey builds these in-game.* Around eight crude
+- [ ] **C1 · Placeholder schematics:** *Hand-built in game.* Around eight crude
       structures (hovel, log house, farmhouse, storehouse, shed, forge, well, wall segment)
       exported via WorldEdit. Deliberately ugly; real ones come at E2 once the ladder stops
       moving. **Nothing in Phase C or D can be tested without them.**
@@ -291,7 +291,7 @@ found more than the content pass did:
 | Decline, guards | Death removing a villager from the roster | E13 |
 | Mine head yields | Whether ore density is even readable | E5 |
 
-**Pass 3, found while building.** Three more, all from Corey playing with what exists:
+**Pass 3, found while building.** Three more, all from playing with what exists:
 villagers wearing clothes (A7 covered inventory but never dressing), a tether keeping them
 near their village (nothing covered it at all), and orphaned villagers migrating to a
 neighbour when their village dies (H2 left them simply gone). Playing the thing finds what
@@ -337,7 +337,7 @@ and are reachable from a mod:
 | A tree can be identified as one object | B8 | No engine helper, we write a flood-fill |
 | `/ff skip <days>` works without wrecking weather and crops | A4 | Try it; fall back to advancing only the village tick |
 | A 30-villager village fits a sane tick budget | E17 | Profile it, and don't wait until Phase H |
-| Nametags render a second line | A2 | In Corey's hands right now |
+| Nametags render a second line | A2 | Waiting on an in-game check |
 
 **This list is expected to grow.** Adding to it is the plan working, not failing.
 
