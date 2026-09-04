@@ -99,6 +99,42 @@ namespace FoundriesFrontiers
                     .HandleWith(args => OnConfig(sapi, args))
                 .EndSubCommand()
 
+                .BeginSubCommand("village")
+                    .WithDescription("Villages. /ff village create|list|info|remove|join|leave")
+                    .BeginSubCommand("create")
+                        .WithDescription("Found a village where you stand. /ff village create [culture] [name]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("culture"),
+                                  sapi.ChatCommands.Parsers.OptionalAll("name"))
+                        .HandleWith(args => OnVillageCreate(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("list")
+                        .WithDescription("List every village in the world")
+                        .HandleWith(args => OnVillageList(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("info")
+                        .WithDescription("Details of a village. /ff village info [id], defaults to the one you are standing in")
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageInfo(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("remove")
+                        .WithDescription("Delete a village. /ff village remove <id>")
+                        .WithArgs(sapi.ChatCommands.Parsers.Int("id"))
+                        .HandleWith(args => OnVillageRemove(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("join")
+                        .WithDescription("Put the villager you are looking at into a village. /ff village join [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageJoin(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("leave")
+                        .WithDescription("Remove the villager you are looking at from their village")
+                        .RequiresPlayer()
+                        .HandleWith(args => OnVillageLeave(sapi, args))
+                    .EndSubCommand()
+                .EndSubCommand()
+
                 .BeginSubCommand("credits")
                     .WithDescription("Who made the parts of this mod that were not made here")
                     .RequiresPrivilege(Privilege.chat)
@@ -124,7 +160,7 @@ namespace FoundriesFrontiers
                 "Game: " + Vintagestory.API.Config.GameVersion.ShortGameVersion + "\n" +
                 "World seed: " + sapi.World.Seed + "\n" +
                 "Villagers loaded: " + villagers + "\n" +
-                "Villages: 0 (not implemented)\n" +
+                "Villages: " + sapi.ModLoader.GetModSystem<VillageRegistry>().Count + "\n" +
                 "Simulation: offline";
 
             return TextCommandResult.Success(msg);
@@ -198,13 +234,26 @@ namespace FoundriesFrontiers
             sapi.World.SpawnEntity(entity);
             DevStats.Bump(DevStats.VillagersSpawned);
 
+            // If they spawned inside a claim, they belong to that village. Saves typing
+            // /ff village join after every spawn, and it is what worldgen will do anyway.
+            string joined = "";
+            if (entity is FFVillager fresh)
+            {
+                Village here = Registry(sapi).VillageAt(entity.Pos.AsBlockPos);
+                if (here != null)
+                {
+                    Registry(sapi).Join(fresh, here);
+                    joined = " Joined " + here.Name + ".";
+                }
+            }
+
             mod.Log("Spawned {0} (id {1}) at {2} for {3}",
                 code.Path, entity.EntityId, pos.AsBlockPos, player.PlayerName);
 
             string name = (entity as FFVillager)?.GivenName ?? "?";
             return TextCommandResult.Success(
                 "Spawned " + name + " - " + culture + " " + gender + " " + trade +
-                " (entity " + entity.EntityId + ").");
+                " (entity " + entity.EntityId + ")." + joined);
         }
 
         /// <summary>Finds the villager the player is looking at, else the nearest within 20 blocks.</summary>
@@ -229,7 +278,7 @@ namespace FoundriesFrontiers
             sb.AppendLine("Trade      " + v.Trade);
             sb.AppendLine("Culture    " + v.CultureCode);
             sb.AppendLine("Gender     " + (v.IsFemale ? "female" : "male"));
-            sb.AppendLine("Village    " + (v.VillageId == "" ? "(none)" : v.VillageId));
+            sb.AppendLine("Village    " + VillageLabel(sapi, v));
             sb.AppendLine("Position   " + v.Pos.AsBlockPos);
             sb.AppendLine("Health     " + v.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth") + " / "
                                         + v.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("maxhealth"));
@@ -288,7 +337,7 @@ namespace FoundriesFrontiers
             // Push every loaded villager back to its normal tag when switching off.
             foreach (var e in sapi.World.LoadedEntities.Values)
             {
-                (e as FFVillager)?.RefreshNameTagPublic();
+                (e as FFVillager)?.RefreshNameTag();
             }
 
             return TextCommandResult.Success(
@@ -549,6 +598,164 @@ namespace FoundriesFrontiers
                 "\n" +
                 "This mod is free. If you want to support the work:\n" +
                 "ko-fi.com/coreypiazza");
+        }
+
+        // --- villages --------------------------------------------------------------
+
+        private static VillageRegistry Registry(ICoreServerAPI sapi)
+            => sapi.ModLoader.GetModSystem<VillageRegistry>();
+
+        /// <summary>Village column for /ff dump, so a villager's affiliation is readable.</summary>
+        private static string VillageLabel(ICoreServerAPI sapi, FFVillager v)
+        {
+            if (v.VillageId == 0) return "(none)";
+            Village village = Registry(sapi)?.Get(v.VillageId);
+            return village == null
+                ? "#" + v.VillageId + " (missing, this villager is an orphan)"
+                : village.Name + " #" + village.Id;
+        }
+
+        private static TextCommandResult OnVillageCreate(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null) return TextCommandResult.Error("No player entity.");
+
+            var cultures = sapi.ModLoader.GetModSystem<CultureSystem>();
+            string culture = args[0] as string;
+            if (string.IsNullOrEmpty(culture))
+            {
+                var all = new List<string>(cultures.Codes);
+                culture = all.Count > 0 ? all[sapi.World.Rand.Next(all.Count)] : CultureSystem.DefaultCulture;
+            }
+            else
+            {
+                culture = culture.ToLowerInvariant();
+                if (!cultures.Has(culture))
+                {
+                    return TextCommandResult.Error(
+                        "Unknown culture '" + culture + "'. Loaded: " + string.Join(", ", cultures.Codes));
+                }
+            }
+
+            BlockPos centre = player.Entity.Pos.AsBlockPos;
+            Village village = Registry(sapi).Create(centre, culture, args[1] as string, out string error);
+            if (village == null) return TextCommandResult.Error(error ?? "Could not found a village here.");
+
+            return TextCommandResult.Success(
+                "Founded " + village.Name + " (#" + village.Id + "), " + culture +
+                ", tier 0, claim " + village.ClaimRadius + " blocks from " + centre + ".");
+        }
+
+        private static TextCommandResult OnVillageList(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            var reg = Registry(sapi);
+            if (reg.Count == 0) return TextCommandResult.Success("No villages yet. /ff village create founds one.");
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine(reg.Count + " village(s):");
+            foreach (Village v in reg.All)
+            {
+                sb.AppendLine("  #" + v.Id + "  " + v.Name.PadRight(16)
+                    + "t" + v.Tier
+                    + "  " + v.CultureCode.PadRight(8)
+                    + "pop " + v.MemberIds.Count + " (" + reg.LoadedMembers(v.Id).Count + " loaded)"
+                    + "  at " + v.Centre);
+            }
+            return TextCommandResult.Success(sb.ToString().TrimEnd());
+        }
+
+        private static TextCommandResult OnVillageInfo(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            var reg = Registry(sapi);
+            int id = (int)args[0];
+
+            Village v = id > 0 ? reg.Get(id) : null;
+            if (v == null && id > 0) return TextCommandResult.Error("No village with id " + id + ".");
+
+            if (v == null)
+            {
+                IServerPlayer player = args.Caller.Player as IServerPlayer;
+                if (player?.Entity == null) return TextCommandResult.Error("Give an id, or stand in a village.");
+                v = reg.VillageAt(player.Entity.Pos.AsBlockPos) ?? reg.Nearest(player.Entity.Pos.AsBlockPos, 200);
+                if (v == null) return TextCommandResult.Error("No village within 200 blocks. /ff village list");
+            }
+
+            double age = sapi.World.Calendar.TotalDays - v.FoundedTotalDays;
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("--- " + v.Name + " (#" + v.Id + ") ---");
+            sb.AppendLine("Culture    " + v.CultureCode);
+            sb.AppendLine("Tier       " + v.Tier);
+            sb.AppendLine("Founded    day " + (int)v.FoundedTotalDays + " (" + (int)age + " days ago)");
+            sb.AppendLine("Centre     " + v.Centre);
+            sb.AppendLine("Claim      " + v.ClaimRadius + " blocks, box " + v.ClaimBox);
+            sb.AppendLine("Roster     " + v.MemberIds.Count + " total, "
+                          + reg.LoadedMembers(v.Id).Count + " loaded");
+
+            var loaded = reg.LoadedMembers(v.Id);
+            if (loaded.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Here now:");
+                foreach (FFVillager m in loaded)
+                {
+                    sb.AppendLine("  " + (m.GivenName == "" ? "#" + m.EntityId : m.GivenName).PadRight(22)
+                                  + m.Trade.ToString().ToLowerInvariant().PadRight(12)
+                                  + (v.Contains(m.Pos.AsBlockPos) ? "inside claim" : "OUTSIDE claim"));
+                }
+            }
+
+            return TextCommandResult.Success(sb.ToString().TrimEnd());
+        }
+
+        private static TextCommandResult OnVillageRemove(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            int id = (int)args[0];
+            var reg = Registry(sapi);
+            Village v = reg.Get(id);
+            if (v == null) return TextCommandResult.Error("No village with id " + id + ".");
+
+            int orphaned = reg.LoadedMembers(id).Count;
+            reg.Remove(id);
+            return TextCommandResult.Success(
+                "Removed " + v.Name + " (#" + id + "). " + orphaned + " loaded villager(s) are now unaffiliated.");
+        }
+
+        private static TextCommandResult OnVillageJoin(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            FFVillager villager = FindTarget(sapi, player);
+            if (villager == null) return TextCommandResult.Error("No villager in sight or within 20 blocks.");
+
+            var reg = Registry(sapi);
+            int id = (int)args[0];
+            Village v = id > 0
+                ? reg.Get(id)
+                : reg.VillageAt(villager.Pos.AsBlockPos) ?? reg.Nearest(villager.Pos.AsBlockPos, 200);
+
+            if (v == null)
+            {
+                return TextCommandResult.Error(id > 0
+                    ? "No village with id " + id + "."
+                    : "No village within 200 blocks of that villager.");
+            }
+
+            reg.Join(villager, v);
+            return TextCommandResult.Success(
+                (villager.GivenName == "" ? "#" + villager.EntityId : villager.GivenName)
+                + " now belongs to " + v.Name + " (#" + v.Id + "). Roster: " + v.MemberIds.Count + ".");
+        }
+
+        private static TextCommandResult OnVillageLeave(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            FFVillager villager = FindTarget(sapi, args.Caller.Player as IServerPlayer);
+            if (villager == null) return TextCommandResult.Error("No villager in sight or within 20 blocks.");
+            if (villager.VillageId == 0) return TextCommandResult.Error("That villager has no village.");
+
+            Village v = Registry(sapi).Get(villager.VillageId);
+            Registry(sapi).Leave(villager);
+            return TextCommandResult.Success(
+                (villager.GivenName == "" ? "#" + villager.EntityId : villager.GivenName)
+                + " left " + (v?.Name ?? "their village") + ".");
         }
 
         private static TextCommandResult OnTrades()

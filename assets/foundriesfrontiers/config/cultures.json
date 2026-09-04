@@ -73,6 +73,28 @@
       "Belhome",
       "Fossard"
     ],
+    "villageNames": [
+      "Aumale",
+      "Beaumont",
+      "Caillou",
+      "Denvers",
+      "Falaise",
+      "Grandcourt",
+      "Harcourt",
+      "Lisieux",
+      "Montfort",
+      "Neuville",
+      "Orbec",
+      "Percy",
+      "Rouvray",
+      "Saint-Clair",
+      "Tancarville",
+      "Valmont",
+      "Bricqueville",
+      "Coutances",
+      "Estouteville",
+      "Longueville"
+    ],
     "lines": {
       "greet": [
         "Well met.",
@@ -195,6 +217,28 @@
       "Saltbeard",
       "the Younger",
       "Crowfoot"
+    ],
+    "villageNames": [
+      "Bjornstad",
+      "Dalvik",
+      "Eldfjall",
+      "Fjellheim",
+      "Grimsby",
+      "Hafnarholt",
+      "Ingolfstad",
+      "Kaldbakur",
+      "Lundgard",
+      "Myrdal",
+      "Norheim",
+      "Ravnsborg",
+      "Selfoss",
+      "Skogarholt",
+      "Steinvik",
+      "Thorsholt",
+      "Ulfsnes",
+      "Vestfjord",
+      "Ylirhamn",
+      "Assvik"
     ],
     "lines": {
       "greet": [

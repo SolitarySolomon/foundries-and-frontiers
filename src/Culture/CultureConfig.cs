@@ -13,6 +13,9 @@ namespace FoundriesFrontiers
         [JsonProperty] public string[] FemaleNames = Array.Empty<string>();
         [JsonProperty] public string[] FamilyNames = Array.Empty<string>();
 
+        /// <summary>Names this culture gives its settlements.</summary>
+        [JsonProperty] public string[] VillageNames = Array.Empty<string>();
+
         /// <summary>Utterance code (lowercase) to the things this culture says.</summary>
         [JsonProperty] public Dictionary<string, string[]> Lines = new Dictionary<string, string[]>();
 
@@ -32,6 +35,12 @@ namespace FoundriesFrontiers
                 return pool[rand.Next(pool.Length)];
             }
             return null;
+        }
+
+        public string RandomVillageName(Random rand)
+        {
+            if (VillageNames == null || VillageNames.Length == 0) return null;
+            return VillageNames[rand.Next(VillageNames.Length)];
         }
 
         public string RandomName(bool female, Random rand)

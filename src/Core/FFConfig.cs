@@ -22,6 +22,7 @@ namespace FoundriesFrontiers
         [JsonProperty] public MovementConfig Movement = new MovementConfig();
         [JsonProperty] public ChatterConfig Chatter = new ChatterConfig();
         [JsonProperty] public VillagerConfig Villager = new VillagerConfig();
+        [JsonProperty] public VillageConfig Village = new VillageConfig();
         [JsonProperty] public PerformanceConfig Performance = new PerformanceConfig();
 
         public class MovementConfig
@@ -70,6 +71,27 @@ namespace FoundriesFrontiers
 
             /// <summary>Work rate by tool tier: none, copper, bronze, iron, steel.</summary>
             [JsonProperty] public float[] WorkRateByToolTier = { 0.55f, 1.00f, 1.25f, 1.45f, 1.55f };
+        }
+
+        public class VillageConfig
+        {
+            /// <summary>
+            /// How far a village claims out from its centre, by tier 0 to 6. A claim is
+            /// a square, so a radius of 32 is a 65 block wide box.
+            /// </summary>
+            [JsonProperty] public int[] ClaimRadiusByTier = { 24, 32, 40, 52, 64, 80, 96 };
+
+            /// <summary>How far the claim reaches above the centre block.</summary>
+            [JsonProperty] public int ClaimHeightAbove = 40;
+
+            /// <summary>And below, which is what a cellar or a mine head needs later.</summary>
+            [JsonProperty] public int ClaimDepthBelow = 24;
+
+            /// <summary>
+            /// Two village centres closer than this are refused. Big enough that even a
+            /// pair of tier 6 claims cannot overlap.
+            /// </summary>
+            [JsonProperty] public float MinBlocksBetweenCentres = 220f;
         }
 
         public class PerformanceConfig

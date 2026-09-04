@@ -22,7 +22,7 @@ namespace FoundriesFrontiers
     public class FFVillager : EntityAgent, ITalkUtil, IPathCrowdPolicy
     {
         private const string AttrTrade = "ffTrade";
-        private const string AttrVillageId = "ffVillageId";
+        private const string AttrVillageId = "ffVillage";
         private const string AttrGivenName = "ffGivenName";
         private const string AttrAppearanceSet = "ffAppearanceSet";
         private const string AttrCulture = "ffCulture";
@@ -91,11 +91,17 @@ namespace FoundriesFrontiers
             set => WatchedAttributes.SetInt(AttrTrade, (int)value);
         }
 
-        /// <summary>Village this villager belongs to. Empty until villages exist.</summary>
-        public string VillageId
+        /// <summary>
+        /// Village this villager belongs to, or 0 for none. Villagers with no village
+        /// are orphans: they exist, they just have nowhere to report to yet.
+        ///
+        /// The villager's copy is the authoritative link. The village's member list is
+        /// the reverse index and gets reconciled against this when a chunk loads.
+        /// </summary>
+        public long VillageId
         {
-            get => WatchedAttributes.GetString(AttrVillageId, "");
-            set => WatchedAttributes.SetString(AttrVillageId, value);
+            get => WatchedAttributes.GetLong(AttrVillageId, 0);
+            set => WatchedAttributes.SetLong(AttrVillageId, value);
         }
 
         /// <summary>Personal name, shown on the nametag and used in the village event log.</summary>
@@ -291,7 +297,7 @@ namespace FoundriesFrontiers
         /// surfaced for entities outside debug views - so culture and trade have to go
         /// here if they are to be visible at all.
         /// </summary>
-        private void RefreshNameTag()
+        public void RefreshNameTag()
         {
             var tag = GetBehavior<EntityBehaviorNameTag>();
             if (tag == null) return;
@@ -311,9 +317,6 @@ namespace FoundriesFrontiers
 
             tag.SetName(name + "\n" + cultureName + " " + Trade.ToString().ToLowerInvariant());
         }
-
-        /// <summary>Lets the debug toggle push every loaded villager back to a normal tag.</summary>
-        public void RefreshNameTagPublic() => RefreshNameTag();
 
         /// <summary>
         /// One line describing what this villager is doing right now. Grows as the AI does -
@@ -725,7 +728,7 @@ namespace FoundriesFrontiers
             text += "\nGender: " + (IsFemale ? "female" : "male");
             text += "\nVoice: " + WatchedAttributes.GetString("voicetype", "?")
                   + " (" + WatchedAttributes.GetString("voicepitch", "?") + ")";
-            if (VillageId != "") text += "\nVillage: " + VillageId;
+            if (VillageId != 0) text += "\nVillage: #" + VillageId;
             return text;
         }
     }

@@ -73,8 +73,14 @@ Rules that apply to every step, because retrofitting any of them is painful.
 
 ## Phase B: Village and economy  *(M1)*
 
-- [ ] **B1 · Village object and persistence:** record, claim box, registry, membership,
+- [x] **B1 · Village object and persistence:** record, claim box, registry, membership,
       saved to world data and restored on load. *Test:* `/ff village create`, reload, still there.
+      *Done:* `Village` record (id, name, culture, tier, centre, roster, per-player standing),
+      `VillageRegistry` owning creation, removal, lookup by position and membership,
+      JSON into world save data with a format version, and `/ff village create|list|info|remove|join|leave`.
+      Claim is a square box sized by tier from config. Villagers spawned inside a claim
+      join it automatically. A villager whose village no longer exists becomes an orphan
+      rather than a dangling reference.
 - [ ] **B2 · Ledger:** six pools, plus **measured daily flow recorded from real deposits**
       (fast-forward depends on this being honest). *Test:* `/ff dump`
 - [ ] **B3 · Blocks, block entities and dialogs:** the shared infrastructure for every
