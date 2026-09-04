@@ -535,14 +535,17 @@ namespace FoundriesFrontiers
                 "Foundries & Frontiers - credits\n" +
                 "\n" +
                 "Villager pathfinding is adapted from VS Village by G3rste and\n" +
-                "contributors, used under the MIT licence. The A* and waypoint graph\n" +
+                "contributors, used under the MIT license. The A* and waypoint graph\n" +
                 "are their work. github.com/G3rste/vsvillage\n" +
                 "\n" +
                 "Villager models, animations, skin parts, voices and clothing are\n" +
                 "Vintage Story's own assets by Anego Studios, referenced rather than\n" +
                 "redistributed.\n" +
                 "\n" +
-                "Everything else is original to this mod. Full details in the README.");
+                "Everything else is original to this mod. Full details in the README.\n" +
+                "\n" +
+                "This mod is free. If you want to support the work:\n" +
+                "ko-fi.com/coreypiazza");
         }
 
         private static TextCommandResult OnTrades()

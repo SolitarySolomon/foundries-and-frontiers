@@ -4,6 +4,8 @@ A Vintage Story mod that adds villages which grow on their own. Villagers forage
 build and eventually forge, working their way up a tech ladder whether or not a player is
 around to watch it happen.
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/coreypiazza)
+
 Built against Vintage Story 1.22.7 (`net10.0`).
 
 ## Building
@@ -85,6 +87,13 @@ If the villagers are too chatty for you, turn down `Chatter.IdleTalkChance` or s
 
 A few things are baked into the entity JSON instead of the config, like wander speed and
 the tether distance. Those still need a game restart.
+
+## Support
+
+This mod is free and it stays free. If you get some hours out of it and want to chip in,
+it buys me time to keep building it.
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/coreypiazza)
 
 ## License
 

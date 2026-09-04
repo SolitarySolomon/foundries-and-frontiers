@@ -11,6 +11,7 @@
     "game": "1.22.7",
     "survival": ""
   },
+  "website": "https://github.com/SolitarySolomon/foundries-and-frontiers",
   "side": "universal",
   "requiredOnClient": true,
   "networkVersion": "1.0.0"
