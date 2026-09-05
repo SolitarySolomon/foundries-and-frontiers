@@ -27,8 +27,9 @@ That gives you `dist/foundriesfrontiers_<version>.zip`. Drop it in `Vintagestory
 
 ## Status
 
-Pre-alpha. Phase A is finished, which means villagers exist and act like people, but there
-is no village simulation behind them yet.
+Pre-alpha. Phase A is finished and Phase B is under way. Villagers exist and act like
+people, villages exist as real records with claims and stores, but nobody is producing
+anything yet.
 
 The full plan and where it currently stands lives in
 [docs/BUILD_ORDER.md](docs/BUILD_ORDER.md).
@@ -47,8 +48,13 @@ Working so far:
 - Pathfinding adapted from VS Village, and a goto task built on it
 - Carrying tools and loads, with tool tier feeding into how fast work gets done
 
-Phase B is next: the village object itself, its ledger, a storehouse, and the first jobs
-that actually produce something.
+- Villages as records: claim, roster, culture, tier, saved with the world, with a stone
+  cairn at the centre that names the place when you look at it
+- A ledger of six pools with a daily flow figure that is measured from real deposits
+  rather than granted, because everything downstream depends on that number being honest
+
+Next up in Phase B: the storehouse, beds and workstations, a daily schedule, and the
+first jobs that actually produce something.
 
 ## Commands
 

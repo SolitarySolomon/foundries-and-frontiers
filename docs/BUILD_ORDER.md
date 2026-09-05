@@ -86,8 +86,18 @@ Rules that apply to every step, because retrofitting any of them is painful.
       `/ff village show` outlines a claim on the ground for testing, `/ff village adopt`
       takes in unaffiliated villagers standing inside it, `/ff village mark` replaces a
       broken cairn, `/ff village remove all` clears the lot.
-- [ ] **B2 · Ledger:** six pools, plus **measured daily flow recorded from real deposits**
+- [x] **B2 · Ledger:** six pools, plus **measured daily flow recorded from real deposits**
       (fast-forward depends on this being honest). *Test:* `/ff dump`
+      *Done:* `VillageLedger` on the village record with stock, today's income and
+      spending, a seven day history of net movement and a lifetime total. Flow is only
+      ever the sum of real movements: nothing can write a rate. Withdrawals refuse rather
+      than go negative, which is what makes a builder stall at a half finished wall.
+      A day clock on the registry closes the day once per in game day and raises
+      `OnNewDay`, which is the hook the brain uses in D2. `ResourceTable` sorts item
+      stacks into pools from `config/resources.json`, with per item weights so a log is
+      worth more than a stick. Commands: `/ff village ledger|give|take|set|deposit|day|table`.
+      Unit tested offline for arithmetic, history capping and save round trip, including
+      loading a save written before a pool existed.
 - [ ] **B3 · Blocks, block entities and dialogs:** the shared infrastructure for every
       placeable this mod adds. First customer is the **storehouse**: a block entity whose
       inventory is the ledger's visible, lootable face, with a dialog to open it.

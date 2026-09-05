@@ -36,6 +36,26 @@ namespace FoundriesFrontiers
         [JsonProperty] public int CentreZ;
 
         /// <summary>
+        /// What the village owns, and what it has actually been earning. Everything the
+        /// brain decides is read from here, so it is part of the record rather than a
+        /// separate object keyed by village id.
+        /// </summary>
+        [JsonProperty] public VillageLedger Ledger = new VillageLedger();
+
+        /// <summary>
+        /// Days held at the current tier. Tier gates require a condition to hold for a
+        /// stretch rather than for one lucky morning, so this is what they read.
+        /// </summary>
+        [JsonProperty] public int DaysAtCurrentTier;
+
+        /// <summary>
+        /// The last whole day this village has been brought up to date for. The day clock
+        /// advances it one day at a time, which is also how fast-forward will catch up a
+        /// village that was unloaded for a season.
+        /// </summary>
+        [JsonProperty] public double LastSimulatedDay;
+
+        /// <summary>
         /// Entity ids of everyone who belongs here, including those in unloaded chunks.
         /// A villager's own ffVillage attribute is the authoritative link; this is the
         /// reverse index, so it gets reconciled rather than trusted blindly.

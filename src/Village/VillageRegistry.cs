@@ -52,6 +52,11 @@ namespace FoundriesFrontiers
             api.Event.SaveGameLoaded += OnSaveGameLoaded;
             api.Event.GameWorldSave += OnGameWorldSave;
 
+            // The day clock. Checked on a real-time timer rather than every tick because
+            // a day is the smallest unit anything here cares about, and a village that
+            // notices the date five seconds late is indistinguishable from one that does not.
+            api.Event.RegisterGameTickListener(OnDayCheck, 5000);
+
             api.Event.OnEntityLoaded += OnEntityAppeared;
             api.Event.OnEntitySpawn += OnEntityAppeared;
             api.Event.OnEntityDespawn += OnEntityDespawn;
@@ -131,7 +136,8 @@ namespace FoundriesFrontiers
                 FoundedTotalDays = sapi.World.Calendar.TotalDays,
                 CentreX = centre.X,
                 CentreY = centre.Y,
-                CentreZ = centre.Z
+                CentreZ = centre.Z,
+                LastSimulatedDay = Math.Floor(sapi.World.Calendar.TotalDays)
             };
 
             byId[village.Id] = village;
@@ -288,6 +294,106 @@ namespace FoundriesFrontiers
             }
         }
 
+        // --- the day clock ---------------------------------------------------------
+
+        /// <summary>
+        /// Raised once per in game day per village, after its ledger has closed the day.
+        /// The brain hangs off this later; right now the ledger is the only listener.
+        /// </summary>
+        public event Action<Village> OnNewDay;
+
+        /// <summary>
+        /// Days are caught up one at a time rather than skipped to, because the whole
+        /// point of the ledger is that a day either happened or it did not. This cap
+        /// stops a calendar jump of a thousand days from freezing the server, at the
+        /// cost of the skipped days simply not being recorded.
+        /// </summary>
+        private const int MaxDaysCaughtUpAtOnce = 400;
+
+        private void OnDayCheck(float dt)
+        {
+            int today = (int)sapi.World.Calendar.TotalDays;
+
+            // Copied because a day handler is allowed to found or remove a village, and
+            // the brain hanging off OnNewDay later will certainly want to.
+            var todays = new List<Village>(byId.Values);
+
+            foreach (Village v in todays)
+            {
+                int caughtUp = 0;
+                while ((int)v.LastSimulatedDay < today && caughtUp < MaxDaysCaughtUpAtOnce)
+                {
+                    v.Ledger.RollDay();
+                    v.DaysAtCurrentTier++;
+                    v.LastSimulatedDay += 1;
+                    caughtUp++;
+
+                    OnNewDay?.Invoke(v);
+                }
+
+                if (caughtUp >= MaxDaysCaughtUpAtOnce)
+                {
+                    sapi.Logger.Warning(
+                        "[F&F] {0} was {1} days behind and only {2} were caught up. Skipping to today.",
+                        v.Name, today - (int)v.LastSimulatedDay, MaxDaysCaughtUpAtOnce);
+                    v.LastSimulatedDay = today;
+                }
+            }
+        }
+
+        /// <summary>Rolls one day by hand, for testing without touching the calendar.</summary>
+        public void ForceDay(Village v)
+        {
+            if (v == null) return;
+            v.Ledger.RollDay();
+            v.DaysAtCurrentTier++;
+            v.LastSimulatedDay += 1;
+            OnNewDay?.Invoke(v);
+        }
+
+        // --- deposits --------------------------------------------------------------
+
+        /// <summary>
+        /// Puts what a villager is carrying into their village's stores.
+        ///
+        /// This is the only route resources take into a ledger during play, and it runs
+        /// off a real stack a real villager really carried. Anything the village cannot
+        /// use is left in their hands rather than quietly deleted.
+        /// </summary>
+        public bool DepositCarried(FFVillager villager, out string outcome)
+        {
+            outcome = null;
+
+            if (villager == null) { outcome = "No villager."; return false; }
+            if (!villager.IsCarrying) { outcome = "Carrying nothing."; return false; }
+
+            Village village = Get(villager.VillageId);
+            if (village == null) { outcome = "No village to deposit into."; return false; }
+
+            var table = sapi.ModLoader.GetModSystem<ResourceTable>();
+            ItemStack stack = villager.CarriedStack;
+
+            EnumVillageResource? pool = table?.Classify(stack);
+            if (pool == null)
+            {
+                outcome = village.Name + " has no use for " + stack.GetName() + ".";
+                return false;
+            }
+
+            float value = table.UnitValue(stack, pool.Value) * stack.StackSize;
+            village.Ledger.Deposit(pool.Value, value);
+
+            int count = stack.StackSize;
+            string name = stack.GetName();
+            villager.TakeCarried();
+
+            DevStats.Bump(DevStats.DepositsMade);
+            outcome = count + "x " + name + " into " + pool.Value.ToString().ToLowerInvariant()
+                    + " (+" + value.ToString("0.#") + "), " + village.Name + " now holds "
+                    + village.Ledger.Get(pool.Value).ToString("0.#") + ".";
+            return true;
+        }
+
         // --- the centre cairn ------------------------------------------------------
 
         /// <summary>
@@ -419,6 +525,8 @@ namespace FoundriesFrontiers
                 {
                     if (v == null || v.Id <= 0) continue;
                     v.MemberIds ??= new List<long>();
+                    v.Ledger ??= new VillageLedger();
+                    v.Ledger.Grow();
                     v.Standing ??= new Dictionary<string, float>();
                     byId[v.Id] = v;
                     loadedMembers[v.Id] = new List<FFVillager>();

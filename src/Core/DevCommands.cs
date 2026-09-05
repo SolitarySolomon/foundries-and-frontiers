@@ -134,6 +134,47 @@ namespace FoundriesFrontiers
                         .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
                         .HandleWith(args => OnVillageAdopt(sapi, args))
                     .EndSubCommand()
+                    .BeginSubCommand("ledger")
+                        .WithDescription("Show a village's stores and measured daily flow. /ff village ledger [id]")
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageLedger(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("give")
+                        .WithDescription("Deposit into the ledger, counted as flow. /ff village give <resource> <amount>")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.Word("resource"),
+                                  sapi.ChatCommands.Parsers.OptionalFloat("amount", 10))
+                        .HandleWith(args => OnVillageGive(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("take")
+                        .WithDescription("Withdraw from the ledger, counted as flow. /ff village take <resource> <amount>")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.Word("resource"),
+                                  sapi.ChatCommands.Parsers.OptionalFloat("amount", 10))
+                        .HandleWith(args => OnVillageTake(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("set")
+                        .WithDescription("Set a pool outright, no flow recorded. /ff village set <resource> <amount>")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.Word("resource"),
+                                  sapi.ChatCommands.Parsers.OptionalFloat("amount", 0))
+                        .HandleWith(args => OnVillageSet(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("deposit")
+                        .WithDescription("Make the villager you are looking at hand in what they carry")
+                        .RequiresPlayer()
+                        .HandleWith(args => OnVillageDeposit(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("day")
+                        .WithDescription("Close the day by hand so the flow figures update. /ff village day [count]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("count", 1))
+                        .HandleWith(args => OnVillageDay(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("table")
+                        .WithDescription("Show how items are sorted into the six pools")
+                        .HandleWith(args => OnVillageTable(sapi))
+                    .EndSubCommand()
                     .BeginSubCommand("mark")
                         .WithDescription("Put the centre cairn back if it was broken. /ff village mark [id]")
                         .RequiresPlayer()
@@ -305,6 +346,15 @@ namespace FoundriesFrontiers
             sb.AppendLine("Activity   " + v.DebugState());
             sb.AppendLine("Goto       " + (v.GotoTarget?.ToString() ?? "(none)") + "  last: " + v.LastGotoResult);
             sb.AppendLine("Carrying   " + (v.IsCarrying ? v.CarriedCount + "x " + v.CarriedStack.GetName() : "(nothing)"));
+            if (v.IsCarrying)
+            {
+                var table = sapi.ModLoader.GetModSystem<ResourceTable>();
+                EnumVillageResource? pool = table?.Classify(v.CarriedStack);
+                sb.AppendLine("  worth    " + (pool == null
+                    ? "nothing to a village, no pool matches it"
+                    : table.ValueOf(v.CarriedStack).ToString("0.#") + " "
+                      + pool.Value.ToString().ToLowerInvariant()));
+            }
             sb.AppendLine("Tool       " + (v.ToolStack?.GetName() ?? "(none)")
                           + "  tier " + v.ToolTier + "  work rate x" + v.WorkRate.ToString("0.00"));
 
@@ -712,6 +762,11 @@ namespace FoundriesFrontiers
             sb.AppendLine("Roster     " + v.MemberIds.Count + " total, "
                           + reg.LoadedMembers(v.Id).Count + " loaded");
 
+            sb.AppendLine("Day        " + (int)v.LastSimulatedDay + ", " + v.DaysAtCurrentTier + " day(s) at this tier");
+            sb.AppendLine();
+            sb.AppendLine(v.Ledger.Describe());
+            sb.AppendLine();
+
             var loaded = reg.LoadedMembers(v.Id);
             if (loaded.Count > 0)
             {
@@ -848,6 +903,122 @@ namespace FoundriesFrontiers
             return TextCommandResult.Success(adopted == 0
                 ? "Nobody inside " + v.Name + "'s claim needed adopting."
                 : v.Name + " adopted " + adopted + " villager(s). Roster: " + v.MemberIds.Count + ".");
+        }
+
+        // --- the ledger --------------------------------------------------------------
+
+        /// <summary>The village a ledger command should act on: an explicit id, else where you stand.</summary>
+        private static Village LedgerTarget(ICoreServerAPI sapi, TextCommandCallingArgs args, int id, out string error)
+        {
+            error = null;
+            var reg = Registry(sapi);
+
+            if (id > 0)
+            {
+                Village byId = reg.Get(id);
+                if (byId == null) error = "No village with id " + id + ".";
+                return byId;
+            }
+
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null)
+            {
+                error = "Give a village id.";
+                return null;
+            }
+
+            BlockPos here = player.Entity.Pos.AsBlockPos;
+            Village v = reg.VillageAt(here) ?? reg.Nearest(here, 400);
+            if (v == null) error = "No village within 400 blocks. /ff village list";
+            return v;
+        }
+
+        private static TextCommandResult OnVillageLedger(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            Village v = LedgerTarget(sapi, args, (int)args[0], out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            return TextCommandResult.Success(
+                "--- " + v.Name + " (#" + v.Id + ") stores ---\n" + v.Ledger.Describe());
+        }
+
+        private static TextCommandResult OnVillageGive(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            EnumVillageResource? r = VillageResources.Parse(args[0] as string);
+            if (r == null) return TextCommandResult.Error("Unknown resource. Pools: " + VillageResources.Names);
+
+            Village v = LedgerTarget(sapi, args, 0, out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            float amount = (float)args[1];
+            v.Ledger.Deposit(r.Value, amount);
+            return TextCommandResult.Success(
+                v.Name + " " + r.Value.ToString().ToLowerInvariant() + " is now "
+                + v.Ledger.Get(r.Value).ToString("0.#") + " (counted as today's income).");
+        }
+
+        private static TextCommandResult OnVillageTake(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            EnumVillageResource? r = VillageResources.Parse(args[0] as string);
+            if (r == null) return TextCommandResult.Error("Unknown resource. Pools: " + VillageResources.Names);
+
+            Village v = LedgerTarget(sapi, args, 0, out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            float amount = (float)args[1];
+            bool ok = v.Ledger.Withdraw(r.Value, amount);
+            return ok
+                ? TextCommandResult.Success(
+                    v.Name + " " + r.Value.ToString().ToLowerInvariant() + " is now "
+                    + v.Ledger.Get(r.Value).ToString("0.#") + " (counted as today's spending).")
+                : TextCommandResult.Error(
+                    v.Name + " only has " + v.Ledger.Get(r.Value).ToString("0.#") + " "
+                    + r.Value.ToString().ToLowerInvariant() + ". Withdrawals refuse rather than go negative.");
+        }
+
+        private static TextCommandResult OnVillageSet(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            EnumVillageResource? r = VillageResources.Parse(args[0] as string);
+            if (r == null) return TextCommandResult.Error("Unknown resource. Pools: " + VillageResources.Names);
+
+            Village v = LedgerTarget(sapi, args, 0, out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            float amount = (float)args[1];
+            v.Ledger.SetDirectly(r.Value, amount);
+            return TextCommandResult.Success(
+                v.Name + " " + r.Value.ToString().ToLowerInvariant() + " set to "
+                + v.Ledger.Get(r.Value).ToString("0.#") + ". No flow recorded.");
+        }
+
+        private static TextCommandResult OnVillageDeposit(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            FFVillager villager = FindTarget(sapi, args.Caller.Player as IServerPlayer);
+            if (villager == null) return TextCommandResult.Error("No villager in sight or within 20 blocks.");
+
+            bool ok = Registry(sapi).DepositCarried(villager, out string outcome);
+            return ok ? TextCommandResult.Success(outcome) : TextCommandResult.Error(outcome);
+        }
+
+        private static TextCommandResult OnVillageDay(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            Village v = LedgerTarget(sapi, args, 0, out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            int count = GameMath.Clamp((int)args[0], 1, 30);
+            for (int i = 0; i < count; i++) Registry(sapi).ForceDay(v);
+
+            return TextCommandResult.Success(
+                "Closed " + count + " day(s) for " + v.Name + ". Now " + v.Ledger.DaysRecorded
+                + " day(s) of history.\n" + v.Ledger.Describe());
+        }
+
+        private static TextCommandResult OnVillageTable(ICoreServerAPI sapi)
+        {
+            var table = sapi.ModLoader.GetModSystem<ResourceTable>();
+            return table == null
+                ? TextCommandResult.Error("Resource table not loaded.")
+                : TextCommandResult.Success("--- how items are sorted ---\n" + table.Describe());
         }
 
         private static TextCommandResult OnVillageMark(ICoreServerAPI sapi, TextCommandCallingArgs args)
