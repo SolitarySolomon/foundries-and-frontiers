@@ -140,6 +140,9 @@ Rules that apply to every step, because retrofitting any of them is painful.
       temporal storms. The frame every job slots into. *Test:* villagers go to bed at dusk.
 - [ ] **B7 · Work loop base:** shared task: travel → act over time → carry → deposit.
       Every producing job below is a subclass.
+      *Also the home of maintenance:* a builder who walks over and rebuilds a broken
+      cairn or storehouse out of stone the village actually has. Until then the day
+      clock puts them back for free, gated on the village still having people in it.
 - [ ] **B8 · Lumberjack:** fell wild trunks in a radius, replant, haul. `BreakBlock` gives
       us drops, but **the game exposes no "these logs are one tree" helper:** we write a
       flood-fill over connected log and leaf blocks ourselves. *Test:* tree falls, ledger wood rises.
@@ -154,6 +157,14 @@ Rules that apply to every step, because retrofitting any of them is painful.
 ## Phase C: Construction  *(M1)*
 
 Nothing in Phase D can place a building until this exists.
+
+- [ ] **C0 · The village monument:** at tier 4 and 5 the marker should stop being a
+      single block and become a **built structure on a 2x2 or larger footprint**, standing
+      in a square rather than in the dirt, with variants: a carved figure, a beast, a
+      villager holding the tool their village is known for. That is not something to
+      write as shape JSON by hand and have it look like anything. It is a schematic, so
+      it waits for this phase and goes on the list of things to ask builders for.
+      Until then the single-block monument stands in.
 
 - [ ] **C1 · Placeholder schematics:** *Hand-built in game.* Around eight crude
       structures (hovel, log house, farmhouse, storehouse, shed, forge, well, wall segment)

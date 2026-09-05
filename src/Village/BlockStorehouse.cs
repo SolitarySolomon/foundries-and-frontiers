@@ -10,6 +10,20 @@ namespace FoundriesFrontiers
     public class BlockStorehouse : Block
     {
         /// <summary>
+        /// The hover text. The base block does not go and ask the block entity, so the
+        /// crate was showing nothing at all when you looked at it.
+        /// </summary>
+        public override string GetPlacedBlockInfo(IWorldAccessor world, BlockPos pos, IPlayer forPlayer)
+        {
+            var be = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityStorehouse;
+            if (be == null) return base.GetPlacedBlockInfo(world, pos, forPlayer);
+
+            var sb = new System.Text.StringBuilder();
+            be.GetBlockInfo(forPlayer, sb);
+            return sb.ToString();
+        }
+
+        /// <summary>
         /// A living village does not let you take its storehouse apart.
         ///
         /// Refusing outright rather than making it merely expensive, because the crate is

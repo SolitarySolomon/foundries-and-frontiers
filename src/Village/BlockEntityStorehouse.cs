@@ -36,6 +36,20 @@ namespace FoundriesFrontiers
         private StorehouseInventory inventory;
         private bool rebuilding;
 
+        /// <summary>
+        /// What each row was worth the last time the crate was filled from the ledger.
+        ///
+        /// This has to exist because the shelves hold less than a village can. Comparing
+        /// a row against the ledger total would read a full crate belonging to a village
+        /// with two thousand wood as somebody having stolen fifteen hundred of it the
+        /// moment they picked up a single log. The crate can only ever report the change
+        /// in what it was showing.
+        /// </summary>
+        private readonly float[] shownValue = new float[VillageResources.Count];
+
+        /// <summary>Totals for the dialog, sent to the client with the block entity.</summary>
+        private string[] displayTotals = new string[VillageResources.Count];
+
         public override InventoryBase Inventory => inventory;
         public override string InventoryClassName => "ffstorehouse";
 
@@ -83,14 +97,18 @@ namespace FoundriesFrontiers
                     int first = StorehouseInventory.FirstSlotOf(pool);
                     for (int c = 0; c < StorehouseInventory.Columns; c++) inventory[first + c].Itemstack = null;
 
-                    float remaining = v.Ledger.Get(pool);
-                    if (remaining <= 0) continue;
+                    float held = v.Ledger.Get(pool);
+                    shownValue[(int)pool] = 0;
+                    displayTotals[(int)pool] = held <= 0 ? "" : held.ToString("0.#");
 
-                    ItemStack sample = SampleStack(v, pool);
+                    if (held <= 0) continue;
+
+                    ItemStack sample = SampleStack(pool);
                     if (sample == null) continue;
 
                     float perItem = Math.Max(0.01f, table?.UnitValue(sample, pool) ?? 1f);
-                    int wanted = (int)Math.Floor(remaining / perItem);
+                    int wanted = (int)Math.Floor(held / perItem);
+                    float placed = 0;
 
                     for (int c = 0; c < StorehouseInventory.Columns && wanted > 0; c++)
                     {
@@ -99,6 +117,16 @@ namespace FoundriesFrontiers
                         stack.StackSize = take;
                         inventory[first + c].Itemstack = stack;
                         wanted -= take;
+                        placed += take * perItem;
+                    }
+
+                    shownValue[(int)pool] = placed;
+
+                    // Say so when the shelves cannot hold everything, rather than quietly
+                    // showing a fraction and letting the number look like the whole.
+                    if (wanted > 0)
+                    {
+                        displayTotals[(int)pool] = held.ToString("0.#") + " held";
                     }
                 }
             }
@@ -111,15 +139,17 @@ namespace FoundriesFrontiers
         }
 
         /// <summary>
-        /// One of whatever a village last carried into this pool, falling back to the
-        /// resource table's own idea of what the pool looks like.
+        /// What a pool comes back out as: always the pool's own base item, never the last
+        /// thing that went in.
+        ///
+        /// Showing the last deposit read better, but it made the crate a material
+        /// converter. Sticks are worth a quarter each and logs four, so a hundred and
+        /// sixty sticks in and ten logs out is value neutral to the village and a free
+        /// upgrade to whoever did it. A village hands back firewood, planks and stone,
+        /// and what it did with your sticks is its own business.
         /// </summary>
-        private ItemStack SampleStack(Village v, EnumVillageResource pool)
+        private ItemStack SampleStack(EnumVillageResource pool)
         {
-            string code = v.Ledger.DisplayItemCode(pool);
-            ItemStack stack = StackFromCode(code);
-            if (stack != null) return stack;
-
             var table = Api.ModLoader.GetModSystem<ResourceTable>();
             return StackFromCode(table?.DisplayCodeFor(pool));
         }
@@ -165,8 +195,8 @@ namespace FoundriesFrontiers
                 newestCode ??= stack.Collectible?.Code?.ToShortString();
             }
 
-            float held = v.Ledger.Get(pool);
-            float delta = shown - held;
+            float delta = shown - shownValue[(int)pool];
+            shownValue[(int)pool] = shown;
 
             if (Math.Abs(delta) < 0.001f) return;
 
@@ -196,8 +226,8 @@ namespace FoundriesFrontiers
         {
             if (Api.Side == EnumAppSide.Client)
             {
-                toggleInventoryDialogClient(byPlayer, () => new GuiDialogBlockEntityInventory(
-                    DialogTitle(), Inventory, Pos, StorehouseInventory.Columns, Api as ICoreClientAPI));
+                toggleInventoryDialogClient(byPlayer, () => new GuiDialogStorehouse(
+                    DialogTitle(), Inventory, Pos, Api as ICoreClientAPI, displayTotals));
             }
 
             return true;
@@ -255,7 +285,7 @@ namespace FoundriesFrontiers
                         float left = village.Ledger.Get(pool) * survivingFraction;
                         if (left <= 0) continue;
 
-                        ItemStack sample = SampleStack(village, pool);
+                        ItemStack sample = SampleStack(pool);
                         if (sample == null) continue;
 
                         float perItem = Math.Max(0.01f, table?.UnitValue(sample, pool) ?? 1f);
@@ -290,6 +320,10 @@ namespace FoundriesFrontiers
             base.ToTreeAttributes(tree);
             tree.SetLong("ffVillage", VillageId);
             tree.SetBool("ffAbandoned", Abandoned);
+            for (int i = 0; i < VillageResources.Count; i++)
+            {
+                tree.SetString("ffTotal" + i, displayTotals[i] ?? "");
+            }
             tree.SetString("ffRuinedName", RuinedName ?? "");
         }
 
@@ -298,6 +332,10 @@ namespace FoundriesFrontiers
             base.FromTreeAttributes(tree, worldForResolve);
             VillageId = tree.GetLong("ffVillage", 0);
             Abandoned = tree.GetBool("ffAbandoned", false);
+            for (int i = 0; i < VillageResources.Count; i++)
+            {
+                displayTotals[i] = tree.GetString("ffTotal" + i, "");
+            }
             RuinedName = tree.GetString("ffRuinedName", "");
         }
 

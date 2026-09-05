@@ -536,6 +536,7 @@ namespace FoundriesFrontiers
                     v.LastSimulatedDay += 1;
                     caughtUp++;
 
+                    RepairMarkers(v);
                     OnNewDay?.Invoke(v);
                 }
 
@@ -561,12 +562,38 @@ namespace FoundriesFrontiers
         }
 
         /// <summary>
+        /// A village with people in it puts its own marker back up, and its storehouse
+        /// too, within a day of losing them.
+        ///
+        /// This is standing in for a real builder task. Once B7 and the maintenance job
+        /// exist a villager should walk over and rebuild it out of stone the village
+        /// actually has, and this goes away. Until then it is gated on the village having
+        /// at least one member, because a place with nobody left in it should stay
+        /// broken. That is what a ruin is.
+        /// </summary>
+        private void RepairMarkers(Village v)
+        {
+            if (v == null || v.MemberIds.Count == 0) return;
+
+            if (!v.HasMarker && PlaceMarker(v) != null)
+            {
+                sapi.Logger.Notification("[F&F] {0} put its stones back up.", v.Name);
+            }
+
+            if (!v.HasStorehouse && PlaceStorehouse(v) != null)
+            {
+                sapi.Logger.Notification("[F&F] {0} rebuilt its storehouse.", v.Name);
+            }
+        }
+
+        /// <summary>
         /// Rolls one day by hand, for testing without touching the calendar. Always filed
         /// as observed: you asked for the day, so the day counts.
         /// </summary>
         public void ForceDay(Village v)
         {
             if (v == null) return;
+            RepairMarkers(v);
             v.Ledger.RollDay(true);
             v.DaysAtCurrentTier++;
             v.LastSimulatedDay += 1;
