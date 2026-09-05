@@ -151,6 +151,16 @@ Rules that apply to every step, because retrofitting any of them is painful.
       stopping on the line leaves them one step from doing it again. Runs unobserved: a
       villager quietly walking off the edge of the world while nobody is looking is the
       exact failure it exists to prevent.
+- [ ] **B5a · The earth pool:** a seventh resource, `Earth`, holding soil, sand, dry grass
+      and peat. It has nowhere to go today and it is what tier 0 to 2 build out of.
+      Folding it into clay would let a village build a kiln out of lawn; folding it into
+      stone is nonsense. It drives different behaviour from the other six, which is the
+      same argument they won on.
+      Cheap because the ledger stores pools as arrays sized from `VillageResources.Count`
+      and `Grow()` already widens a save written before a pool existed, unit tested.
+      **Lands with C5, not before:** until terracing gives it a source and C2 gives it a
+      cost, it is a storehouse row full of nothing.
+
 - [ ] **B5 · Plots:** first-class `VillagePlot`: type, bounds, tier, state. Woodlot, field,
       pasture, quarry, clay pit and mine head all hang off this.
 - [ ] **B6 · Daily schedule:** sleep at night in an owned bed, work by day, shelter during
@@ -206,7 +216,17 @@ Nothing in Phase D can place a building until this exists.
       blocks*, converting one into the other only for forms the tier has unlocked.
       Consumes from the ledger and **stalls visibly** when
       empty. *Test:* start a build with no wood; nothing happens until wood arrives.
-- [ ] **C5 · Terracing:** cut uphill, fill downhill, retain in the tier's material, before
+- [ ] **C5 · Terracing:** **the cut is where a tier-0 village gets its walls.** The game's
+      own recipes settle this: cob is 5 soil and 4 dry grass, daub is soil, sand, clay and
+      grass. So the spoil from levelling a site is not waste to be moved, it is the
+      material the building is made of, and a settlement that works its ground is
+      self-sufficient in walls before it has a clay pit.
+      Blocks cut are broken properly and their drops go through the resource table into
+      the ledger, so this mostly falls out of machinery that already exists.
+      **Hard limit: only a queued building's footprint, never speculative.** A tier-5
+      claim is 193 blocks across and a village that levels it leaves a dirt pancake where
+      the player's terrain used to be. Terracing works a site toward buildable, not flat.
+      Then: cut uphill, fill downhill, retain in the tier's material, before
       raising anything. *Test:* a house on a slope that doesn't look pasted on.
 
 ---
