@@ -8,12 +8,14 @@
       "bread-",
       "dough-",
       "flour-",
+      "porridge",
       "redmeat",
       "bushmeat",
       "poultry",
       "fishfillet",
       "fishraw",
       "fishchunk",
+      "fishcured",
       "cheese",
       "butter",
       "egg-",
@@ -23,26 +25,67 @@
       "bambooshoot",
       "insect-",
       "cassava",
-      "mushroom"
+      "mushroom-",
+      "jam",
+      "soup",
+      "stew",
+      "meal-"
     ],
     "exclude": [
-      "seeds",
-      "rot",
       "fishbait",
-      "spice-"
+      "spice-",
+      "clayform",
+      "mushroom-flyagaric",
+      "mushroom-deathcap",
+      "mushroom-devilstooth",
+      "mushroom-devilbolete",
+      "mushroom-earthball",
+      "mushroom-elfinsaddle",
+      "mushroom-funeralbell",
+      "mushroom-foolsconecap",
+      "mushroom-jackolantern",
+      "mushroom-sickener",
+      "mushroom-greencrackedrussula",
+      "mushroom-witchhat",
+      "mushroom-panthercap",
+      "mushroom-libertycap",
+      "mushroom-wavycap",
+      "mushroom-bluemeanie",
+      "mushroom-goldcap",
+      "mushroom-laughingjim",
+      "mushroom-pinkbonnet",
+      "seeds-"
     ],
     "defaultWeight": 1,
     "weights": {
+      "grain-": 1,
+      "flour-": 1.5,
+      "dough-": 1.5,
+      "bread-": 2,
+      "porridge": 2,
+      "vegetable-": 1,
+      "fruit-": 0.5,
+      "legume-": 1,
+      "pickled": 1.5,
+      "jam": 1.5,
       "redmeat": 2,
       "bushmeat": 2,
       "poultry": 2,
+      "fishfillet": 2,
+      "fishraw": 1.5,
+      "fishchunk": 1.5,
       "cheese": 3,
-      "bread-": 2,
+      "butter": 2,
+      "egg-": 1,
+      "honeycomb": 1.5,
       "pemmican": 3,
-      "flour-": 1.5,
-      "dough-": 1.5,
-      "fruit-": 0.5,
-      "insect-": 0.25
+      "insect-": 0.25,
+      "mushroom-": 0.5,
+      "bambooshoot": 0.5,
+      "cassava": 1,
+      "soup": 2,
+      "stew": 2,
+      "meal-": 2
     },
     "forms": [
       {
@@ -51,10 +94,22 @@
         "primary": true
       },
       {
+        "code": "game:vegetable-carrot",
+        "tier": 1
+      },
+      {
+        "code": "game:cheese-cheddar",
+        "tier": 2
+      },
+      {
         "code": "game:bread-spelt",
         "tier": 4,
         "primary": true
       }
+    ],
+    "excludeExact": [
+      "rot",
+      "rotten"
     ]
   },
   "wood": {
@@ -67,15 +122,20 @@
       "stick"
     ],
     "exclude": [
-      "logging"
+      "logging",
+      "sapling",
+      "treeseed",
+      "stickpile",
+      "chiselblock"
     ],
     "defaultWeight": 1,
     "weights": {
       "log-": 4,
       "plank-": 1,
       "firewood": 1,
-      "stick": 0.25,
-      "board-": 1
+      "board-": 1,
+      "lumber": 1,
+      "stick": 0.25
     },
     "forms": [
       {
@@ -96,32 +156,49 @@
         "tier": 2,
         "primary": true
       }
-    ]
+    ],
+    "excludeExact": []
   },
   "stone": {
     "match": [
       "stone-",
       "stonebrick",
       "rock-",
-      "cobble",
+      "cobblestone",
       "gravel",
       "looserubble",
-      "looseboulders"
+      "looseboulders",
+      "loosestones",
+      "polishedrock",
+      "stoneslab",
+      "stonepath",
+      "drystone"
     ],
     "exclude": [
       "grindstone",
       "whetstone",
       "millstone",
       "quern",
-      "stone-coral"
+      "stone-coral",
+      "stonecoffin",
+      "knappingsurface",
+      "stonecrucible",
+      "touchstone"
     ],
     "defaultWeight": 1,
     "weights": {
       "stone-": 1,
-      "stonebrick": 1.5,
       "rock-": 1,
-      "cobble": 1,
-      "gravel": 0.5
+      "cobblestone": 1,
+      "stonebrick": 1.5,
+      "polishedrock": 2,
+      "gravel": 0.5,
+      "looserubble": 0.5,
+      "looseboulders": 1,
+      "loosestones": 0.5,
+      "stoneslab": 0.5,
+      "stonepath": 0.5,
+      "drystone": 1
     },
     "forms": [
       {
@@ -139,30 +216,49 @@
         "tier": 4,
         "primary": true
       }
-    ]
+    ],
+    "excludeExact": []
   },
   "clay": {
     "match": [
       "clay-",
+      "rawclay",
       "ceramic",
       "burnedbrick",
       "refractorybrick",
+      "claybrick",
       "shingle",
       "tile-clay",
-      "daub"
+      "daub",
+      "bowl-",
+      "crock",
+      "vessel",
+      "planter",
+      "flowerpot"
     ],
     "exclude": [
       "clayworkitem",
-      "clayform"
+      "clayform",
+      "clayoven",
+      "claykiln"
     ],
     "defaultWeight": 1,
     "weights": {
       "clay-": 1,
+      "clay-fire": 1.5,
+      "rawclay": 1,
       "burnedbrick": 1.5,
       "refractorybrick": 2,
+      "claybrick": 1,
       "shingle": 0.5,
       "tile-clay": 0.5,
-      "daub": 0.5
+      "daub": 0.5,
+      "ceramic": 1,
+      "bowl-": 0.5,
+      "crock": 1,
+      "vessel": 1,
+      "planter": 0.5,
+      "flowerpot": 0.5
     },
     "forms": [
       {
@@ -174,8 +270,13 @@
         "code": "game:burnedbrick",
         "tier": 3,
         "primary": true
+      },
+      {
+        "code": "game:refractorybrick",
+        "tier": 4
       }
-    ]
+    ],
+    "excludeExact": []
   },
   "metal": {
     "match": [
@@ -185,18 +286,58 @@
       "metalbit",
       "ironbloom",
       "metalplate",
+      "metalscale",
+      "metallamellae",
+      "metalnailsandstrips",
       "solderbar",
-      "crystalizedore"
+      "crystalizedore",
+      "metalchain"
     ],
-    "exclude": [],
+    "exclude": [
+      "uranium",
+      "ore-gem",
+      "oreblock",
+      "orehandbook"
+    ],
     "defaultWeight": 1,
     "weights": {
-      "ingot-": 4,
-      "ironbloom": 3,
-      "metalplate": 2,
       "nugget-": 1,
       "ore-": 1,
-      "metalbit": 0.25
+      "ore-poor": 0.5,
+      "ore-medium": 1,
+      "ore-rich": 1.5,
+      "ore-bountiful": 2,
+      "metalbit": 0.25,
+      "crystalizedore": 1.5,
+      "metalchain": 1,
+      "metalscale": 1,
+      "metallamellae": 1,
+      "metalnailsandstrips": 1,
+      "metalplate": 2,
+      "solderbar": 2,
+      "ironbloom": 6,
+      "ingot-": 4,
+      "ingot-tinbronze": 6,
+      "ingot-bismuthbronze": 6,
+      "ingot-blackbronze": 6,
+      "ingot-brass": 6,
+      "ingot-cupronickel": 5,
+      "ingot-electrum": 3,
+      "ingot-iron": 8,
+      "ingot-meteoriciron": 8,
+      "ingot-nickel": 6,
+      "ingot-steel": 12,
+      "ingot-stainlesssteel": 14,
+      "ingot-chromium": 10,
+      "ingot-gold": 2,
+      "ingot-silver": 2,
+      "ingot-platinum": 2,
+      "ingot-lead": 2,
+      "ingot-tin": 3,
+      "ingot-zinc": 3,
+      "ingot-bismuth": 3,
+      "ingot-titanium": 3,
+      "ingot-molybdochalkos": 3
     },
     "forms": [
       {
@@ -210,11 +351,21 @@
         "primary": true
       },
       {
+        "code": "game:ingot-tinbronze",
+        "tier": 3
+      },
+      {
         "code": "game:ingot-iron",
         "tier": 4,
         "primary": true
+      },
+      {
+        "code": "game:ingot-steel",
+        "tier": 5,
+        "primary": true
       }
-    ]
+    ],
+    "excludeExact": []
   },
   "cloth": {
     "match": [
@@ -222,20 +373,29 @@
       "linen",
       "flaxfibers",
       "flaxtwine",
-      "wool",
       "hide-",
       "leather",
-      "rope"
+      "rope",
+      "canvas",
+      "sail"
     ],
-    "exclude": [],
+    "exclude": [
+      "clothesrack"
+    ],
     "defaultWeight": 1,
     "weights": {
       "cloth-": 2,
       "linen": 2,
       "leather": 3,
       "hide-": 2,
-      "wool": 1,
+      "hide-raw": 1,
+      "hide-soaked": 1,
+      "hide-scraped": 1.5,
+      "hide-prepared": 2.5,
+      "hide-pelt": 2,
       "rope": 1,
+      "canvas": 2,
+      "sail": 3,
       "flaxfibers": 0.5,
       "flaxtwine": 0.5
     },
@@ -253,7 +413,12 @@
         "code": "game:cloth-plain",
         "tier": 2,
         "primary": true
+      },
+      {
+        "code": "game:leather-normal",
+        "tier": 3
       }
-    ]
+    ],
+    "excludeExact": []
   }
 }

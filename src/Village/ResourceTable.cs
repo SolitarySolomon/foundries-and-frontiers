@@ -41,6 +41,16 @@ namespace FoundriesFrontiers
         [JsonProperty] public string[] Exclude = Array.Empty<string>();
 
         /// <summary>
+        /// Codes that are exactly one of these are excluded, matched whole rather than as
+        /// a fragment.
+        ///
+        /// This exists because "rot" as a fragment also excludes car-rot, which is how a
+        /// village came to refuse carrots. Anything short enough to hide inside a real
+        /// word belongs here instead.
+        /// </summary>
+        [JsonProperty] public string[] ExcludeExact = Array.Empty<string>();
+
+        /// <summary>
         /// How much one item is worth to the pool. A log is worth more than a stick, and
         /// without this a village could stockpile kindling and call it a timber yard.
         /// The longest matching fragment wins, so "plank" can override "log".
@@ -215,6 +225,14 @@ namespace FoundriesFrontiers
 
         private static bool Matches(ResourceRule rule, string code)
         {
+            if (rule.ExcludeExact != null)
+            {
+                foreach (string exact in rule.ExcludeExact)
+                {
+                    if (string.Equals(exact, code, StringComparison.OrdinalIgnoreCase)) return false;
+                }
+            }
+
             if (rule.Exclude != null)
             {
                 foreach (string bad in rule.Exclude)
