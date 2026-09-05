@@ -73,6 +73,16 @@ namespace FoundriesFrontiers
         [JsonProperty] public int MarkerZ;
 
         /// <summary>
+        /// Whether the storehouse crate is standing. Like the cairn, breaking it costs
+        /// the village nothing: the stores are in the ledger, not in the box.
+        /// </summary>
+        [JsonProperty] public bool HasStorehouse;
+
+        [JsonProperty] public int StorehouseX;
+        [JsonProperty] public int StorehouseY;
+        [JsonProperty] public int StorehouseZ;
+
+        /// <summary>
         /// Standing per player, keyed by player UID.
         ///
         /// A map rather than a single number because two players on one server must be

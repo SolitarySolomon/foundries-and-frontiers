@@ -55,6 +55,16 @@ namespace FoundriesFrontiers
         /// <summary>How many observed days have ever been filed. Drives confidence.</summary>
         [JsonProperty] private int observedDaysEver;
 
+        /// <summary>
+        /// The last thing actually carried in for each pool.
+        ///
+        /// Pools are abstract numbers, but the storehouse has to show the player real
+        /// items on real shelves. Remembering what villagers last brought in means a
+        /// timber village's wood row is stacked with the logs they felled rather than
+        /// with whatever generic placeholder the config happened to name.
+        /// </summary>
+        [JsonProperty] private string[] lastItemCode = new string[VillageResources.Count];
+
         // --- reading ---------------------------------------------------------------
 
         public float Get(EnumVillageResource r) => At(stock, r);
@@ -132,7 +142,7 @@ namespace FoundriesFrontiers
         /// Credits the pool. This is the only way resources enter a village, and it is
         /// called when a villager physically puts something down, not on a timer.
         /// </summary>
-        public void Deposit(EnumVillageResource r, float amount)
+        public void Deposit(EnumVillageResource r, float amount, string itemCode = null)
         {
             if (amount <= 0) return;
             int i = (int)r;
@@ -140,6 +150,14 @@ namespace FoundriesFrontiers
             stock[i] += amount;
             inToday[i] += amount;
             lifetimeIn[i] += amount;
+            if (!string.IsNullOrEmpty(itemCode)) lastItemCode[i] = itemCode;
+        }
+
+        /// <summary>The item code the storehouse should show for this pool, or null.</summary>
+        public string DisplayItemCode(EnumVillageResource r)
+        {
+            Grow();
+            return lastItemCode[(int)r];
         }
 
         /// <summary>
@@ -246,6 +264,16 @@ namespace FoundriesFrontiers
             outToday = Resize(outToday);
             lifetimeIn = Resize(lifetimeIn);
             history ??= new System.Collections.Generic.List<float[]>();
+
+            if (lastItemCode == null || lastItemCode.Length != VillageResources.Count)
+            {
+                var grown = new string[VillageResources.Count];
+                if (lastItemCode != null)
+                {
+                    Array.Copy(lastItemCode, grown, Math.Min(lastItemCode.Length, grown.Length));
+                }
+                lastItemCode = grown;
+            }
         }
 
         private static float[] Resize(float[] arr)

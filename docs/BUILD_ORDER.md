@@ -104,9 +104,19 @@ Rules that apply to every step, because retrofitting any of them is painful.
       being simulated forward at a rate it never had a chance to earn. The ledger also
       carries a confidence figure now, which F1 blends against a per-tier default so a
       village seen once is not projected forward on one day of luck.
-- [ ] **B3 · Blocks, block entities and dialogs:** the shared infrastructure for every
+- [x] **B3 · Blocks, block entities and dialogs:** the shared infrastructure for every
       placeable this mod adds. First customer is the **storehouse**: a block entity whose
       inventory is the ledger's visible, lootable face, with a dialog to open it.
+      *Done:* `BlockStorehouse` and `BlockEntityStorehouse` on the game's own container
+      base, with a chest style dialog. One row per pool, eight columns, and a slot only
+      accepts stacks that belong in its row. The grid is rebuilt from the ledger whenever
+      it is opened or the stores change, and moving anything writes the difference back
+      as a real deposit or withdrawal, so a player helping themselves shows up as
+      spending on the day it happened. That is the signal G4 turns into a standing hit.
+      Each pool shows whatever villagers last carried in, falling back to a stand-in item
+      from `config/resources.json`. Breaking the crate does not spill or destroy anything,
+      because the stores live in the ledger; `/ff village storehouse` puts it back.
+      The cairn came earlier as the deliberately small first customer for this plumbing.
 - [ ] **B4 · Beds and workstations:** **cheaper than planned.** The game already has a
       point-of-interest registry (`POIRegistry`, used by beehives and farmland). Our block
       entities implement `IPointOfInterest`; lookup is `GetNearestPoi` / `WalkPois`. We add

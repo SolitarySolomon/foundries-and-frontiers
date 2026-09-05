@@ -1,10 +1,36 @@
 {
   "food": {
-    "match": ["grain-", "vegetable-", "fruit-", "legume-", "bread-", "dough-", "flour-",
-              "redmeat", "bushmeat", "poultry", "fishfillet", "fishraw", "fishchunk",
-              "cheese", "butter", "egg-", "honeycomb", "pemmican", "pickled",
-              "bambooshoot", "insect-", "cassava", "mushroom"],
-    "exclude": ["seeds", "rot", "fishbait", "spice-"],
+    "match": [
+      "grain-",
+      "vegetable-",
+      "fruit-",
+      "legume-",
+      "bread-",
+      "dough-",
+      "flour-",
+      "redmeat",
+      "bushmeat",
+      "poultry",
+      "fishfillet",
+      "fishraw",
+      "fishchunk",
+      "cheese",
+      "butter",
+      "egg-",
+      "honeycomb",
+      "pemmican",
+      "pickled",
+      "bambooshoot",
+      "insect-",
+      "cassava",
+      "mushroom"
+    ],
+    "exclude": [
+      "seeds",
+      "rot",
+      "fishbait",
+      "spice-"
+    ],
     "defaultWeight": 1,
     "weights": {
       "redmeat": 2,
@@ -17,24 +43,47 @@
       "dough-": 1.5,
       "fruit-": 0.5,
       "insect-": 0.25
-    }
+    },
+    "display": "game:grain-spelt"
   },
-
   "wood": {
-    "match": ["log-", "plank-", "firewood", "board-", "lumber", "stick"],
-    "exclude": ["logging"],
+    "match": [
+      "log-",
+      "plank-",
+      "firewood",
+      "board-",
+      "lumber",
+      "stick"
+    ],
+    "exclude": [
+      "logging"
+    ],
     "defaultWeight": 1,
     "weights": {
       "log-": 4,
       "plank-": 1,
       "firewood": 1,
       "stick": 0.25
-    }
+    },
+    "display": "game:firewood"
   },
-
   "stone": {
-    "match": ["stone-", "stonebrick", "rock-", "cobble", "gravel", "looserubble", "looseboulders"],
-    "exclude": ["grindstone", "whetstone", "millstone", "quern", "stone-coral"],
+    "match": [
+      "stone-",
+      "stonebrick",
+      "rock-",
+      "cobble",
+      "gravel",
+      "looserubble",
+      "looseboulders"
+    ],
+    "exclude": [
+      "grindstone",
+      "whetstone",
+      "millstone",
+      "quern",
+      "stone-coral"
+    ],
     "defaultWeight": 1,
     "weights": {
       "stone-": 1,
@@ -42,12 +91,23 @@
       "rock-": 1,
       "cobble": 1,
       "gravel": 0.5
-    }
+    },
+    "display": "game:stone-granite"
   },
-
   "clay": {
-    "match": ["clay-", "ceramic", "burnedbrick", "refractorybrick", "shingle", "tile-clay", "daub"],
-    "exclude": ["clayworkitem", "clayform"],
+    "match": [
+      "clay-",
+      "ceramic",
+      "burnedbrick",
+      "refractorybrick",
+      "shingle",
+      "tile-clay",
+      "daub"
+    ],
+    "exclude": [
+      "clayworkitem",
+      "clayform"
+    ],
     "defaultWeight": 1,
     "weights": {
       "clay-": 1,
@@ -56,11 +116,20 @@
       "shingle": 0.5,
       "tile-clay": 0.5,
       "daub": 0.5
-    }
+    },
+    "display": "game:clay-blue"
   },
-
   "metal": {
-    "match": ["ingot-", "nugget-", "ore-", "metalbit", "ironbloom", "metalplate", "solderbar", "crystalizedore"],
+    "match": [
+      "ingot-",
+      "nugget-",
+      "ore-",
+      "metalbit",
+      "ironbloom",
+      "metalplate",
+      "solderbar",
+      "crystalizedore"
+    ],
     "exclude": [],
     "defaultWeight": 1,
     "weights": {
@@ -70,11 +139,20 @@
       "nugget-": 1,
       "ore-": 1,
       "metalbit": 0.25
-    }
+    },
+    "display": "game:nugget-copper"
   },
-
   "cloth": {
-    "match": ["cloth-", "linen", "flaxfibers", "flaxtwine", "wool", "hide-", "leather", "rope"],
+    "match": [
+      "cloth-",
+      "linen",
+      "flaxfibers",
+      "flaxtwine",
+      "wool",
+      "hide-",
+      "leather",
+      "rope"
+    ],
     "exclude": [],
     "defaultWeight": 1,
     "weights": {
@@ -86,6 +164,7 @@
       "rope": 1,
       "flaxfibers": 0.5,
       "flaxtwine": 0.5
-    }
+    },
+    "display": "game:flaxfibers"
   }
 }

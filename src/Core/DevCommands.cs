@@ -176,6 +176,12 @@ namespace FoundriesFrontiers
                         .WithDescription("Show how items are sorted into the six pools")
                         .HandleWith(args => OnVillageTable(sapi))
                     .EndSubCommand()
+                    .BeginSubCommand("storehouse")
+                        .WithDescription("Put the storehouse crate back if it was broken. /ff village storehouse [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageStorehouse(sapi, args))
+                    .EndSubCommand()
                     .BeginSubCommand("mark")
                         .WithDescription("Put the centre cairn back if it was broken. /ff village mark [id]")
                         .RequiresPlayer()
@@ -766,6 +772,9 @@ namespace FoundriesFrontiers
             sb.AppendLine("Cairn      " + (v.HasMarker
                 ? new BlockPos(v.MarkerX, v.MarkerY, v.MarkerZ, 0).ToString()
                 : "(gone, /ff village mark puts it back)"));
+            sb.AppendLine("Storehouse " + (v.HasStorehouse
+                ? new BlockPos(v.StorehouseX, v.StorehouseY, v.StorehouseZ, 0).ToString()
+                : "(gone, /ff village storehouse puts it back)"));
             sb.AppendLine("Roster     " + v.MemberIds.Count + " total, "
                           + reg.LoadedMembers(v.Id).Count + " loaded");
 
@@ -940,6 +949,7 @@ namespace FoundriesFrontiers
 
             float amount = (float)args[1];
             v.Ledger.Deposit(r.Value, amount);
+            Registry(sapi).RefreshStorehouse(v);
             return TextCommandResult.Success(
                 v.Name + " " + r.Value.ToString().ToLowerInvariant() + " is now "
                 + v.Ledger.Get(r.Value).ToString("0.#") + " (counted as today's income).");
@@ -955,6 +965,7 @@ namespace FoundriesFrontiers
 
             float amount = (float)args[1];
             bool ok = v.Ledger.Withdraw(r.Value, amount);
+            Registry(sapi).RefreshStorehouse(v);
             return ok
                 ? TextCommandResult.Success(
                     v.Name + " " + r.Value.ToString().ToLowerInvariant() + " is now "
@@ -974,6 +985,7 @@ namespace FoundriesFrontiers
 
             float amount = (float)args[1];
             v.Ledger.SetDirectly(r.Value, amount);
+            Registry(sapi).RefreshStorehouse(v);
             return TextCommandResult.Success(
                 v.Name + " " + r.Value.ToString().ToLowerInvariant() + " set to "
                 + v.Ledger.Get(r.Value).ToString("0.#") + ". No flow recorded.");
@@ -1007,6 +1019,17 @@ namespace FoundriesFrontiers
             return table == null
                 ? TextCommandResult.Error("Resource table not loaded.")
                 : TextCommandResult.Success("--- how items are sorted ---\n" + table.Describe());
+        }
+
+        private static TextCommandResult OnVillageStorehouse(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            Village v = LedgerTarget(sapi, args, (int)args[0], out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            BlockPos placed = Registry(sapi).PlaceStorehouse(v);
+            return placed == null
+                ? TextCommandResult.Error("No room for a storehouse near " + v.Centre + ".")
+                : TextCommandResult.Success(v.Name + "'s storehouse is at " + placed + ".");
         }
 
         private static TextCommandResult OnVillageMark(ICoreServerAPI sapi, TextCommandCallingArgs args)

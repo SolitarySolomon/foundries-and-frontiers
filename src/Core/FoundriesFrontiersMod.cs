@@ -49,6 +49,8 @@ namespace FoundriesFrontiers
             // Blocks. Both sides again: the client needs the class to draw and describe it.
             api.RegisterBlockClass("BlockVillageCairn", typeof(BlockVillageCairn));
             api.RegisterBlockEntityClass("VillageCairn", typeof(BlockEntityVillageCairn));
+            api.RegisterBlockClass("BlockStorehouse", typeof(BlockStorehouse));
+            api.RegisterBlockEntityClass("Storehouse", typeof(BlockEntityStorehouse));
 
             // Our AI tasks. Registered by code so entity JSON can reference them,
             // which keeps tuning in data rather than requiring a rebuild.

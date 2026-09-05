@@ -157,6 +157,7 @@ namespace FoundriesFrontiers
             loadedMembers[village.Id] = new List<FFVillager>();
 
             PlaceMarker(village);
+            PlaceStorehouse(village);
 
             sapi.Logger.Notification("[F&F] Founded {0} at {1}", village, centre);
             return village;
@@ -177,6 +178,7 @@ namespace FoundriesFrontiers
             }
 
             ClearMarker(v);
+            ClearStorehouse(v);
             HideClaimEverywhere(id);
 
             byId.Remove(id);
@@ -488,12 +490,13 @@ namespace FoundriesFrontiers
             }
 
             float value = table.UnitValue(stack, pool.Value) * stack.StackSize;
-            village.Ledger.Deposit(pool.Value, value);
+            village.Ledger.Deposit(pool.Value, value, stack.Collectible?.Code?.ToShortString());
 
             int count = stack.StackSize;
             string name = stack.GetName();
             villager.TakeCarried();
 
+            RefreshStorehouse(village);
             DevStats.Bump(DevStats.DepositsMade);
             outcome = count + "x " + name + " into " + pool.Value.ToString().ToLowerInvariant()
                     + " (+" + value.ToString("0.#") + "), " + village.Name + " now holds "
@@ -595,6 +598,93 @@ namespace FoundriesFrontiers
         {
             Block b = ba.GetBlock(pos);
             return b == null || b.BlockId == 0 || b.Replaceable >= 6000;
+        }
+
+        /// <summary>
+        /// Puts the storehouse crate down beside the cairn.
+        ///
+        /// Beside rather than on top because the cairn is the village's name and the
+        /// storehouse is its stores, and in Phase C the storehouse becomes a real
+        /// building that wants its own ground.
+        /// </summary>
+        public BlockPos PlaceStorehouse(Village village)
+        {
+            if (village == null) return null;
+
+            Block crate = sapi.World.GetBlock(new AssetLocation(FoundriesFrontiersMod.ModId, "storehouse"));
+            if (crate == null)
+            {
+                sapi.Logger.Warning("[F&F] storehouse block did not resolve. Is the blocktype JSON loading?");
+                return null;
+            }
+
+            IBlockAccessor ba = sapi.World.BlockAccessor;
+
+            // Try a ring of spots around the centre rather than one fixed offset, so a
+            // village founded against a wall still gets its stores somewhere sensible.
+            foreach (BlockFacing facing in BlockFacing.HORIZONTALS)
+            {
+                for (int dist = 2; dist <= 4; dist++)
+                {
+                    var pos = new BlockPos(
+                        village.CentreX + facing.Normali.X * dist,
+                        village.CentreY,
+                        village.CentreZ + facing.Normali.Z * dist, 0);
+
+                    for (int i = 0; i < 8 && !IsFree(ba, pos); i++) pos.Y++;
+                    if (!IsFree(ba, pos)) continue;
+                    for (int i = 0; i < 8 && IsFree(ba, pos.DownCopy()); i++) pos.Y--;
+
+                    ba.SetBlock(crate.BlockId, pos);
+
+                    if (ba.GetBlockEntity(pos) is BlockEntityStorehouse be)
+                    {
+                        be.VillageId = village.Id;
+                        be.RebuildFromLedger();
+                        be.MarkDirty(true);
+                    }
+
+                    village.StorehouseX = pos.X;
+                    village.StorehouseY = pos.Y;
+                    village.StorehouseZ = pos.Z;
+                    village.HasStorehouse = true;
+                    return pos;
+                }
+            }
+
+            sapi.Logger.Warning("[F&F] No room for {0}'s storehouse near {1}.", village.Name, village.Centre);
+            return null;
+        }
+
+        /// <summary>Takes the storehouse back out, if it is still there.</summary>
+        public void ClearStorehouse(Village village)
+        {
+            if (village == null || !village.HasStorehouse) return;
+
+            var pos = new BlockPos(village.StorehouseX, village.StorehouseY, village.StorehouseZ, 0);
+            if (sapi.World.BlockAccessor.GetBlockEntity(pos) is BlockEntityStorehouse be
+                && be.VillageId == village.Id)
+            {
+                be.Inventory?.Clear();
+                sapi.World.BlockAccessor.SetBlock(0, pos);
+            }
+            village.HasStorehouse = false;
+        }
+
+        /// <summary>
+        /// Pushes the ledger back into the crate, for when something changed the stores
+        /// without going through the crate itself.
+        /// </summary>
+        public void RefreshStorehouse(Village village)
+        {
+            if (village == null || !village.HasStorehouse) return;
+
+            var pos = new BlockPos(village.StorehouseX, village.StorehouseY, village.StorehouseZ, 0);
+            if (sapi.World.BlockAccessor.GetBlockEntity(pos) is BlockEntityStorehouse be
+                && be.VillageId == village.Id)
+            {
+                be.RebuildFromLedger();
+            }
         }
 
         /// <summary>Takes the cairn back out of the world, if it is still there.</summary>

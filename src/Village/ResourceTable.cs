@@ -27,6 +27,13 @@ namespace FoundriesFrontiers
 
         /// <summary>Worth per item when nothing in Weights matches.</summary>
         [JsonProperty] public float DefaultWeight = 1f;
+
+        /// <summary>
+        /// What the storehouse shows for this pool before a village has carried anything
+        /// in. Once villagers start hauling, whatever they actually brought is shown
+        /// instead, so this only covers stores that arrived some other way.
+        /// </summary>
+        [JsonProperty] public string Display;
     }
 
     /// <summary>
@@ -139,6 +146,10 @@ namespace FoundriesFrontiers
             }
             return best;
         }
+
+        /// <summary>The stand-in item code for a pool with no history, or null.</summary>
+        public string DisplayCodeFor(EnumVillageResource r)
+            => rules.TryGetValue(r, out ResourceRule rule) ? rule.Display : null;
 
         private static bool Matches(ResourceRule rule, string code)
         {
