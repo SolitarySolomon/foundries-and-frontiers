@@ -158,19 +158,33 @@ Rules that apply to every step, because retrofitting any of them is painful.
       same argument they won on.
       Cheap because the ledger stores pools as arrays sized from `VillageResources.Count`
       and `Grow()` already widens a save written before a pool existed, unit tested.
+      **Soil grade is a forms ladder on this pool**, the same shape as firewood to planks.
+      The farmer stockpiles whatever earth gets dug; what the village can hand back out
+      depends on its tier. First pass, against the game's real farmland fertility of
+      verylow 5, low 25, medium 50, compost 65, high 80:
+
+      | form | tier | value |
+      |---|---|---|
+      | `soil-verylow` | 0 | 0.5 |
+      | `soil-low` | 1 | 1 |
+      | `soil-medium` | 2 | 1.5 |
+      | `soil-compost` | 3 | 2 |
+      | `soil-high` | 5 | 3 |
+      | `sand`, `drygrass`, `peat` | 0 | 0.5 |
+
+      The weights do the trading up on their own: at those values it is six units of dug
+      dirt for one of the best soil in the game, so improving ground costs real labour
+      without needing a system of its own. There is no terra preta in Vintage Story;
+      `soil-high` at 80 is the best there is.
       **Lands with C5, not before:** until terracing gives it a source and C2 gives it a
       cost, it is a storehouse row full of nothing.
 
 - [ ] **B5 · Plots:** first-class `VillagePlot`: type, bounds, tier, state. Woodlot, field,
       pasture, quarry, clay pit and mine head all hang off this.
-      **For a field, plot tier means soil grade.** The game's own ladder is
-      verylow 5, low 25, medium 50, compost 65, high 80 farmland fertility, so a village
-      trades its ground up as it climbs: whatever it was founded on at tier 1, composted
-      to 65 once the compost yard exists at tier 2, and worked toward high 80 after that.
-      There is no terra preta in Vintage Story; `soil-high` at 80 is the best there is.
-      **Grade lives on the plot, never in the earth pool.** The pool is bulk material for
-      walls; grading it would mean a pool per grade. Improving a field is a farmer task
-      that consumes compost or high soil as items.
+      For a field, the plot's tier records **which grade of soil was laid down**, which
+      comes straight out of the storehouse. The grading itself is not a plot mechanic and
+      not a separate system: it is the earth pool's forms table, exactly as wood already
+      works. See B5a.
 - [ ] **B6 · Daily schedule:** sleep at night in an owned bed, work by day, shelter during
       temporal storms. The frame every job slots into. *Test:* villagers go to bed at dusk.
 - [ ] **B7 · Work loop base:** shared task: travel → act over time → carry → deposit.
@@ -183,12 +197,10 @@ Rules that apply to every step, because retrofitting any of them is painful.
       flood-fill over connected log and leaf blocks ourselves. *Test:* tree falls, ledger wood rises.
 - [ ] **B9 · Farmer:** till, sow from retained seed, water, reap, replant, rotate against
       the game's real N/P/K.
-      *Plus soil improvement:* spreading compost and better soil to raise a field plot's
-      grade over time. Three routes to good ground and all three are worth having:
-      **dig it** where the village happens to sit on it, so geography matters the way it
-      does for ore; **make it**, the compost loop the design already relies on; and
-      **trade for it**, which turns a village on rich soil into an exporter of the one
-      thing a village on poor soil can never dig its way out of.
+      *Plus soil improvement:* relaying a field with the best grade the storehouse can
+      currently produce, so a village's fields visibly improve as it climbs. The grading
+      is the earth pool's job (B5a); the farmer's job is digging the raw material and
+      laying the result.
 - [ ] **B10 · Herder:** troughs from stored grain, cull to cap, eggs and wool.
 - [ ] **B11 · Trickle jobs:** forager and deadfall gatherer. The low-yield renewable
       bootstrap that stops a badly-sited village being dead on arrival.
@@ -287,12 +299,14 @@ Nothing in Phase D can place a building until this exists.
       cellar, lamp posts, market, workshops. Roughly two thirds of the ~40-building catalogue.
 - [ ] **E4 · Woodlot:** planted plot, forester replaces lumberjack at tier 2, sapling and
       seed recoup tuned so renewables trend stable rather than draining.
-      *Soil under a tree farm:* **this one is ours to build, not something the game
-      gives us.** Vanilla tree growth does not read soil fertility at all, so planting
-      saplings in good ground does nothing on its own. But `BlockEntitySapling` exposes a
-      public `GrowthRateMod`, so a forester planting into a graded woodlot plot can set
-      it and make better ground genuinely grow trees faster. Worth doing, and worth being
-      honest that it is an addition rather than a behaviour we inherit.
+      *The woodlot lays its own ground.* The blueprint includes a soil base under the
+      planting grid, so a village founded on bare rock is not permanently wood-locked: it
+      digs earth, lays a bed, and grows its own timber. Deliberately **not** touching how
+      trees and fertility work, because vanilla tree growth does not read fertility and
+      there is no reason to invent that. Soil here is a requirement for planting at all,
+      not a yield modifier.
+      A stone village still has to get its first saplings from somewhere, which means
+      trade, and that is a fine thing for it to need.
 - [ ] **E5 · Extraction points:** quarry, clay pit, mine head. **Confirmed readable:**
       `GenDeposits.Deposits` in `Vintagestory.ServerMods` exposes the deposit variants the
       prospecting pick uses, so mine-head yields really can be seeded from local geology.
