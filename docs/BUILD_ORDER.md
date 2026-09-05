@@ -124,16 +124,33 @@ Rules that apply to every step, because retrofitting any of them is painful.
       The cairn stays standing with the dead village's name on it and the storehouse
       becomes an ordinary lootable box holding a fraction of what was left, because a
       settlement does not fail with a full granary.
-- [ ] **B4 · Beds and workstations:** **cheaper than planned.** The game already has a
+- [x] **B4 · Beds and workstations:** **cheaper than planned.** The game already has a
       point-of-interest registry (`POIRegistry`, used by beehives and farmland). Our block
       entities implement `IPointOfInterest`; lookup is `GetNearestPoi` / `WalkPois`. We add
       ownership and free-slot logic on top rather than building a registry.
       *Test:* place beds, `/ff dump` shows occupancy.
-- [ ] **B4b · Village tether:** villagers stay within their village's claim unless a task
+      *Correction:* `POIRegistry` lives in **VSEssentials**, not VSSurvivalMod, and
+      **vanilla beds do not implement `IPointOfInterest`**. So a facility is our own
+      record pointing at a position, registered as a point of interest, rather than the
+      bed itself being one. Same benefit, one more indirection.
+      *Done:* `VillageFacility` for beds and workstations, persisted on the village with
+      ownership. Block codes come from `config/facilities.json`, so recognising a forge is
+      data. A claim is scanned on founding, on a tier change and on demand, never on a
+      timer, because a tier-5 claim is most of a million blocks; between scans the list is
+      kept current from the game's own place and break events. Beds are handed out on the
+      day tick, nearest free one first, and a bed whose owner is gone frees itself.
+      `/ff village scan`, `/ff village beds`, and `/ff dump` names a villager's bed.
+- [x] **B4b · Village tether:** villagers stay within their village's claim unless a task
       takes them out, and return when it ends. Currently anchored to spawn point via the
       wander task's `maxDistanceToSpawn`; this step re-anchors it to the claim centre and
       makes leaving require a reason: a job site, a caravan, a raid, fleeing.
       *Test:* a villager wanders a village and never drifts off across the map.
+      *Done:* `ffhome`, priority 1.6, above wandering and below an explicit order, because
+      being told to go somewhere is itself a reason to leave. Triggers outside the claim
+      plus a slack margin and walks them to the centre rather than to the boundary, since
+      stopping on the line leaves them one step from doing it again. Runs unobserved: a
+      villager quietly walking off the edge of the world while nobody is looking is the
+      exact failure it exists to prevent.
 - [ ] **B5 · Plots:** first-class `VillagePlot`: type, bounds, tier, state. Woodlot, field,
       pasture, quarry, clay pit and mine head all hang off this.
 - [ ] **B6 · Daily schedule:** sleep at night in an owned bed, work by day, shelter during

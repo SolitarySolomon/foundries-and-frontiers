@@ -189,6 +189,18 @@ namespace FoundriesFrontiers
                         .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
                         .HandleWith(args => OnVillageAbandon(sapi, args))
                     .EndSubCommand()
+                    .BeginSubCommand("scan")
+                        .WithDescription("Re-scan the claim for beds and workstations. /ff village scan [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageScan(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("beds")
+                        .WithDescription("Who has a bed and who does not. /ff village beds [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageBeds(sapi, args))
+                    .EndSubCommand()
                     .BeginSubCommand("storehouse")
                         .WithDescription("Put the storehouse crate back if it was broken. /ff village storehouse [id]")
                         .RequiresPlayer()
@@ -364,6 +376,7 @@ namespace FoundriesFrontiers
             sb.AppendLine("Culture    " + v.CultureCode);
             sb.AppendLine("Gender     " + (v.IsFemale ? "female" : "male"));
             sb.AppendLine("Village    " + VillageLabel(sapi, v));
+            sb.AppendLine("Bed        " + BedLabel(sapi, v));
             sb.AppendLine("Position   " + v.Pos.AsBlockPos);
             sb.AppendLine("Health     " + v.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth") + " / "
                                         + v.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("maxhealth"));
@@ -709,6 +722,23 @@ namespace FoundriesFrontiers
                 : village.Name + " #" + village.Id;
         }
 
+        /// <summary>Where a villager sleeps, for /ff dump.</summary>
+        private static string BedLabel(ICoreServerAPI sapi, FFVillager v)
+        {
+            if (v.VillageId == 0) return "(no village, so no bed)";
+
+            Village village = Registry(sapi)?.Get(v.VillageId);
+            if (village == null) return "(village missing)";
+
+            VillageFacility bed = VillageRegistry.BedOf(village, v.EntityId);
+            if (bed != null) return bed.Pos.ToString();
+
+            int free = VillageRegistry.FreeCountOf(village, EnumFacilityKind.Bed);
+            return free > 0
+                ? "none yet, " + free + " free in the village"
+                : "none, and the village has no spare";
+        }
+
         private static TextCommandResult OnVillageCreate(ICoreServerAPI sapi, TextCommandCallingArgs args)
         {
             IServerPlayer player = args.Caller.Player as IServerPlayer;
@@ -791,6 +821,7 @@ namespace FoundriesFrontiers
             sb.AppendLine("Roster     " + v.MemberIds.Count + " total, "
                           + reg.LoadedMembers(v.Id).Count + " loaded");
 
+            sb.AppendLine(VillageRegistry.DescribeFacilities(v));
             sb.AppendLine("Day        " + (int)v.LastSimulatedDay + ", " + v.DaysAtCurrentTier + " day(s) at this tier");
             sb.AppendLine();
             sb.AppendLine(v.Ledger.Describe());
@@ -1063,6 +1094,48 @@ namespace FoundriesFrontiers
             return Registry(sapi).Abandon(v.Id, out string report)
                 ? TextCommandResult.Success(report)
                 : TextCommandResult.Error("Could not abandon " + v.Name + ".");
+        }
+
+        private static TextCommandResult OnVillageScan(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            Village v = LedgerTarget(sapi, args, (int)args[0], out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            int found = Registry(sapi).ScanFacilities(v);
+            int given = Registry(sapi).AssignBeds(v);
+
+            return TextCommandResult.Success(
+                "Scanned " + v.Name + ", claim " + v.ClaimRadius + " blocks. Found " + found + " facility(s).\n"
+                + VillageRegistry.DescribeFacilities(v)
+                + (given > 0 ? "\nHanded out " + given + " bed(s)." : ""));
+        }
+
+        private static TextCommandResult OnVillageBeds(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            Village v = LedgerTarget(sapi, args, (int)args[0], out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            var reg = Registry(sapi);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("--- " + v.Name + " ---");
+            sb.AppendLine(VillageRegistry.DescribeFacilities(v));
+            sb.AppendLine();
+
+            var loaded = reg.LoadedMembers(v.Id);
+            if (loaded.Count == 0)
+            {
+                sb.Append("Nobody here to sleep in them.");
+            }
+            else
+            {
+                foreach (FFVillager m in loaded)
+                {
+                    VillageFacility bed = VillageRegistry.BedOf(v, m.EntityId);
+                    sb.AppendLine("  " + (m.GivenName == "" ? "#" + m.EntityId : m.GivenName).PadRight(22)
+                                  + (bed == null ? "no bed" : "bed at " + bed.Pos));
+                }
+            }
+            return TextCommandResult.Success(sb.ToString().TrimEnd());
         }
 
         private static TextCommandResult OnVillageStorehouse(ICoreServerAPI sapi, TextCommandCallingArgs args)

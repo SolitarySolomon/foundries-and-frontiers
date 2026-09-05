@@ -355,6 +355,13 @@
 						priorityForCancel: 2.0
 					},
 					{
+						// The tether. Above wandering, below an explicit order, because
+						// being told to go somewhere is itself a reason to leave.
+						code: "ffhome",
+						priority: 1.6,
+						priorityForCancel: 1.6
+					},
+					{
 						code: "ffloiter",
 						priority: 0.8,
 						chance: 0.15

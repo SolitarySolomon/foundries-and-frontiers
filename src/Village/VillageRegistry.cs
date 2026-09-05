@@ -20,7 +20,7 @@ namespace FoundriesFrontiers
     /// most, JSON survives a field being added without a migration step, and when
     /// something goes wrong the save data can be read by a human.
     /// </summary>
-    public class VillageRegistry : ModSystem
+    public partial class VillageRegistry : ModSystem
     {
         /// <summary>Bump only if the shape changes in a way old data cannot survive.</summary>
         public const int SaveFormatVersion = 1;
@@ -56,6 +56,13 @@ namespace FoundriesFrontiers
             // a day is the smallest unit anything here cares about, and a village that
             // notices the date five seconds late is indistinguishable from one that does not.
             api.Event.RegisterGameTickListener(OnDayCheck, 5000);
+
+            LoadFacilityConfig(api);
+
+            // Keeping the facility list current as the world changes, so a scan is only
+            // ever needed when something happened that these did not see.
+            api.Event.DidPlaceBlock += (player, id, sel, stack) => NoticeBlockChanged(sel?.Position);
+            api.Event.DidBreakBlock += (player, id, sel) => NoticeBlockChanged(sel?.Position);
 
             api.Event.OnEntityLoaded += OnEntityAppeared;
             api.Event.OnEntitySpawn += OnEntityAppeared;
@@ -158,6 +165,7 @@ namespace FoundriesFrontiers
 
             PlaceMarker(village);
             PlaceStorehouse(village);
+            ScanFacilities(village);
 
             sapi.Logger.Notification("[F&F] Founded {0} at {1}", village, centre);
             return village;
@@ -215,6 +223,7 @@ namespace FoundriesFrontiers
                 villager.RefreshNameTag();
             }
 
+            UnregisterFacilities(v);
             HideClaimEverywhere(id);
             byId.Remove(id);
             loadedMembers.Remove(id);
@@ -244,6 +253,7 @@ namespace FoundriesFrontiers
 
             ClearMarker(v);
             ClearStorehouse(v);
+            UnregisterFacilities(v);
             HideClaimEverywhere(id);
 
             byId.Remove(id);
@@ -398,6 +408,7 @@ namespace FoundriesFrontiers
             // The marker only needs replacing when the stage actually changes, but the
             // claim grew either way, so anyone watching the outline gets a fresh one.
             RefreshStorehouse(village);
+            ScanFacilities(village);
 
             if (StageForTier(tier) != wasStage || !village.HasMarker)
             {
@@ -539,6 +550,7 @@ namespace FoundriesFrontiers
                     caughtUp++;
 
                     RepairMarkers(v);
+                    AssignBeds(v);
                     OnNewDay?.Invoke(v);
                 }
 
@@ -934,8 +946,10 @@ namespace FoundriesFrontiers
                     v.Ledger ??= new VillageLedger();
                     v.Ledger.Grow();
                     v.Standing ??= new Dictionary<string, float>();
+                    v.Facilities ??= new List<VillageFacility>();
                     byId[v.Id] = v;
                     loadedMembers[v.Id] = new List<FFVillager>();
+                    RegisterFacilities(v);
                 }
 
                 // Never trust a saved counter over the data itself.

@@ -116,6 +116,18 @@ namespace FoundriesFrontiers
             /// pot and a full one are not worth the same to a village.
             /// </summary>
             [JsonProperty] public float MealServingValue = 2f;
+
+            /// <summary>How far above the village centre a facility scan looks.</summary>
+            [JsonProperty] public int FacilityScanUp = 20;
+
+            /// <summary>And below, for cellars and anything dug in.</summary>
+            [JsonProperty] public int FacilityScanDown = 10;
+
+            /// <summary>
+            /// How far outside its claim a villager may drift before it turns round and
+            /// walks home. A little slack so they can round a corner without being yanked.
+            /// </summary>
+            [JsonProperty] public int TetherSlackBlocks = 8;
         }
 
         public class PerformanceConfig

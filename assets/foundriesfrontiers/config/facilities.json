@@ -1,0 +1,44 @@
+{
+  "// note": "Block code fragments a village recognises inside its claim. Beds are what population growth gates on; workstations are what lets a trade exist at all. Matched as fragments, longest wins, so a specific entry beats a general one.",
+
+  "beds": {
+    "bed": 1
+  },
+
+  "workstations": {
+    "forge": "Smith",
+    "anvil": "Smith",
+    "toolmold": "Smith",
+    "crucible": "Smith",
+    "bloomery": "Smith",
+    "helvehammer": "Smith",
+
+    "quern": "Miller",
+    "clayoven": "Baker",
+    "oven": "Baker",
+
+    "barrel": "Preserver",
+    "cheesepress": "Preserver",
+    "meatrack": "Preserver",
+
+    "firepit": "Cook",
+    "cookingpot": "Cook",
+
+    "loom": "Weaver",
+    "spinningwheel": "Weaver",
+
+    "claypot": "Potter",
+    "pottery": "Potter",
+    "kiln": "Potter",
+
+    "workbench": "Builder",
+    "sawhorse": "Builder",
+    "chiselblock": "Mason",
+
+    "tapestry": "Clothier",
+    "tanningrack": "Tanner",
+
+    "displaycase": "Trader",
+    "shelf": "Trader"
+  }
+}

@@ -56,6 +56,15 @@ namespace FoundriesFrontiers
         [JsonProperty] public double LastSimulatedDay;
 
         /// <summary>
+        /// Beds and workstations found inside the claim, and who owns them.
+        ///
+        /// Persisted rather than rescanned on load, because a scan of a large claim is
+        /// expensive and because bed ownership is a village decision that should survive
+        /// a restart. The world is re-checked only when something changes or somebody asks.
+        /// </summary>
+        [JsonProperty] public List<VillageFacility> Facilities = new List<VillageFacility>();
+
+        /// <summary>
         /// Entity ids of everyone who belongs here, including those in unloaded chunks.
         /// A villager's own ffVillage attribute is the authoritative link; this is the
         /// reverse index, so it gets reconciled rather than trusted blindly.

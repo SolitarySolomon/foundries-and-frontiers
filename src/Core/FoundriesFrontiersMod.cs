@@ -56,6 +56,7 @@ namespace FoundriesFrontiers
             // which keeps tuning in data rather than requiring a rebuild.
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerLoiter>("ffloiter");
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerGoto>("ffgoto");
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerReturnHome>("ffhome");
         }
 
         public override void StartServerSide(ICoreServerAPI sapi)
