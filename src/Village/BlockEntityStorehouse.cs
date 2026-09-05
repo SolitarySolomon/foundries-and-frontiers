@@ -56,6 +56,19 @@ namespace FoundriesFrontiers
         /// <summary>Totals for the dialog, sent to the client with the block entity.</summary>
         private string[] displayTotals = new string[VillageResources.Count];
 
+        /// <summary>
+        /// What the open dialog should be showing for a pool right now.
+        ///
+        /// Read every frame by the window rather than handed over once when it opens, so
+        /// the numbers move as you take things off the shelf instead of being a snapshot
+        /// of what was there when you walked up.
+        /// </summary>
+        public string TotalFor(EnumVillageResource pool)
+        {
+            int i = (int)pool;
+            return displayTotals != null && i < displayTotals.Length ? displayTotals[i] ?? "" : "";
+        }
+
         public override InventoryBase Inventory => inventory;
         public override string InventoryClassName => "ffstorehouse";
 
@@ -258,7 +271,7 @@ namespace FoundriesFrontiers
             if (Api.Side == EnumAppSide.Client)
             {
                 toggleInventoryDialogClient(byPlayer, () => new GuiDialogStorehouse(
-                    DialogTitle(), Inventory, Pos, Api as ICoreClientAPI, displayTotals));
+                    DialogTitle(), Inventory, Pos, Api as ICoreClientAPI, this));
             }
 
             return true;

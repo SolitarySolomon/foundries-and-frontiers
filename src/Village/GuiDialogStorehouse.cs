@@ -14,15 +14,15 @@ namespace FoundriesFrontiers
     /// </summary>
     public class GuiDialogStorehouse : GuiDialogBlockEntity
     {
-        private readonly string[] totals;
+        private readonly BlockEntityStorehouse crate;
 
         public GuiDialogStorehouse(string title, InventoryBase inventory, BlockPos pos,
-                                   ICoreClientAPI capi, string[] totals)
+                                   ICoreClientAPI capi, BlockEntityStorehouse crate)
             : base(title, inventory, pos, capi)
         {
             if (IsDuplicate) return;
 
-            this.totals = totals;
+            this.crate = crate;
             capi.World.Player.InventoryManager.OpenInventory(inventory);
             Compose(title);
         }
@@ -65,11 +65,11 @@ namespace FoundriesFrontiers
                         Inventory, DoSendPacket, StorehouseInventory.Columns, slots,
                         ElementStdBounds.SlotGrid(EnumDialogArea.None, gridLeft, y, StorehouseInventory.Columns, 1),
                         "grid" + row)
-                    .AddStaticText(
-                        totals != null && row < totals.Length ? totals[row] : "",
+                    .AddDynamicText(
+                        crate?.TotalFor(pool) ?? "",
                         figure,
-                        EnumTextOrientation.Right,
-                        ElementBounds.Fixed(gridLeft + StorehouseInventory.Columns * 50 + 6, y + 14, totalWidth, 24));
+                        ElementBounds.Fixed(gridLeft + StorehouseInventory.Columns * 50 + 6, y + 14, totalWidth, 24),
+                        "total" + row);
             }
 
             composer.EndChildElements().Compose();
@@ -77,6 +77,27 @@ namespace FoundriesFrontiers
         }
 
         private void OnTitleBarClose() => TryClose();
+
+        /// <summary>
+        /// Pull the figures across every frame. They only change when the block entity
+        /// syncs, which is a handful of times a second at most, and comparing six short
+        /// strings is cheaper than working out when to bother.
+        /// </summary>
+        public override void OnFinalizeFrame(float dt)
+        {
+            base.OnFinalizeFrame(dt);
+
+            if (crate == null || SingleComposer == null) return;
+
+            for (int row = 0; row < VillageResources.Count; row++)
+            {
+                var text = SingleComposer.GetDynamicText("total" + row);
+                if (text == null) continue;
+
+                string now = crate.TotalFor(VillageResources.All[row]);
+                if (text.GetText() != now) text.SetNewText(now);
+            }
+        }
 
         public override void OnGuiClosed()
         {

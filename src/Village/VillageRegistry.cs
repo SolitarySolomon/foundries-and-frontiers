@@ -797,6 +797,18 @@ namespace FoundriesFrontiers
 
             IBlockAccessor ba = sapi.World.BlockAccessor;
 
+            // Clear whatever is at the recorded spot first. A crate left in a bad state by
+            // an older build would otherwise sit there refusing to be replaced.
+            if (village.HasStorehouse)
+            {
+                var was = new BlockPos(village.StorehouseX, village.StorehouseY, village.StorehouseZ, 0);
+                if (ba.GetBlockEntity(was) is BlockEntityStorehouse stale && !stale.Abandoned)
+                {
+                    ba.SetBlock(0, was);
+                }
+                village.HasStorehouse = false;
+            }
+
             // Try a ring of spots around the centre rather than one fixed offset, so a
             // village founded against a wall still gets its stores somewhere sensible.
             foreach (BlockFacing facing in BlockFacing.HORIZONTALS)
