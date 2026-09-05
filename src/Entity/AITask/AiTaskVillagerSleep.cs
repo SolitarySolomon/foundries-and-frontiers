@@ -101,8 +101,23 @@ namespace FoundriesFrontiers
         {
             Villager.CancelGoto();
 
-            if (entity.World.BlockAccessor.GetBlockEntity(bedPos) is not BlockEntityBed bed) return;
-            if (bed.AnyMounted()) return;
+            BlockEntityBed bed = entity.World.BlockAccessor.GetBlockEntity(bedPos) as BlockEntityBed;
+
+            // The block entity sits on one half of the bed. If this is the other half,
+            // look at the four neighbours for it rather than giving up.
+            if (bed == null)
+            {
+                foreach (BlockFacing face in BlockFacing.HORIZONTALS)
+                {
+                    if (entity.World.BlockAccessor.GetBlockEntity(bedPos.AddCopy(face)) is BlockEntityBed neighbour)
+                    {
+                        bed = neighbour;
+                        break;
+                    }
+                }
+            }
+
+            if (bed == null || bed.AnyMounted()) return;
 
             IMountableSeat seat = (bed as IMountable)?.Seats?.Length > 0
                 ? ((IMountable)bed).Seats[0]
@@ -118,8 +133,13 @@ namespace FoundriesFrontiers
         {
             if (mounted) entity.TryUnmount();
             mounted = false;
+
+            // Deliberately does not cancel the walk. This task hands the actual walking
+            // to ffgoto, and ffgoto outranks it, so being stopped is the normal way a
+            // trip to bed begins rather than a sign anything went wrong. Cancelling here
+            // tore up the order the instant it was given, which is why nobody ever
+            // arrived anywhere.
             bedPos = null;
-            Villager.CancelGoto();
         }
 
         private BlockPos FindBed()

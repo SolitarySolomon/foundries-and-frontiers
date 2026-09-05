@@ -89,8 +89,11 @@ namespace FoundriesFrontiers
 
         protected override void OnStop(bool cancelled)
         {
+            // Same rule as the sleep task: the walk is not this task's to tear up. It is
+            // cancelled in OnTick when the villager is actually home, and being stopped
+            // because something more important came along is not a reason to abandon a
+            // journey that something else is carrying out.
             target = null;
-            if (cancelled) Villager.CancelGoto();
         }
 
         private Village Home

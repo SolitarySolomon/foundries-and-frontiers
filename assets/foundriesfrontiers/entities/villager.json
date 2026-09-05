@@ -350,7 +350,11 @@
 					{
 						// Highest of the ambient tasks: an order to be somewhere beats
 						// pottering about. Real work will sit above this again.
+						// Slot 1, on its own. Walking is a service the deciding tasks in
+						// slot 0 ask for, so it has to be able to run alongside them
+						// rather than shouldering whichever one gave it the order.
 						code: "ffgoto",
+						slot: 1,
 						priority: 2.0,
 						priorityForCancel: 2.0
 					},

@@ -86,7 +86,21 @@ namespace FoundriesFrontiers
 
             foreach (string bed in bedCodes)
             {
-                if (code.Contains(bed)) { kind = EnumFacilityKind.Bed; return true; }
+                if (!code.Contains(bed)) continue;
+
+                // A bed is two blocks, a head and a feet. Counting both makes every bed
+                // two beds, which is how four beds reported as eight. The head is the
+                // canonical half because that is where the block entity lives and where
+                // a sleeper has to be standing to get in.
+                if (block.Variant != null
+                    && block.Variant.TryGetValue("part", out string part)
+                    && !string.Equals(part, "head", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                kind = EnumFacilityKind.Bed;
+                return true;
             }
 
             // Longest fragment wins, so "clayoven" beats "oven" and a specific station
