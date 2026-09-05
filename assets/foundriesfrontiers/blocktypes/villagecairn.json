@@ -2,14 +2,26 @@
 	code: "villagecairn",
 	class: "BlockVillageCairn",
 	entityClass: "VillageCairn",
-	// One variant per rock type, so a cairn is built from whatever the ground is made
-	// of. A village on granite gets a granite cairn; the same village fifty blocks into
-	// a limestone shelf would get limestone. The stones look local because they are.
+	// Two variant groups, and both of them are the point.
+	//
+	// rock: built from whatever the local bedrock is, so the stones look like the ones
+	// lying around them.
+	//
+	// stage: the marker grows with the village. Three dropped stones at the founding,
+	// a stacked cairn once the place is established, dressed stone when it has a mason,
+	// and a monument when it is a town. It is the cheapest possible way to read a
+	// village's age from across a valley.
 	variantgroups: [
-		{ code: "rock", loadFromProperties: "game:block/rock" }
+		{ code: "rock", loadFromProperties: "game:block/rock" },
+		{ code: "stage", states: ["rough", "cairn", "column", "monument"] }
 	],
 	drawtype: "json",
-	shape: { base: "block/villagecairn" },
+	shapeByType: {
+		"*-rough": { base: "block/villagecairn-rough" },
+		"*-cairn": { base: "block/villagecairn-cairn" },
+		"*-column": { base: "block/villagecairn-column" },
+		"*-monument": { base: "block/villagecairn-monument" }
+	},
 	textures: {
 		rock: { base: "game:block/stone/rock/{rock}1" }
 	},
@@ -21,8 +33,14 @@
 	sideopaque: { all: false },
 	lightAbsorption: 0,
 	replaceable: 500,
-	collisionbox: { x1: 0.18, y1: 0, z1: 0.18, x2: 0.82, y2: 0.78, z2: 0.82 },
-	selectionbox: { x1: 0.18, y1: 0, z1: 0.18, x2: 0.82, y2: 0.78, z2: 0.82 },
+	collisionboxByType: {
+		"*-rough": { x1: 0.18, y1: 0, z1: 0.18, x2: 0.82, y2: 0.3, z2: 0.82 },
+		"*": { x1: 0.1, y1: 0, z1: 0.1, x2: 0.9, y2: 1, z2: 0.9 }
+	},
+	selectionboxByType: {
+		"*-rough": { x1: 0.18, y1: 0, z1: 0.18, x2: 0.82, y2: 0.3, z2: 0.82 },
+		"*": { x1: 0.1, y1: 0, z1: 0.1, x2: 0.9, y2: 1, z2: 0.9 }
+	},
 	sounds: {
 		place: "game:block/rock",
 		break: "game:block/rock",

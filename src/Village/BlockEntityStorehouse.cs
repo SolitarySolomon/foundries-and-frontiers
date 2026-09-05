@@ -23,6 +23,16 @@ namespace FoundriesFrontiers
     {
         public long VillageId;
 
+        /// <summary>
+        /// Set when the village that owned this died. An abandoned storehouse stops
+        /// mirroring a ledger that no longer exists and becomes an ordinary box holding
+        /// whatever was left, which anyone can break open and empty.
+        /// </summary>
+        public bool Abandoned;
+
+        /// <summary>Whose stores these were, for the hover text once they are nobody's.</summary>
+        public string RuinedName = "";
+
         private StorehouseInventory inventory;
         private bool rebuilding;
 
@@ -61,7 +71,7 @@ namespace FoundriesFrontiers
         public void RebuildFromLedger()
         {
             Village v = Village;
-            if (v == null || Api?.Side != EnumAppSide.Server) return;
+            if (v == null || Abandoned || Api?.Side != EnumAppSide.Server) return;
 
             rebuilding = true;
             try
@@ -135,7 +145,8 @@ namespace FoundriesFrontiers
         /// </summary>
         private void OnSlotModified(int slotId)
         {
-            if (rebuilding || Api?.Side != EnumAppSide.Server) return;
+            // An abandoned crate answers to nobody. What is in it is simply what is in it.
+            if (rebuilding || Abandoned || Api?.Side != EnumAppSide.Server) return;
 
             Village v = Village;
             if (v == null) return;
@@ -218,20 +229,89 @@ namespace FoundriesFrontiers
 
         // --- persistence and info ---------------------------------------------------
 
+        /// <summary>
+        /// Turns this into a ruin: the ledger link is cut, and what the village had left
+        /// is written into the box as real items for whoever finds it.
+        ///
+        /// Only a fraction survives, because a settlement does not fail with its granary
+        /// full. What is standing in the crate is the remainder nobody managed to carry
+        /// away, which is the right amount of reward for walking into somewhere that died.
+        /// </summary>
+        public void AbandonWith(Village village, float survivingFraction)
+        {
+            if (Api?.Side != EnumAppSide.Server) return;
+
+            var table = Api.ModLoader.GetModSystem<ResourceTable>();
+
+            rebuilding = true;
+            try
+            {
+                for (int i = 0; i < Inventory.Count; i++) Inventory[i].Itemstack = null;
+
+                if (village != null)
+                {
+                    foreach (EnumVillageResource pool in VillageResources.All)
+                    {
+                        float left = village.Ledger.Get(pool) * survivingFraction;
+                        if (left <= 0) continue;
+
+                        ItemStack sample = SampleStack(village, pool);
+                        if (sample == null) continue;
+
+                        float perItem = Math.Max(0.01f, table?.UnitValue(sample, pool) ?? 1f);
+                        int wanted = (int)Math.Floor(left / perItem);
+
+                        int first = StorehouseInventory.FirstSlotOf(pool);
+                        for (int c = 0; c < StorehouseInventory.Columns && wanted > 0; c++)
+                        {
+                            int take = Math.Min(wanted, sample.Collectible.MaxStackSize);
+                            ItemStack stack = sample.Clone();
+                            stack.StackSize = take;
+                            Inventory[first + c].Itemstack = stack;
+                            wanted -= take;
+                        }
+                    }
+
+                    RuinedName = village.Name;
+                }
+            }
+            finally
+            {
+                rebuilding = false;
+            }
+
+            Abandoned = true;
+            VillageId = 0;
+            MarkDirty(true);
+        }
+
         public override void ToTreeAttributes(ITreeAttribute tree)
         {
             base.ToTreeAttributes(tree);
             tree.SetLong("ffVillage", VillageId);
+            tree.SetBool("ffAbandoned", Abandoned);
+            tree.SetString("ffRuinedName", RuinedName ?? "");
         }
 
         public override void FromTreeAttributes(ITreeAttribute tree, IWorldAccessor worldForResolve)
         {
             base.FromTreeAttributes(tree, worldForResolve);
             VillageId = tree.GetLong("ffVillage", 0);
+            Abandoned = tree.GetBool("ffAbandoned", false);
+            RuinedName = tree.GetString("ffRuinedName", "");
         }
 
         public override void GetBlockInfo(IPlayer forPlayer, System.Text.StringBuilder sb)
         {
+            if (Abandoned)
+            {
+                sb.AppendLine(string.IsNullOrEmpty(RuinedName)
+                    ? "An abandoned storehouse."
+                    : "What is left of " + RuinedName + "'s storehouse.");
+                base.GetBlockInfo(forPlayer, sb);
+                return;
+            }
+
             Village v = Village;
             if (v == null)
             {
@@ -255,6 +335,13 @@ namespace FoundriesFrontiers
         /// </summary>
         public override void OnBlockBroken(IPlayer byPlayer = null)
         {
+            // A ruin is an ordinary box: whatever is inside spills like anything else.
+            if (Abandoned)
+            {
+                base.OnBlockBroken(byPlayer);
+                return;
+            }
+
             Inventory?.Clear();
 
             Village v = Village;

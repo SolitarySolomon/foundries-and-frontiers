@@ -164,8 +164,73 @@ namespace FoundriesFrontiers
         }
 
         /// <summary>
+        /// The village dies but its remains stay in the world.
+        ///
+        /// This is the path H1 and H2 will use when a settlement fails: the cairn is left
+        /// standing as a grave marker with the name still on it, and the storehouse turns
+        /// into an ordinary lootable box holding what was not carried away. Removing the
+        /// record afterwards is what makes the ground free for a reclamation later.
+        ///
+        /// Distinct from Remove, which is a clean delete for testing and leaves nothing.
+        /// </summary>
+        public bool Abandon(long id, out string report)
+        {
+            report = null;
+            if (!byId.TryGetValue(id, out Village v)) return false;
+
+            float fraction = GameMath.Clamp(FFConfig.Current.Village.RuinLootFraction, 0f, 1f);
+            var left = new List<string>();
+
+            if (v.HasStorehouse)
+            {
+                var pos = new BlockPos(v.StorehouseX, v.StorehouseY, v.StorehouseZ, 0);
+                if (sapi.World.BlockAccessor.GetBlockEntity(pos) is BlockEntityStorehouse crate
+                    && crate.VillageId == v.Id)
+                {
+                    crate.AbandonWith(v, fraction);
+
+                    foreach (EnumVillageResource pool in VillageResources.All)
+                    {
+                        float amount = v.Ledger.Get(pool) * fraction;
+                        if (amount > 0) left.Add(amount.ToString("0.#") + " " + pool.ToString().ToLowerInvariant());
+                    }
+                }
+            }
+
+            if (v.HasMarker)
+            {
+                var pos = new BlockPos(v.MarkerX, v.MarkerY, v.MarkerZ, 0);
+                if (sapi.World.BlockAccessor.GetBlockEntity(pos) is BlockEntityVillageCairn cairn
+                    && cairn.VillageId == v.Id)
+                {
+                    cairn.RuinedName = v.Name;
+                    cairn.VillageId = 0;
+                    cairn.MarkDirty(true);
+                }
+            }
+
+            foreach (FFVillager villager in LoadedMembers(id))
+            {
+                villager.VillageId = 0;
+                villager.RefreshNameTag();
+            }
+
+            HideClaimEverywhere(id);
+            byId.Remove(id);
+            loadedMembers.Remove(id);
+
+            report = v.Name + " is abandoned. "
+                   + (left.Count == 0 ? "Its storehouse is empty." : "Left in the storehouse: " + string.Join(", ", left) + ".");
+            sapi.Logger.Notification("[F&F] {0}", report);
+            return true;
+        }
+
+        /// <summary>
         /// Removes a village and releases everyone in it. Members are not killed: they
         /// become unaffiliated, which is what an orphaned villager is.
+        ///
+        /// This is the clean delete. A village that actually failed should go through
+        /// Abandon instead, which leaves the ruin behind.
         /// </summary>
         public bool Remove(long id)
         {
@@ -310,6 +375,39 @@ namespace FoundriesFrontiers
             }
         }
 
+        // --- tier --------------------------------------------------------------------
+
+        /// <summary>
+        /// Moves a village to a new tier and makes the world show it.
+        ///
+        /// Tier is not just a number on a record. The claim grows, the marker is rebuilt
+        /// at the stage that tier deserves, and anyone looking at the claim outline sees
+        /// the new size. E1 calls this when a gate is met; for now the dev command does.
+        /// </summary>
+        public bool SetTier(Village village, int tier)
+        {
+            if (village == null) return false;
+
+            tier = GameMath.Clamp(tier, 0, 6);
+            if (tier == village.Tier) return false;
+
+            string wasStage = StageForTier(village.Tier);
+            village.Tier = tier;
+            village.DaysAtCurrentTier = 0;
+
+            // The marker only needs replacing when the stage actually changes, but the
+            // claim grew either way, so anyone watching the outline gets a fresh one.
+            if (StageForTier(tier) != wasStage || !village.HasMarker)
+            {
+                ClearMarker(village);
+                PlaceMarker(village);
+            }
+
+            RefreshShownClaims(village.Id);
+            sapi.Logger.Notification("[F&F] {0} is now tier {1}.", village.Name, tier);
+            return true;
+        }
+
         // --- claim outlines --------------------------------------------------------
 
         /// <summary>
@@ -357,6 +455,21 @@ namespace FoundriesFrontiers
             if (player == null) return;
             sapi.World.HighlightBlocks(player, ClaimHighlightSlot, new List<BlockPos>());
             claimShownTo.Remove(player.PlayerUID);
+        }
+
+        /// <summary>Redraws the outline for anyone looking, after a claim changes size.</summary>
+        private void RefreshShownClaims(long villageId)
+        {
+            Village v = Get(villageId);
+            if (v == null) return;
+
+            var watchers = new List<string>();
+            foreach (var kv in claimShownTo) if (kv.Value == villageId) watchers.Add(kv.Key);
+
+            foreach (string uid in watchers)
+            {
+                if (sapi.World.PlayerByUid(uid) is IServerPlayer player) ShowClaim(player, v);
+            }
         }
 
         /// <summary>Clears the outline for anyone currently looking at this village.</summary>
@@ -521,7 +634,7 @@ namespace FoundriesFrontiers
             IBlockAccessor ba = sapi.World.BlockAccessor;
             BlockPos pos = village.Centre.Copy();
 
-            Block cairn = CairnForLocalStone(pos);
+            Block cairn = CairnFor(pos, village.Tier);
             if (cairn == null)
             {
                 sapi.Logger.Warning("[F&F] villagecairn block did not resolve. Is the blocktype JSON loading?");
@@ -559,9 +672,23 @@ namespace FoundriesFrontiers
         /// the cairn agrees with its surroundings rather than guessing from whatever
         /// block happens to be directly underneath a patch of soil.
         /// </summary>
-        private Block CairnForLocalStone(BlockPos pos)
+        /// <summary>
+        /// Which marker a village of this tier gets. Three stones at the founding, a
+        /// stacked cairn once it is established, dressed stone when it has a mason, a
+        /// monument when it is a town.
+        /// </summary>
+        public static string StageForTier(int tier)
+        {
+            if (tier <= 1) return "rough";
+            if (tier <= 3) return "cairn";
+            if (tier <= 4) return "column";
+            return "monument";
+        }
+
+        private Block CairnFor(BlockPos pos, int tier)
         {
             string rock = "granite";
+            string stage = StageForTier(tier);
 
             try
             {
@@ -587,11 +714,11 @@ namespace FoundriesFrontiers
             }
 
             Block cairn = sapi.World.GetBlock(
-                new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn-" + rock));
+                new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn-" + rock + "-" + stage));
 
             // A rock type with no cairn variant is not worth failing over.
             return cairn ?? sapi.World.GetBlock(
-                new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn-granite"));
+                new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn-granite-" + stage));
         }
 
         private static bool IsFree(IBlockAccessor ba, BlockPos pos)

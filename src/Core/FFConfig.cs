@@ -99,6 +99,13 @@ namespace FoundriesFrontiers
             /// recorded as zero production, it is not recorded at all.
             /// </summary>
             [JsonProperty] public float ObservedDayThreshold = 0.5f;
+
+            /// <summary>
+            /// How much of a dead village's stores are still in the crate when you find
+            /// it. A settlement does not fail with a full granary, so the rest is assumed
+            /// eaten, carried off by the survivors, or spoiled where it stood.
+            /// </summary>
+            [JsonProperty] public float RuinLootFraction = 0.4f;
         }
 
         public class PerformanceConfig

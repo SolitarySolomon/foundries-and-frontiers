@@ -14,21 +14,31 @@ namespace FoundriesFrontiers
     {
         public long VillageId;
 
+        /// <summary>
+        /// Set when the village these stones marked is gone. The cairn stays standing,
+        /// because a place that failed still has a name and somebody piled these here.
+        /// </summary>
+        public string RuinedName = "";
+
         public override void ToTreeAttributes(ITreeAttribute tree)
         {
             base.ToTreeAttributes(tree);
             tree.SetLong("ffVillage", VillageId);
+            tree.SetString("ffRuinedName", RuinedName ?? "");
         }
 
         public override void FromTreeAttributes(ITreeAttribute tree, IWorldAccessor worldForResolve)
         {
             base.FromTreeAttributes(tree, worldForResolve);
             VillageId = tree.GetLong("ffVillage", 0);
+            RuinedName = tree.GetString("ffRuinedName", "");
         }
 
         /// <summary>What the player sees when they look at it.</summary>
         public string Describe()
         {
+            if (!string.IsNullOrEmpty(RuinedName)) return "The stones of " + RuinedName + ".\nNobody lives here now.";
+
             if (Api?.Side != EnumAppSide.Server && VillageId == 0) return "An unclaimed cairn.";
 
             var registry = Api?.ModLoader?.GetModSystem<VillageRegistry>();

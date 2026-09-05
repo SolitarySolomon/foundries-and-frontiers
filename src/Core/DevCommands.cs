@@ -176,6 +176,19 @@ namespace FoundriesFrontiers
                         .WithDescription("Show how items are sorted into the six pools")
                         .HandleWith(args => OnVillageTable(sapi))
                     .EndSubCommand()
+                    .BeginSubCommand("tier")
+                        .WithDescription("Set a village's tier and watch its marker change. /ff village tier <0-6> [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.Int("tier"),
+                                  sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageTier(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("abandon")
+                        .WithDescription("Kill a village and leave its ruins behind. /ff village abandon [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageAbandon(sapi, args))
+                    .EndSubCommand()
                     .BeginSubCommand("storehouse")
                         .WithDescription("Put the storehouse crate back if it was broken. /ff village storehouse [id]")
                         .RequiresPlayer()
@@ -1019,6 +1032,36 @@ namespace FoundriesFrontiers
             return table == null
                 ? TextCommandResult.Error("Resource table not loaded.")
                 : TextCommandResult.Success("--- how items are sorted ---\n" + table.Describe());
+        }
+
+        private static TextCommandResult OnVillageTier(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            int tier = (int)args[0];
+            if (tier < 0 || tier > 6) return TextCommandResult.Error("Tier runs 0 to 6.");
+
+            Village v = LedgerTarget(sapi, args, (int)args[1], out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            int was = v.Tier;
+            if (!Registry(sapi).SetTier(v, tier))
+            {
+                return TextCommandResult.Success(v.Name + " is already tier " + tier + ".");
+            }
+
+            return TextCommandResult.Success(
+                v.Name + " moved from tier " + was + " to " + tier
+                + ". Marker is now the " + VillageRegistry.StageForTier(tier)
+                + ", claim is " + v.ClaimRadius + " blocks.");
+        }
+
+        private static TextCommandResult OnVillageAbandon(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            Village v = LedgerTarget(sapi, args, (int)args[0], out string error);
+            if (v == null) return TextCommandResult.Error(error);
+
+            return Registry(sapi).Abandon(v.Id, out string report)
+                ? TextCommandResult.Success(report)
+                : TextCommandResult.Error("Could not abandon " + v.Name + ".");
         }
 
         private static TextCommandResult OnVillageStorehouse(ICoreServerAPI sapi, TextCommandCallingArgs args)

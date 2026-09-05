@@ -117,6 +117,13 @@ Rules that apply to every step, because retrofitting any of them is painful.
       from `config/resources.json`. Breaking the crate does not spill or destroy anything,
       because the stores live in the ledger; `/ff village storehouse` puts it back.
       The cairn came earlier as the deliberately small first customer for this plumbing.
+      *Also:* a living village will not let you break its storehouse at all, and the
+      marker grows with the tier: three dropped stones, a stacked cairn, a dressed
+      column, a monument. `/ff village tier` drives it until E1 does.
+      *Pulled forward from H2:* `Abandon` leaves a ruin rather than deleting anything.
+      The cairn stays standing with the dead village's name on it and the storehouse
+      becomes an ordinary lootable box holding a fraction of what was left, because a
+      settlement does not fail with a full granary.
 - [ ] **B4 · Beds and workstations:** **cheaper than planned.** The game already has a
       point-of-interest registry (`POIRegistry`, used by beehives and farmland). Our block
       entities implement `IPointOfInterest`; lookup is `GetNearestPoi` / `WalkPois`. We add
