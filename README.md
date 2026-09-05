@@ -8,7 +8,43 @@ around to watch it happen.
 
 Built against Vintage Story 1.22.7 (`net10.0`).
 
-## Building
+## Installing
+
+You need Vintage Story 1.22.7 or later.
+
+**The short version:** put the `.zip` in your Mods folder. Do not unzip it.
+
+1. Download `foundriesfrontiers_<version>.zip` from the
+   [Releases page](https://github.com/SolitarySolomon/foundries-and-frontiers/releases)
+2. Open your Vintage Story data folder:
+   - **Windows:** press Win+R, paste `%appdata%\VintagestoryData` and press enter
+   - **Linux:** `~/.config/VintagestoryData`
+   - **Mac:** `~/Library/Application Support/VintagestoryData`
+3. Open the `Mods` folder inside it. If there isn't one, make it
+4. Drop the zip in. Leave it zipped
+5. Start the game. Foundries & Frontiers should be listed under Mods in the main menu
+
+**Updating:** delete the old zip before adding the new one. Two versions of the same mod
+in that folder will not end well.
+
+**Removing it:** delete the zip. Villages are stored in your world save, so they stay in
+the file but stop being simulated, and they come back if you reinstall.
+
+**Multiplayer:** the server needs the mod. Clients need it too, since villagers and their
+blocks have to be drawn.
+
+**It is not showing up:**
+
+- Check you dropped the zip in `Mods` and not somewhere near it
+- Check you did not unzip it
+- Check the version. The mod says which game version it targets, and the game refuses
+  mods built for a newer one
+- The log will say why. `VintagestoryData/Logs/server-main.log`, and search for
+  `foundriesfrontiers`
+
+## Building it yourself
+
+Only needed if you are working on the mod. To play it, see Installing above.
 
 The game's assemblies are not redistributable, so they are not in this repo. Copy these
 out of your own install into `refs/`:
@@ -99,10 +135,10 @@ the tether distance. Those still need a game restart.
 This mod is free and it stays free. There is no paid version, nothing held back and no
 perks for paying. If you want to help anyway, Ko-fi is the place.
 
-What support actually buys is hours. A mod like this is not a weekend project, it is a
-long list of systems that each take real time to build and test. Anything that comes in
-is time I can put into this instead of something else, which means features land sooner
-and bugs get fixed faster. That is the whole pitch.
+What support actually does is help give me more time. A mod like this is not a weekend
+project, it is a long list of systems that each take real time to build and test. Anything
+that comes in is time I can put into this instead of something else, which means features
+land sooner and bugs get fixed faster.
 
 [![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/coreypiazza)
 
@@ -118,8 +154,8 @@ so development moves faster than I could manage on my own with the time I have. 
 design, the direction, the testing and the decision about what actually ships are mine.
 
 I am saying so plainly because you deserve to know what went into something before you
-install it, and because I would rather tell you than have you find out later and wonder
-what else I left out.
+install it, and because I would rather be upfront as I know some people disagree with the
+use of AI.
 
 ## Credits and attribution
 

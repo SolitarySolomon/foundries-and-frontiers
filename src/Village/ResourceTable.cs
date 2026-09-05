@@ -5,6 +5,28 @@ using Vintagestory.API.Common;
 
 namespace FoundriesFrontiers
 {
+    /// <summary>
+    /// One concrete thing a village can hand back out of a pool, and when it learns how.
+    ///
+    /// Pools are abstract value, but a village does not store "sixty wood", it stores
+    /// logs and firewood and planks. This is the list of shapes that value can take, and
+    /// the tier is what stops a founding hamlet with no saw producing finished planks.
+    /// </summary>
+    public class ResourceForm
+    {
+        [JsonProperty] public string Code;
+
+        /// <summary>Earliest tier at which the village can make this.</summary>
+        [JsonProperty] public int Tier;
+
+        /// <summary>
+        /// Whether this is what the village shows and hands over by default at its tier.
+        /// The highest unlocked primary wins, so a village that learns to saw starts
+        /// handing out planks where it used to hand out firewood.
+        /// </summary>
+        [JsonProperty] public bool Primary;
+    }
+
     /// <summary>One pool's matching rules, loaded from config/resources.json.</summary>
     public class ResourceRule
     {
@@ -28,12 +50,8 @@ namespace FoundriesFrontiers
         /// <summary>Worth per item when nothing in Weights matches.</summary>
         [JsonProperty] public float DefaultWeight = 1f;
 
-        /// <summary>
-        /// What the storehouse shows for this pool before a village has carried anything
-        /// in. Once villagers start hauling, whatever they actually brought is shown
-        /// instead, so this only covers stores that arrived some other way.
-        /// </summary>
-        [JsonProperty] public string Display;
+        /// <summary>Every shape this pool's value can take, and the tier that unlocks it.</summary>
+        [JsonProperty] public ResourceForm[] Forms = Array.Empty<ResourceForm>();
     }
 
     /// <summary>
@@ -147,9 +165,53 @@ namespace FoundriesFrontiers
             return best;
         }
 
-        /// <summary>The stand-in item code for a pool with no history, or null.</summary>
-        public string DisplayCodeFor(EnumVillageResource r)
-            => rules.TryGetValue(r, out ResourceRule rule) ? rule.Display : null;
+        /// <summary>
+        /// What a village of this tier hands out of this pool.
+        ///
+        /// The highest unlocked primary form, so the same request gives you firewood from
+        /// a hamlet and planks from a place with a sawmill. That is the whole point of
+        /// the storehouse working as a converter: you bring a village raw material and
+        /// take back whatever it has learned to make, and what it has learned is a
+        /// readable measure of how far it has come.
+        /// </summary>
+        public string PrimaryFormFor(EnumVillageResource r, int tier)
+        {
+            if (!rules.TryGetValue(r, out ResourceRule rule) || rule.Forms == null) return null;
+
+            string best = null;
+            int bestTier = -1;
+            foreach (ResourceForm form in rule.Forms)
+            {
+                if (!form.Primary || form.Tier > tier || form.Tier <= bestTier) continue;
+                bestTier = form.Tier;
+                best = form.Code;
+            }
+            return best;
+        }
+
+        /// <summary>Everything a village of this tier could hand out of this pool.</summary>
+        public List<ResourceForm> UnlockedForms(EnumVillageResource r, int tier)
+        {
+            var found = new List<ResourceForm>();
+            if (!rules.TryGetValue(r, out ResourceRule rule) || rule.Forms == null) return found;
+
+            foreach (ResourceForm form in rule.Forms)
+            {
+                if (form.Tier <= tier) found.Add(form);
+            }
+            return found;
+        }
+
+        /// <summary>Whether a village of this tier knows how to make this item at all.</summary>
+        public bool IsUnlocked(EnumVillageResource r, string code, int tier)
+        {
+            if (!rules.TryGetValue(r, out ResourceRule rule) || rule.Forms == null) return false;
+            foreach (ResourceForm form in rule.Forms)
+            {
+                if (form.Tier <= tier && string.Equals(form.Code, code, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
 
         private static bool Matches(ResourceRule rule, string code)
         {
@@ -182,6 +244,15 @@ namespace FoundriesFrontiers
                 }
                 sb.AppendLine(r.ToString().ToLowerInvariant() + " (default weight "
                               + rule.DefaultWeight.ToString("0.##") + ")");
+                if (rule.Forms != null && rule.Forms.Length > 0)
+                {
+                    var forms = new List<string>();
+                    foreach (ResourceForm f in rule.Forms)
+                    {
+                        forms.Add(f.Code.Replace("game:", "") + " t" + f.Tier + (f.Primary ? "*" : ""));
+                    }
+                    sb.AppendLine("  hands out: " + string.Join(", ", forms) + "   (* = default at that tier)");
+                }
                 sb.AppendLine("  matches: " + string.Join(", ", rule.Match));
                 if (rule.Exclude != null && rule.Exclude.Length > 0)
                     sb.AppendLine("  except:  " + string.Join(", ", rule.Exclude));

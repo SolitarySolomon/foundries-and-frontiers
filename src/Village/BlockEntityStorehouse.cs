@@ -139,19 +139,20 @@ namespace FoundriesFrontiers
         }
 
         /// <summary>
-        /// What a pool comes back out as: always the pool's own base item, never the last
-        /// thing that went in.
+        /// What a pool comes back out as: whatever the village currently knows how to
+        /// make, not whatever went in last.
         ///
-        /// Showing the last deposit read better, but it made the crate a material
-        /// converter. Sticks are worth a quarter each and logs four, so a hundred and
-        /// sixty sticks in and ten logs out is value neutral to the village and a free
-        /// upgrade to whoever did it. A village hands back firewood, planks and stone,
-        /// and what it did with your sticks is its own business.
+        /// The crate is deliberately a converter. Bring a village raw material and take
+        /// back the best shape it can put that value into, which for wood is firewood in
+        /// a hamlet and planks once it can saw. What it cannot do is hand you something
+        /// its tier has not unlocked, so a founding settlement has no planks to give you
+        /// however many logs you push across the counter.
         /// </summary>
         private ItemStack SampleStack(EnumVillageResource pool)
         {
             var table = Api.ModLoader.GetModSystem<ResourceTable>();
-            return StackFromCode(table?.DisplayCodeFor(pool));
+            int tier = Village?.Tier ?? 0;
+            return StackFromCode(table?.PrimaryFormFor(pool, tier));
         }
 
         private ItemStack StackFromCode(string code)

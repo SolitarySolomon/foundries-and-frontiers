@@ -44,7 +44,18 @@
       "fruit-": 0.5,
       "insect-": 0.25
     },
-    "display": "game:grain-spelt"
+    "forms": [
+      {
+        "code": "game:grain-spelt",
+        "tier": 0,
+        "primary": true
+      },
+      {
+        "code": "game:bread-spelt",
+        "tier": 4,
+        "primary": true
+      }
+    ]
   },
   "wood": {
     "match": [
@@ -63,9 +74,29 @@
       "log-": 4,
       "plank-": 1,
       "firewood": 1,
-      "stick": 0.25
+      "stick": 0.25,
+      "board-": 1
     },
-    "display": "game:firewood"
+    "forms": [
+      {
+        "code": "game:stick",
+        "tier": 0
+      },
+      {
+        "code": "game:firewood",
+        "tier": 0,
+        "primary": true
+      },
+      {
+        "code": "game:log-placed-oak-ud",
+        "tier": 1
+      },
+      {
+        "code": "game:plank-oak",
+        "tier": 2,
+        "primary": true
+      }
+    ]
   },
   "stone": {
     "match": [
@@ -92,7 +123,23 @@
       "cobble": 1,
       "gravel": 0.5
     },
-    "display": "game:stone-granite"
+    "forms": [
+      {
+        "code": "game:stone-granite",
+        "tier": 0,
+        "primary": true
+      },
+      {
+        "code": "game:cobblestone-granite",
+        "tier": 3,
+        "primary": true
+      },
+      {
+        "code": "game:stonebrick-granite",
+        "tier": 4,
+        "primary": true
+      }
+    ]
   },
   "clay": {
     "match": [
@@ -117,7 +164,18 @@
       "tile-clay": 0.5,
       "daub": 0.5
     },
-    "display": "game:clay-blue"
+    "forms": [
+      {
+        "code": "game:clay-blue",
+        "tier": 0,
+        "primary": true
+      },
+      {
+        "code": "game:burnedbrick",
+        "tier": 3,
+        "primary": true
+      }
+    ]
   },
   "metal": {
     "match": [
@@ -140,7 +198,23 @@
       "ore-": 1,
       "metalbit": 0.25
     },
-    "display": "game:nugget-copper"
+    "forms": [
+      {
+        "code": "game:nugget-copper",
+        "tier": 0,
+        "primary": true
+      },
+      {
+        "code": "game:ingot-copper",
+        "tier": 3,
+        "primary": true
+      },
+      {
+        "code": "game:ingot-iron",
+        "tier": 4,
+        "primary": true
+      }
+    ]
   },
   "cloth": {
     "match": [
@@ -165,6 +239,21 @@
       "flaxfibers": 0.5,
       "flaxtwine": 0.5
     },
-    "display": "game:flaxfibers"
+    "forms": [
+      {
+        "code": "game:flaxfibers",
+        "tier": 0,
+        "primary": true
+      },
+      {
+        "code": "game:flaxtwine",
+        "tier": 1
+      },
+      {
+        "code": "game:cloth-plain",
+        "tier": 2,
+        "primary": true
+      }
+    ]
   }
 }

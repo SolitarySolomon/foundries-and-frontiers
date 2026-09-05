@@ -170,13 +170,24 @@ Nothing in Phase D can place a building until this exists.
       structures (hovel, log house, farmhouse, storehouse, shed, forge, well, wall segment)
       exported via WorldEdit. Deliberately ugly; real ones come at E2 once the ladder stops
       moving. **Nothing in Phase C or D can be tested without them.**
-- [ ] **C2 · Schematic catalogue:** load, validate every block code, classify by size,
+- [ ] **C2 · Schematic catalogue:** **every building carries two costs, and both are
+      read out of the schematic, never written by hand.** The *bill of blocks* is what
+      physically gets placed, 15 oak logs and 6 planks. The *ledger cost* is what those
+      blocks are worth in pool value, so 15 logs at 4 each plus 6 planks at 1 is 66 wood.
+      The village pays the pool cost out of its stores and the builder places the blocks.
+      That is what lets a village that only has firewood still afford a log cabin: it has
+      the wood, and turning wood into the shape the building needs is the craft chain's
+      job, gated by tier. A settlement with no saw cannot spend its wood on anything that
+      needs planks.
+      Then: load, validate every block code, classify by size,
       **derive the bill of materials and build duration from the blocks themselves**, plus a
       per-culture manifest carrying what a schematic can't know about itself: which need it
       satisfies, which trade it houses, its tier, its footprint in cells.
       *Test:* `/ff buildings` lists what loaded with its costs.
 - [ ] **C3 · Build site:** marker block, scaffold, progressive construction over in-game days.
-- [ ] **C4 · Builder draws materials:** consumes from the ledger and **stalls visibly** when
+- [ ] **C4 · Builder draws materials:** spends the *ledger cost* and places the *bill of
+      blocks*, converting one into the other only for forms the tier has unlocked.
+      Consumes from the ledger and **stalls visibly** when
       empty. *Test:* start a build with no wood; nothing happens until wood arrives.
 - [ ] **C5 · Terracing:** cut uphill, fill downhill, retain in the tier's material, before
       raising anything. *Test:* a house on a slope that doesn't look pasted on.
@@ -229,7 +240,11 @@ Nothing in Phase D can place a building until this exists.
       `GenDeposits.Deposits` in `Vintagestory.ServerMods` exposes the deposit variants the
       prospecting pick uses, so mine-head yields really can be seeded from local geology.
       8–12% floor so nowhere is bricked; scales with tier.
-- [ ] **E6 · The craft chain:** charcoal burner → smith → tools, with **tool tier feeding
+- [ ] **E6 · The craft chain:** *the tier gate on item forms already exists in
+      `config/resources.json`: each pool lists the shapes its value can take and the tier
+      that unlocks each. Planks at tier 2, fired brick at 3, iron at 4. This step is what
+      makes those unlocks cost a workshop and a worker rather than just a number.*
+      Then: charcoal burner → smith → tools, with **tool tier feeding
       back into everyone's work rate**. The loop that makes progression accelerate.
 - [ ] **E7 · Remaining trades:** potter, mason, miller, baker, weaver, clothier, tanner,
       cook, preserver, angler. Each a subclass of B7 plus a workstation.

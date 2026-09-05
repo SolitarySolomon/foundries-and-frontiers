@@ -397,6 +397,8 @@ namespace FoundriesFrontiers
 
             // The marker only needs replacing when the stage actually changes, but the
             // claim grew either way, so anyone watching the outline gets a fresh one.
+            RefreshStorehouse(village);
+
             if (StageForTier(tier) != wasStage || !village.HasMarker)
             {
                 ClearMarker(village);
