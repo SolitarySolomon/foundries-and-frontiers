@@ -192,7 +192,7 @@ namespace FoundriesFrontiers
             {
                 ItemStack stack = inventory[first + c].Itemstack;
                 if (stack == null) continue;
-                shown += (table?.UnitValue(stack, pool) ?? 1f) * stack.StackSize;
+                shown += table?.ValueOf(stack) ?? stack.StackSize;
                 newestCode ??= stack.Collectible?.Code?.ToShortString();
             }
 

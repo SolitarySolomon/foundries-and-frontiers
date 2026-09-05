@@ -631,7 +631,7 @@ namespace FoundriesFrontiers
                 return false;
             }
 
-            float value = table.UnitValue(stack, pool.Value) * stack.StackSize;
+            float value = table.ValueOf(stack);
             village.Ledger.Deposit(pool.Value, value, stack.Collectible?.Code?.ToShortString());
 
             int count = stack.StackSize;

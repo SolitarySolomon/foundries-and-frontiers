@@ -109,6 +109,13 @@ namespace FoundriesFrontiers
             /// eaten, carried off by the survivors, or spoiled where it stood.
             /// </summary>
             [JsonProperty] public float RuinLootFraction = 0.4f;
+
+            /// <summary>
+            /// Food value of one serving of a cooked meal. A pot of stew is worth this
+            /// times however many helpings are left in it, which is why a nearly empty
+            /// pot and a full one are not worth the same to a village.
+            /// </summary>
+            [JsonProperty] public float MealServingValue = 2f;
         }
 
         public class PerformanceConfig

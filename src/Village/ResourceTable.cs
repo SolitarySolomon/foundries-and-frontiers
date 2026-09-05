@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Vintagestory.API.Common;
+using Vintagestory.GameContent;
 
 namespace FoundriesFrontiers
 {
@@ -86,9 +87,12 @@ namespace FoundriesFrontiers
 
         public override double ExecuteOrder() => 0.25;
 
+        private ICoreAPI api;
+
         public override void AssetsFinalize(ICoreAPI api)
         {
             base.AssetsFinalize(api);
+            this.api = api;
 
             IAsset asset = api.Assets.TryGet(
                 new AssetLocation(FoundriesFrontiersMod.ModId, "config/resources.json"));
@@ -127,6 +131,13 @@ namespace FoundriesFrontiers
         public EnumVillageResource? Classify(ItemStack stack)
         {
             if (stack?.Collectible?.Code == null) return null;
+
+            // A bowl of stew is food, not a clay bowl. The container is incidental and
+            // matching on the code would call it pottery, so ask the game whether there
+            // is a meal in it first. An empty bowl has no servings and falls through to
+            // the fragment rules, where it correctly reads as clay.
+            if (ServingsIn(stack) > 0) return EnumVillageResource.Food;
+
             string code = stack.Collectible.Code.ToShortString().ToLowerInvariant();
 
             foreach (EnumVillageResource r in VillageResources.All)
@@ -143,14 +154,51 @@ namespace FoundriesFrontiers
             return null;
         }
 
-        /// <summary>What a whole stack is worth to its pool.</summary>
+        /// <summary>
+        /// How many portions of food are actually in this stack.
+        ///
+        /// Cooked meals live in a container and carry their remaining servings on the
+        /// stack, so a pot holding four helpings of stew and one holding half a helping
+        /// are the same item with the same stack size. Bowls, crocks, pots and pies all
+        /// answer to the same interface, so one question covers every meal in the game.
+        /// Returns 0 for anything that is not a meal, including an empty bowl.
+        /// </summary>
+        public float ServingsIn(ItemStack stack)
+        {
+            if (stack?.Collectible is not IBlockMealContainer meal) return 0;
+
+            try
+            {
+                return Math.Max(0, meal.GetQuantityServings(api?.World, stack));
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// What a whole stack is worth to its pool.
+        ///
+        /// Almost everything is worth its unit value times how many of it there are. A
+        /// meal is worth its value per serving times how many servings are left, because
+        /// a nearly empty pot and a full one are the same item and should not be worth
+        /// the same to a hungry village.
+        /// </summary>
         public float ValueOf(ItemStack stack)
         {
             if (stack == null) return 0;
             EnumVillageResource? r = Classify(stack);
             if (r == null) return 0;
+
+            float servings = ServingsIn(stack);
+            if (servings > 0) return MealServingValue * servings * stack.StackSize;
+
             return UnitValue(stack, r.Value) * stack.StackSize;
         }
+
+        /// <summary>Food value of one serving of a cooked meal.</summary>
+        public float MealServingValue => FFConfig.Current.Village.MealServingValue;
 
         /// <summary>What one item of this stack is worth to the given pool.</summary>
         public float UnitValue(ItemStack stack, EnumVillageResource r)
