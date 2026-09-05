@@ -2,10 +2,16 @@
 	code: "villagecairn",
 	class: "BlockVillageCairn",
 	entityClass: "VillageCairn",
+	// One variant per rock type, so a cairn is built from whatever the ground is made
+	// of. A village on granite gets a granite cairn; the same village fifty blocks into
+	// a limestone shelf would get limestone. The stones look local because they are.
+	variantgroups: [
+		{ code: "rock", loadFromProperties: "game:block/rock" }
+	],
 	drawtype: "json",
 	shape: { base: "block/villagecairn" },
 	textures: {
-		rock: { base: "survival:block/stone/rock/granite1" }
+		rock: { base: "game:block/stone/rock/{rock}1" }
 	},
 	blockmaterial: "Stone",
 	creativeinventory: { "general": ["*"] },

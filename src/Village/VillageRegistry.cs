@@ -71,6 +71,19 @@ namespace FoundriesFrontiers
         public Village Get(long id) => byId.TryGetValue(id, out Village v) ? v : null;
 
         /// <summary>
+        /// The ids that do exist, for error messages. Ids are never reused, so after a
+        /// few rounds of testing they are nowhere near 1 and "no village with id 1" is
+        /// only useful if it also says what the ids actually are.
+        /// </summary>
+        public string IdList()
+        {
+            if (byId.Count == 0) return "there are no villages at all";
+            var parts = new List<string>();
+            foreach (Village v in byId.Values) parts.Add("#" + v.Id + " " + v.Name);
+            return "existing: " + string.Join(", ", parts);
+        }
+
+        /// <summary>
         /// The village whose claim contains this position. If claims overlap, which they
         /// should not but might after a tier bump, the nearer centre wins.
         /// </summary>
@@ -164,6 +177,7 @@ namespace FoundriesFrontiers
             }
 
             ClearMarker(v);
+            HideClaimEverywhere(id);
 
             byId.Remove(id);
             loadedMembers.Remove(id);
@@ -292,6 +306,76 @@ namespace FoundriesFrontiers
                 Get(id)?.MemberIds.Remove(villager.EntityId);
                 if (why == EnumDespawnReason.Death) DevStats.Bump(DevStats.VillagersDied);
             }
+        }
+
+        // --- claim outlines --------------------------------------------------------
+
+        /// <summary>
+        /// Highlight slot for claim outlines. Any number does, as long as nothing else in
+        /// the mod reuses it, because a slot is replaced wholesale each time it is set.
+        /// </summary>
+        private const int ClaimHighlightSlot = 1701;
+
+        /// <summary>
+        /// Who is currently looking at which claim, by player uid.
+        ///
+        /// This lives here rather than in the command that draws it because the outline
+        /// has to disappear when the village does, and only the registry knows when that
+        /// happens. A command that draws something the world can outlive is a command
+        /// that leaves litter on the ground.
+        /// </summary>
+        private readonly Dictionary<string, long> claimShownTo = new Dictionary<string, long>();
+
+        public void ShowClaim(IServerPlayer player, Village village)
+        {
+            if (player == null || village == null) return;
+
+            var blocks = new List<BlockPos>();
+            int r = village.ClaimRadius;
+            int step = r > 48 ? 2 : 1;
+
+            for (int d = -r; d <= r; d += step)
+            {
+                AddOutlineBlock(blocks, village.CentreX + d, village.CentreZ - r);
+                AddOutlineBlock(blocks, village.CentreX + d, village.CentreZ + r);
+                AddOutlineBlock(blocks, village.CentreX - r, village.CentreZ + d);
+                AddOutlineBlock(blocks, village.CentreX + r, village.CentreZ + d);
+            }
+
+            var colours = new List<int>();
+            int colour = ColorUtil.ToRgba(120, 70, 190, 255);
+            for (int i = 0; i < blocks.Count; i++) colours.Add(colour);
+
+            sapi.World.HighlightBlocks(player, ClaimHighlightSlot, blocks, colours);
+            claimShownTo[player.PlayerUID] = village.Id;
+        }
+
+        public void HideClaim(IServerPlayer player)
+        {
+            if (player == null) return;
+            sapi.World.HighlightBlocks(player, ClaimHighlightSlot, new List<BlockPos>());
+            claimShownTo.Remove(player.PlayerUID);
+        }
+
+        /// <summary>Clears the outline for anyone currently looking at this village.</summary>
+        private void HideClaimEverywhere(long villageId)
+        {
+            var stale = new List<string>();
+            foreach (var kv in claimShownTo) if (kv.Value == villageId) stale.Add(kv.Key);
+
+            foreach (string uid in stale)
+            {
+                IServerPlayer player = sapi.World.PlayerByUid(uid) as IServerPlayer;
+                if (player != null) sapi.World.HighlightBlocks(player, ClaimHighlightSlot, new List<BlockPos>());
+                claimShownTo.Remove(uid);
+            }
+        }
+
+        private void AddOutlineBlock(List<BlockPos> into, int x, int z)
+        {
+            var probe = new BlockPos(x, 0, z, 0);
+            int y = sapi.World.BlockAccessor.GetTerrainMapheightAt(probe);
+            into.Add(new BlockPos(x, y, z, 0));
         }
 
         // --- the day clock ---------------------------------------------------------
@@ -431,15 +515,15 @@ namespace FoundriesFrontiers
         {
             if (village == null) return null;
 
-            Block cairn = sapi.World.GetBlock(new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn"));
+            IBlockAccessor ba = sapi.World.BlockAccessor;
+            BlockPos pos = village.Centre.Copy();
+
+            Block cairn = CairnForLocalStone(pos);
             if (cairn == null)
             {
                 sapi.Logger.Warning("[F&F] villagecairn block did not resolve. Is the blocktype JSON loading?");
                 return null;
             }
-
-            IBlockAccessor ba = sapi.World.BlockAccessor;
-            BlockPos pos = village.Centre.Copy();
 
             // Up out of any solid ground first.
             for (int i = 0; i < 8 && !IsFree(ba, pos); i++) pos.Y++;
@@ -461,6 +545,50 @@ namespace FoundriesFrontiers
             village.MarkerZ = pos.Z;
             village.HasMarker = true;
             return pos;
+        }
+
+        /// <summary>
+        /// The cairn variant matching the bedrock under this spot, so a village's marker
+        /// is built out of the same stone lying around it.
+        ///
+        /// The rock type comes from the map chunk's top rock map, which is the same thing
+        /// worldgen uses to decide what the loose stones on the surface are made of, so
+        /// the cairn agrees with its surroundings rather than guessing from whatever
+        /// block happens to be directly underneath a patch of soil.
+        /// </summary>
+        private Block CairnForLocalStone(BlockPos pos)
+        {
+            string rock = "granite";
+
+            try
+            {
+                IMapChunk mc = sapi.World.BlockAccessor.GetMapChunkAtBlockPos(pos);
+                int[] topRock = mc?.TopRockIdMap;
+                if (topRock != null && topRock.Length > 0)
+                {
+                    int index = (pos.Z % 32) * 32 + (pos.X % 32);
+                    if (index >= 0 && index < topRock.Length)
+                    {
+                        Block rockBlock = sapi.World.GetBlock(topRock[index]);
+                        if (rockBlock?.Variant != null && rockBlock.Variant.TryGetValue("rock", out string found)
+                            && !string.IsNullOrEmpty(found))
+                        {
+                            rock = found;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                sapi.Logger.Warning("[F&F] Could not read the local rock type at {0}: {1}", pos, e.Message);
+            }
+
+            Block cairn = sapi.World.GetBlock(
+                new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn-" + rock));
+
+            // A rock type with no cairn variant is not worth failing over.
+            return cairn ?? sapi.World.GetBlock(
+                new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn-granite"));
         }
 
         private static bool IsFree(IBlockAccessor ba, BlockPos pos)

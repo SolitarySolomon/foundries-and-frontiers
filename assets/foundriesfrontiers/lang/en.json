@@ -11,5 +11,5 @@
   "foundriesfrontiers:item-creature-villager-female-farmer": "Farmer",
   "foundriesfrontiers:item-creature-villager-male-herder": "Herder",
   "foundriesfrontiers:item-creature-villager-female-herder": "Herder",
-  "foundriesfrontiers:block-villagecairn": "Village Cairn"
+  "foundriesfrontiers:block-villagecairn-*": "Village Cairn"
 }

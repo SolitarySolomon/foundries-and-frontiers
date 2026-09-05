@@ -118,8 +118,9 @@ namespace FoundriesFrontiers
                         .HandleWith(args => OnVillageInfo(sapi, args))
                     .EndSubCommand()
                     .BeginSubCommand("remove")
-                        .WithDescription("Delete a village. /ff village remove <id|all>")
-                        .WithArgs(sapi.ChatCommands.Parsers.Word("id"))
+                        .WithDescription("Delete a village. /ff village remove [id|all], defaults to the one you are in")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("id"))
                         .HandleWith(args => OnVillageRemove(sapi, args))
                     .EndSubCommand()
                     .BeginSubCommand("show")
@@ -245,18 +246,32 @@ namespace FoundriesFrontiers
             CultureSystem cultures = sapi.ModLoader.GetModSystem<CultureSystem>();
             string cultureArg = args[1] as string;
             string culture;
-            if (string.IsNullOrEmpty(cultureArg))
+
+            // Where the villager is about to appear, which decides whose village they
+            // are born into and therefore what culture they are.
+            Vec3d spawnAt = player.Entity.Pos.XYZ
+                .AheadCopy(2.0, 0, player.Entity.Pos.Yaw)
+                .Add(0, 0.5, 0);
+            Village bornInto = Registry(sapi).VillageAt(spawnAt.AsBlockPos);
+
+            if (!string.IsNullOrEmpty(cultureArg))
             {
-                // Roll across everything loaded rather than always defaulting to one,
-                // so spawning a crowd for testing produces a mixed crowd.
+                culture = cultureArg.ToLowerInvariant();
+            }
+            else if (bornInto != null)
+            {
+                // People born in a Norse village are Norse. Rolling the dice here would
+                // hand a settlement villagers who do not share its names or its clothes.
+                culture = bornInto.CultureCode;
+            }
+            else
+            {
+                // Outside any claim there is nothing to inherit, so roll across everything
+                // loaded and a test crowd comes out mixed.
                 var all = new List<string>(cultures.Codes);
                 culture = all.Count > 0
                     ? all[sapi.World.Rand.Next(all.Count)]
                     : CultureSystem.DefaultCulture;
-            }
-            else
-            {
-                culture = cultureArg.ToLowerInvariant();
             }
 
             if (!cultures.Has(culture))
@@ -278,11 +293,7 @@ namespace FoundriesFrontiers
             Entity entity = sapi.World.ClassRegistry.CreateEntity(type);
             if (entity == null) return TextCommandResult.Error("Class registry returned null for " + code);
 
-            // Two blocks in front of the player, on the ground.
-            Vec3d pos = player.Entity.Pos.XYZ
-                .AheadCopy(2.0, 0, player.Entity.Pos.Yaw)
-                .Add(0, 0.5, 0);
-
+            Vec3d pos = spawnAt;
             entity.Pos.SetPosWithDimension(pos);
             entity.Pos.Yaw = player.Entity.Pos.Yaw + GameMath.PI;
             entity.PositionBeforeFalling.Set(entity.Pos.XYZ);
@@ -296,14 +307,10 @@ namespace FoundriesFrontiers
             // If they spawned inside a claim, they belong to that village. Saves typing
             // /ff village join after every spawn, and it is what worldgen will do anyway.
             string joined = "";
-            if (entity is FFVillager fresh)
+            if (entity is FFVillager fresh && bornInto != null)
             {
-                Village here = Registry(sapi).VillageAt(entity.Pos.AsBlockPos);
-                if (here != null)
-                {
-                    Registry(sapi).Join(fresh, here);
-                    joined = " Joined " + here.Name + ".";
-                }
+                Registry(sapi).Join(fresh, bornInto);
+                joined = " Joined " + bornInto.Name + ".";
             }
 
             mod.Log("Spawned {0} (id {1}) at {2} for {3}",
@@ -738,7 +745,7 @@ namespace FoundriesFrontiers
             int id = (int)args[0];
 
             Village v = id > 0 ? reg.Get(id) : null;
-            if (v == null && id > 0) return TextCommandResult.Error("No village with id " + id + ".");
+            if (v == null && id > 0) return TextCommandResult.Error("No village with id " + id + ". " + reg.IdList() + ".");
 
             if (v == null)
             {
@@ -788,6 +795,20 @@ namespace FoundriesFrontiers
             var reg = Registry(sapi);
             string arg = (args[0] as string ?? "").Trim();
 
+            if (arg.Length == 0)
+            {
+                IServerPlayer standing = args.Caller.Player as IServerPlayer;
+                if (standing?.Entity == null) return TextCommandResult.Error("Give a village id, or 'all'.");
+
+                BlockPos where = standing.Entity.Pos.AsBlockPos;
+                Village near = reg.VillageAt(where) ?? reg.Nearest(where, 400);
+                if (near == null)
+                {
+                    return TextCommandResult.Error("No village within 400 blocks. " + reg.IdList() + ".");
+                }
+                arg = near.Id.ToString();
+            }
+
             if (arg.ToLowerInvariant() == "all")
             {
                 var ids = new List<long>();
@@ -804,23 +825,17 @@ namespace FoundriesFrontiers
 
             if (!long.TryParse(arg, out long id))
             {
-                return TextCommandResult.Error("Give a village id, or 'all'. /ff village list shows the ids.");
+                return TextCommandResult.Error("Give a village id, or 'all'. " + reg.IdList() + ".");
             }
 
             Village v = reg.Get(id);
-            if (v == null) return TextCommandResult.Error("No village with id " + id + ".");
+            if (v == null) return TextCommandResult.Error("No village with id " + id + ". " + reg.IdList() + ".");
 
             int orphaned = reg.LoadedMembers(id).Count;
             reg.Remove(id);
             return TextCommandResult.Success(
                 "Removed " + v.Name + " (#" + id + "). " + orphaned + " loaded villager(s) are now unaffiliated.");
         }
-
-        /// <summary>
-        /// Highlight slot for the claim outline. Any number will do as long as nothing
-        /// else in the mod reuses it, since a slot is overwritten wholesale each time.
-        /// </summary>
-        private const int ClaimHighlightSlot = 1701;
 
         private static TextCommandResult OnVillageShow(ICoreServerAPI sapi, TextCommandCallingArgs args)
         {
@@ -832,7 +847,7 @@ namespace FoundriesFrontiers
 
             if (arg == "off")
             {
-                sapi.World.HighlightBlocks(player, ClaimHighlightSlot, new List<BlockPos>());
+                reg.HideClaim(player);
                 return TextCommandResult.Success("Claim outline off.");
             }
 
@@ -840,46 +855,19 @@ namespace FoundriesFrontiers
             if (arg.Length > 0 && long.TryParse(arg, out long id))
             {
                 v = reg.Get(id);
-                if (v == null) return TextCommandResult.Error("No village with id " + id + ".");
+                if (v == null) return TextCommandResult.Error("No village with id " + id + ". " + reg.IdList() + ".");
             }
             else
             {
                 BlockPos here = player.Entity.Pos.AsBlockPos;
                 v = reg.VillageAt(here) ?? reg.Nearest(here, 400);
-                if (v == null) return TextCommandResult.Error("No village within 400 blocks. /ff village list");
+                if (v == null) return TextCommandResult.Error("No village within 400 blocks. " + reg.IdList() + ".");
             }
 
-            // Walk the perimeter and hug the terrain, so the outline reads as a line on
-            // the ground rather than a floating square. Every fourth block keeps the
-            // marker count sane on a big claim without leaving visible gaps.
-            var blocks = new List<BlockPos>();
-            int r = v.ClaimRadius;
-            int step = r > 48 ? 2 : 1;
-
-            for (int d = -r; d <= r; d += step)
-            {
-                AddOutlineBlock(sapi, blocks, v.CentreX + d, v.CentreZ - r);
-                AddOutlineBlock(sapi, blocks, v.CentreX + d, v.CentreZ + r);
-                AddOutlineBlock(sapi, blocks, v.CentreX - r, v.CentreZ + d);
-                AddOutlineBlock(sapi, blocks, v.CentreX + r, v.CentreZ + d);
-            }
-
-            var colors = new List<int>();
-            int colour = ColorUtil.ToRgba(120, 70, 190, 255);
-            for (int i = 0; i < blocks.Count; i++) colors.Add(colour);
-
-            sapi.World.HighlightBlocks(player, ClaimHighlightSlot, blocks, colors);
-
+            reg.ShowClaim(player, v);
             return TextCommandResult.Success(
-                "Outlining " + v.Name + " (#" + v.Id + "), claim " + r + " blocks out from " + v.Centre
-                + ". " + blocks.Count + " markers. /ff village show off to clear.");
-        }
-
-        private static void AddOutlineBlock(ICoreServerAPI sapi, List<BlockPos> into, int x, int z)
-        {
-            var probe = new BlockPos(x, 0, z, 0);
-            int y = sapi.World.BlockAccessor.GetTerrainMapheightAt(probe);
-            into.Add(new BlockPos(x, y, z, 0));
+                "Outlining " + v.Name + " (#" + v.Id + "), claim " + v.ClaimRadius
+                + " blocks out from " + v.Centre + ". /ff village show off to clear.");
         }
 
         private static TextCommandResult OnVillageAdopt(ICoreServerAPI sapi, TextCommandCallingArgs args)
