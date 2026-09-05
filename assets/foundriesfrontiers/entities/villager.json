@@ -346,6 +346,14 @@
 						priorityForCancel: 2.0
 					},
 					{
+						// Being attacked outranks everything except an explicit order. A
+						// villager who keeps strolling while something bites them is the
+						// single most immersion breaking thing a village could do.
+						code: "ffreact",
+						priority: 1.95,
+						priorityForCancel: 1.95
+					},
+					{
 						// Bedtime outranks the tether: a villager caught outside at dusk
 						// should be heading for their own bed, not for the village centre.
 						code: "ffsleep",

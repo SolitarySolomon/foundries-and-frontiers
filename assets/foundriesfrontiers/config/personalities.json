@@ -1,0 +1,11 @@
+{
+  "// note": "boldChance decides who fights back and who runs. tone picks dialogue: a line is looked up as '<situation>-<tone>' first and falls back to '<situation>', so a new personality works with the lines that already exist and can be given its own voice one line at a time.",
+
+  "even":   { "name": "Even",     "boldChance": 0.20, "talkFrequency": 1.0,  "tone": "",       "weight": 30 },
+  "kind":   { "name": "Kind",     "boldChance": 0.15, "talkFrequency": 1.4,  "tone": "kind",   "weight": 16 },
+  "sunny":  { "name": "Sunny",    "boldChance": 0.20, "talkFrequency": 1.6,  "tone": "sunny",  "weight": 12 },
+  "gruff":  { "name": "Gruff",    "boldChance": 0.45, "talkFrequency": 0.9,  "tone": "gruff",  "weight": 14 },
+  "whiny":  { "name": "Whiny",    "boldChance": 0.05, "talkFrequency": 1.5,  "tone": "whiny",  "weight": 10 },
+  "stoic":  { "name": "Stoic",    "boldChance": 0.55, "talkFrequency": 0.4,  "tone": "stoic",  "weight": 10 },
+  "sour":   { "name": "Sour",     "boldChance": 0.40, "talkFrequency": 1.0,  "tone": "sour",   "weight": 8 }
+}

@@ -184,12 +184,12 @@ namespace FoundriesFrontiers
 
             // A short remark most of the time, occasionally a laugh or a shrug.
             double roll = entity.World.Rand.NextDouble();
-            EnumVillagerUtterance utterance =
-                roll < 0.15 ? EnumVillagerUtterance.Laugh :
-                roll < 0.25 ? EnumVillagerUtterance.Shrug :
-                              EnumVillagerUtterance.Remark;
-
-            villager.SaySomething(utterance);
+            // Mostly they say something about the moment: the weather, the hour, how
+            // they feel. Laughing and shrugging stay in as punctuation. This does not
+            // make them talk more, only about better things.
+            if (roll < 0.12) villager.SaySomething(EnumVillagerUtterance.Laugh);
+            else if (roll < 0.20) villager.SaySomething(EnumVillagerUtterance.Shrug);
+            else villager.SaySomethingSituational();
 
             exchangesLeft--;
             // Each side speaks on alternate beats, so wait out the partner's turn plus a pause.

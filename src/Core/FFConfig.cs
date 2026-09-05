@@ -60,7 +60,7 @@ namespace FoundriesFrontiers
             /// utterance every 30 seconds PER VILLAGER - fine for one, a machine shop for
             /// twenty. Raise it if your villages feel too quiet.
             /// </summary>
-            [JsonProperty] public float IdleTalkChance = 0.00012f;
+            [JsonProperty] public float IdleTalkChance = 0.00009f;
 
             /// <summary>Villager voice volume, 0 to 1.</summary>
             [JsonProperty] public float VoiceVolume = 0.55f;
@@ -70,7 +70,7 @@ namespace FoundriesFrontiers
 
             [JsonProperty] public float ChatRangeBlocks = 6f;
             [JsonProperty] public double ChatCooldownSec = 150;
-            [JsonProperty] public double ChatStartChance = 0.05;
+            [JsonProperty] public double ChatStartChance = 0.04;
 
             /// <summary>Nobody within this range means no conversations are started at all.</summary>
             [JsonProperty] public float ChatWitnessRangeBlocks = 24f;
@@ -85,6 +85,37 @@ namespace FoundriesFrontiers
         public class VillagerConfig
         {
             [JsonProperty] public int CarryCapacity = 16;
+
+            /// <summary>
+            /// Chance an ordinary villager is bold enough to fight back rather than run.
+            /// Low on purpose: a village where every farmer swings at a drifter is a
+            /// village that loses its farmers. Guards ignore this and are always bold.
+            /// </summary>
+            [JsonProperty] public double BoldChance = 0.2;
+
+            /// <summary>Damage a villager with no weapon does when it fights back.</summary>
+            [JsonProperty] public float UnarmedDamage = 1.5f;
+
+            /// <summary>Seconds between swings.</summary>
+            [JsonProperty] public float AttackIntervalSec = 1.5f;
+
+            /// <summary>How long being hurt keeps a villager frightened or angry.</summary>
+            [JsonProperty] public double ThreatMemorySec = 12;
+
+            /// <summary>How close they need to be to swing.</summary>
+            [JsonProperty] public float AttackRangeBlocks = 2.2f;
+
+            /// <summary>Extra damage per tool tier they happen to be holding.</summary>
+            [JsonProperty] public float DamagePerToolTier = 0.75f;
+
+            /// <summary>
+            /// Health fraction below which a fighter will fall back, but only if there is
+            /// somebody to fall back behind. Alone, they fight on.
+            /// </summary>
+            [JsonProperty] public float RetreatBelowHealthFraction = 0.4f;
+
+            /// <summary>How near another fighter has to be to count as support.</summary>
+            [JsonProperty] public float SupportRangeBlocks = 12f;
 
             /// <summary>Work rate by tool tier: none, copper, bronze, iron, steel.</summary>
             [JsonProperty] public float[] WorkRateByToolTier = { 0.55f, 1.00f, 1.25f, 1.45f, 1.55f };

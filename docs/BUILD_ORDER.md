@@ -210,6 +210,29 @@ Rules that apply to every step, because retrofitting any of them is painful.
       one looking tired. A villager with no bed still stands down where they are, which
       makes an overcrowded village visibly overcrowded, and that is the pressure housing
       is meant to apply. `/ff time <hour>` to watch it change.
+- [x] **B6b · Personality and reaction:** villagers that respond to the world instead of
+      walking through it. Two things, deliberately kept separate.
+      *Personality* is a data file, `config/personalities.json`, not a class hierarchy.
+      Each entry carries a `boldChance`, a `talkFrequency` and a `tone`, and is rolled
+      once at spawn and then persisted, so a villager keeps their manner across reloads.
+      The roll turns into one of two courages, timid or bold, and that single value is
+      what the reaction task reads. Adding a personality later is an edit to a JSON file,
+      which is the whole point: the seven that ship are a starting set, not the design.
+      *Reaction* is one task, `ffreact` at priority 1.95, that handles both fighting and
+      fleeing rather than two tasks fighting over the same villager. A bold villager
+      turns and swings; a timid one runs. Because it is one task, a villager can change
+      their mind halfway through, which is what actually happens to people.
+      Guards are not rolled. Spearmen, swordsmen and archers are always bold, because a
+      guard who runs is not a guard. The one exception is the retreat rule: a guard who
+      drops below 40% health **and has another bold villager nearby** will fall back.
+      Alone, they hold. The condition is deliberate; retreating only when someone else is
+      there to take over is the difference between a rout and a line.
+      Speech got quieter and wider at the same time. Idle chance came down, and every
+      culture gained situational lines: weather, time of day, being hurt, tired or
+      hungry, each with tone variants that fall back to a neutral line when a culture has
+      not written one. Fewer words, more of them worth hearing.
+      *Test:* `/ff dump` shows manner and courage; hit a villager and watch what they do.
+
 - [ ] **B7 · Work loop base:** shared task: travel → act over time → carry → deposit.
       Every producing job below is a subclass.
       *Also the home of maintenance:* a builder who walks over and rebuilds a broken

@@ -381,6 +381,13 @@ namespace FoundriesFrontiers
             sb.AppendLine("Trade      " + v.Trade);
             sb.AppendLine("Culture    " + v.CultureCode);
             sb.AppendLine("Gender     " + (v.IsFemale ? "female" : "male"));
+            sb.AppendLine("Manner     " + (v.PersonalityCode != "" ? v.PersonalityCode : "(none)")
+                          + ", " + v.Courage.ToString().ToLowerInvariant()
+                          + (PersonalitySystem.AlwaysBold(v.Trade) ? " (fixed, this trade always fights)" : "")
+                          + ", talks x" + v.TalkFrequency.ToString("0.00"));
+            sb.AppendLine("Threat     " + (v.IsThreatened
+                              ? (v.Threat?.GetName() ?? "something") + ", " + v.ThreatAgeSec.ToString("0.#") + "s ago"
+                              : "(calm)"));
             sb.AppendLine("Village    " + VillageLabel(sapi, v));
             sb.AppendLine("Bed        " + BedLabel(sapi, v));
             sb.AppendLine("Schedule   " + VillageSchedule.Describe(

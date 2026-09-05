@@ -59,6 +59,7 @@ namespace FoundriesFrontiers
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerReturnHome>("ffhome");
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerSleep>("ffsleep");
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerWander>("ffwander");
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerReact>("ffreact");
         }
 
         public override void StartServerSide(ICoreServerAPI sapi)

@@ -69,6 +69,12 @@ namespace FoundriesFrontiers
             failures = 0;
 
             Villager.OrderGoto(target, MoveSpeeds.Walk);
+
+            entity.Api.Logger.Notification(
+                "[F&F] {0} is {1} blocks outside {2} and heading home.",
+                Villager.GivenName == "" ? "#" + entity.EntityId : Villager.GivenName,
+                (int)village.HorizontalDistanceTo(entity.Pos.XYZ),
+                village.Name);
         }
 
         protected override bool OnTick(float dt)
@@ -88,6 +94,10 @@ namespace FoundriesFrontiers
             {
                 Villager.CancelGoto();
                 DevStats.Bump(DevStats.PathsFailed);
+                entity.Api.Logger.Warning(
+                    "[F&F] Gave up walking {0} home after {1} tries. Still {2} blocks out.",
+                    Villager.GivenName == "" ? "#" + entity.EntityId : Villager.GivenName,
+                    failures, (int)village.HorizontalDistanceTo(entity.Pos.XYZ));
                 return false;
             }
 
@@ -104,7 +114,14 @@ namespace FoundriesFrontiers
                 // A long way from home is a long way for a pathfinder. After a couple of
                 // refusals, aim at a point part of the way back instead and make the
                 // journey in stages.
-                Villager.OrderGoto(failures <= 2 ? target : PartWayHome(village), MoveSpeeds.Walk);
+                BlockPos aim = failures <= 2 ? target : PartWayHome(village);
+                Villager.OrderGoto(aim, MoveSpeeds.Walk);
+
+                entity.Api.Logger.Notification(
+                    "[F&F] Retry {0} getting {1} home, aiming at {2} ({3}).",
+                    failures,
+                    Villager.GivenName == "" ? "#" + entity.EntityId : Villager.GivenName,
+                    aim, Villager.LastGotoResult);
             }
 
             return true;

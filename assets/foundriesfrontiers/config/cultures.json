@@ -125,6 +125,96 @@
         "We're short again.",
         "No one's come by in weeks.",
         "It's never enough, is it."
+      ],
+      "rain": [
+        "Rain again.",
+        "This'll do the fields good.",
+        "Soaked through already."
+      ],
+      "snow": [
+        "Cold enough to split stone.",
+        "Winter's got its teeth in.",
+        "Snow's early this year."
+      ],
+      "hot": [
+        "No air in it today.",
+        "Too hot to be doing much.",
+        "I'd give a shilling for shade."
+      ],
+      "night": [
+        "Should be abed.",
+        "Quiet out here.",
+        "Dark comes quick this time of year."
+      ],
+      "dawn": [
+        "Early start.",
+        "Light's coming up.",
+        "Best get on."
+      ],
+      "storm": [
+        "The air's gone wrong.",
+        "Get inside. Now.",
+        "I don't like the feel of this."
+      ],
+      "hurt": [
+        "Ah! That hurt.",
+        "Get off me!",
+        "Someone help!"
+      ],
+      "tired": [
+        "I'm about done in.",
+        "Long day.",
+        "My back's not what it was."
+      ],
+      "hungry": [
+        "Stores are thin.",
+        "Not much left in the store.",
+        "We'll be hungry by spring."
+      ],
+      "remark-gruff": [
+        "Nothing's ever simple here.",
+        "Someone's not pulling their weight.",
+        "Hm."
+      ],
+      "remark-whiny": [
+        "Why is it always me?",
+        "My feet are killing me.",
+        "Nobody ever asks how I am."
+      ],
+      "remark-sunny": [
+        "Good to be out.",
+        "Fine sort of day, isn't it.",
+        "Can't complain."
+      ],
+      "remark-kind": [
+        "Hope you're keeping well.",
+        "Mind how you go.",
+        "Anything you need, just say."
+      ],
+      "remark-stoic": [
+        "Aye.",
+        "It'll keep.",
+        "Work's work."
+      ],
+      "remark-sour": [
+        "Waste of a morning.",
+        "Should've been done days ago.",
+        "Typical."
+      ],
+      "greet-sunny": [
+        "Hello there!",
+        "Good to see you!",
+        "Well now, hello!"
+      ],
+      "greet-stoic": [
+        "Aye.",
+        "Morning.",
+        "Hm."
+      ],
+      "greet-sour": [
+        "What do you want?",
+        "Aye, hello.",
+        "You again."
       ]
     },
     "wardrobe": {
@@ -270,6 +360,96 @@
         "Stores are thin.",
         "We'll not see spring at this rate.",
         "Someone ought to do something."
+      ],
+      "rain": [
+        "Sky's leaking.",
+        "Good weather for fish, not for men.",
+        "Wet through."
+      ],
+      "snow": [
+        "Proper weather at last.",
+        "The cold keeps a man honest.",
+        "Snow's come."
+      ],
+      "hot": [
+        "Too warm by half.",
+        "This heat is unnatural.",
+        "Give me a north wind."
+      ],
+      "night": [
+        "Long dark ahead.",
+        "Fire's low.",
+        "Should be sleeping."
+      ],
+      "dawn": [
+        "Up with the light.",
+        "The day won't wait.",
+        "Cold morning."
+      ],
+      "storm": [
+        "Something's wrong with the sky.",
+        "Inside, all of you.",
+        "This is no ordinary storm."
+      ],
+      "hurt": [
+        "You'll pay for that!",
+        "Argh!",
+        "To me! To me!"
+      ],
+      "tired": [
+        "I've done enough today.",
+        "My arms ache.",
+        "Enough."
+      ],
+      "hungry": [
+        "The stores won't last.",
+        "Thin eating this winter.",
+        "We need more than this."
+      ],
+      "remark-gruff": [
+        "Bah.",
+        "It'll hold. Probably.",
+        "Nobody listens."
+      ],
+      "remark-whiny": [
+        "Why me, always?",
+        "I never get a moment.",
+        "This is too much for one man."
+      ],
+      "remark-sunny": [
+        "A good day for it!",
+        "Can't say I mind this.",
+        "Ha! Fine weather."
+      ],
+      "remark-kind": [
+        "Keep warm, friend.",
+        "You look tired. Rest.",
+        "Come by the fire later."
+      ],
+      "remark-stoic": [
+        "Aye.",
+        "It stands.",
+        "Work."
+      ],
+      "remark-sour": [
+        "Poorly done.",
+        "Someone will hear about this.",
+        "Useless."
+      ],
+      "greet-sunny": [
+        "Hail, friend!",
+        "Well met indeed!",
+        "Ha! Company!"
+      ],
+      "greet-stoic": [
+        "Hail.",
+        "Aye.",
+        "You."
+      ],
+      "greet-sour": [
+        "What.",
+        "Speak, then.",
+        "Hm."
       ]
     },
     "wardrobe": {

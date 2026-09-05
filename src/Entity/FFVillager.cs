@@ -26,6 +26,8 @@ namespace FoundriesFrontiers
         private const string AttrGivenName = "ffGivenName";
         private const string AttrAppearanceSet = "ffAppearanceSet";
         private const string AttrCulture = "ffCulture";
+        private const string AttrPersonality = "ffPersonality";
+        private const string AttrCourage = "ffCourage";
 
         /// <summary>Players this far away won't see what a villager says.</summary>
         private static double SpeechTextRange => FFConfig.Current.Chatter.SpeechTextRangeBlocks;
@@ -102,6 +104,139 @@ namespace FoundriesFrontiers
         {
             get => WatchedAttributes.GetLong(AttrVillageId, 0);
             set => WatchedAttributes.SetLong(AttrVillageId, value);
+        }
+
+        /// <summary>
+        /// Which personality this villager was born with. Decides how they talk and how
+        /// likely they were to end up bold.
+        /// </summary>
+        public string PersonalityCode
+        {
+            get => WatchedAttributes.GetString(AttrPersonality, PersonalitySystem.DefaultCode);
+            set => WatchedAttributes.SetString(AttrPersonality, value);
+        }
+
+        /// <summary>
+        /// Whether they fight when hurt or run. Rolled once from their personality and
+        /// then fixed, because a villager who is brave on alternate Tuesdays is not a
+        /// character, it is a dice roll.
+        /// </summary>
+        public EnumCourage Courage
+        {
+            get => (EnumCourage)WatchedAttributes.GetInt(AttrCourage, (int)EnumCourage.Timid);
+            set => WatchedAttributes.SetInt(AttrCourage, (int)value);
+        }
+
+        /// <summary>Who hurt them last, and when. Drives fleeing and fighting back.</summary>
+        public Entity Threat { get; private set; }
+
+        public double ThreatAtSeconds { get; private set; }
+
+        /// <summary>True while a recent injury is still on their mind.</summary>
+        public bool IsThreatened
+            => Threat != null
+               && Threat.Alive
+               && (World.ElapsedMilliseconds / 1000.0 - ThreatAtSeconds) < FFConfig.Current.Villager.ThreatMemorySec;
+
+        /// <summary>Seconds since the last injury, for the debug dump.</summary>
+        public double ThreatAgeSec => World.ElapsedMilliseconds / 1000.0 - ThreatAtSeconds;
+
+        public void NoteThreat(Entity from)
+        {
+            if (from == null || from == this) return;
+            Threat = from;
+            ThreatAtSeconds = World.ElapsedMilliseconds / 1000.0;
+        }
+
+        /// <summary>How readily this villager speaks, from their personality.</summary>
+        public float TalkFrequency
+            => Api?.ModLoader?.GetModSystem<PersonalitySystem>()?.Get(PersonalityCode)?.TalkFrequency ?? 1f;
+
+        /// <summary>The dialogue tone this villager's personality speaks in, or empty.</summary>
+        public string Tone
+            => Api?.ModLoader?.GetModSystem<PersonalitySystem>()?.Get(PersonalityCode)?.Tone ?? "";
+
+        /// <summary>
+        /// Says whatever suits the moment: the weather, the hour, how they feel.
+        ///
+        /// Falls back to an ordinary remark when nothing in particular is going on, so
+        /// this never makes them talk more than before, only about better things.
+        /// </summary>
+        public void SaySomethingSituational()
+        {
+            Culture culture = GetCulture();
+            if (culture == null) { SaySomething(EnumVillagerUtterance.Remark); return; }
+
+            string situation = PickSituation(culture);
+            if (situation == null) { SaySomething(EnumVillagerUtterance.Remark); return; }
+
+            string line = culture.RandomLine(situation, Tone, World.Rand);
+            if (line == null) { SaySomething(EnumVillagerUtterance.Remark); return; }
+
+            SayLine(line, EnumVillagerUtterance.Remark);
+        }
+
+        /// <summary>
+        /// What is worth mentioning right now, most pressing first. Returns null when
+        /// nothing is, which is most of the time and is the point: a villager who
+        /// comments on the weather every thirty seconds is worse than one who does not.
+        /// </summary>
+        private string PickSituation(Culture culture)
+        {
+            BlockPos at = Pos.AsBlockPos;
+
+            if (VillageSchedule.IsStorming(Api, at) && culture.HasLinesFor("storm")) return "storm";
+
+            ITreeAttribute health = WatchedAttributes.GetTreeAttribute("health");
+            if (health != null)
+            {
+                float max = health.GetFloat("maxhealth", 1f);
+                if (max > 0 && health.GetFloat("currenthealth", max) / max < 0.5f
+                    && culture.HasLinesFor("tired")) return "tired";
+            }
+
+            EnumDayPhase phase = VillageSchedule.PhaseFor(Api, at);
+            double hour = World.Calendar.HourOfDay;
+
+            if (phase == EnumDayPhase.Sleep && culture.HasLinesFor("night")) return "night";
+            if (hour >= 5 && hour < 8 && culture.HasLinesFor("dawn")) return "dawn";
+
+            // The weather is the fallback subject, the way it is for everyone.
+            var climate = Api.World.BlockAccessor.GetClimateAt(at);
+            if (climate != null)
+            {
+                if (climate.Rainfall > 0.15f)
+                {
+                    bool freezing = climate.Temperature < 0;
+                    string key = freezing ? "snow" : "rain";
+                    if (culture.HasLinesFor(key)) return key;
+                }
+                if (climate.Temperature > 28 && culture.HasLinesFor("hot")) return "hot";
+            }
+
+            return null;
+        }
+
+        public void ForgetThreat()
+        {
+            Threat = null;
+        }
+
+        /// <summary>
+        /// Remember who did this. The reaction task reads it and decides whether this
+        /// villager is the sort to run or the sort to swing back.
+        /// </summary>
+        public override bool ReceiveDamage(DamageSource damageSource, float damage)
+        {
+            bool taken = base.ReceiveDamage(damageSource, damage);
+
+            if (taken && World?.Side == EnumAppSide.Server && damage > 0)
+            {
+                Entity from = damageSource?.SourceEntity ?? damageSource?.CauseEntity;
+                if (from != null && from != this) NoteThreat(from);
+            }
+
+            return taken;
         }
 
         /// <summary>Personal name, shown on the nametag and used in the village event log.</summary>
@@ -371,12 +506,25 @@ namespace FoundriesFrontiers
         /// </summary>
         private void SendSpeechText(ICoreServerAPI sapi, EnumVillagerUtterance utterance)
         {
-            if (!FFConfig.Current.Chatter.SpeechInChat) return;
-
             Culture culture = GetCulture();
             if (culture == null) return;
 
-            string line = culture.RandomLine(utterance.ToString().ToLowerInvariant(), World.Rand);
+            SendSpeechLine(sapi, culture.RandomLine(utterance.ToString().ToLowerInvariant(), Tone, World.Rand));
+        }
+
+        /// <summary>Says one specific line, in the voice they would have said it.</summary>
+        public void SayLine(string line, EnumVillagerUtterance voice)
+        {
+            if (World.Side != EnumAppSide.Server || !Alive) return;
+
+            ICoreServerAPI sapi = World.Api as ICoreServerAPI;
+            sapi.Network.BroadcastEntityPacket(EntityId, PacketIdUtterance, new byte[] { (byte)voice });
+            SendSpeechLine(sapi, line);
+        }
+
+        private void SendSpeechLine(ICoreServerAPI sapi, string line)
+        {
+            if (!FFConfig.Current.Chatter.SpeechInChat) return;
             if (string.IsNullOrEmpty(line)) return;
 
             string speaker = GivenName != "" ? GivenName : "Villager";
@@ -426,7 +574,10 @@ namespace FoundriesFrontiers
                 // half-minute sounds alive; ten of them doing it sounds like a machine
                 // shop. Ambient noise scales with village size, so this has to be sparse.
                 talkUtil.ShouldDoIdleTalk = true;
-                talkUtil.idleTalkChance = FFConfig.Current.Chatter.IdleTalkChance;
+                // Scaled by personality, so a quiet villager really is quieter and a warm
+                // one really is chattier, without anybody becoming exhausting.
+                talkUtil.idleTalkChance =
+                    FFConfig.Current.Chatter.IdleTalkChance * TalkFrequency;
 
                 // Villagers should sit under the ambience, not on top of it.
                 talkUtil.volumneModifier = FFConfig.Current.Chatter.VoiceVolume;
@@ -482,6 +633,17 @@ namespace FoundriesFrontiers
             ApplyGenderedAppearance();
             DressFromWardrobe();
             WatchedAttributes.SetBool(AttrAppearanceSet, true);
+
+            // Who they are, rolled once and kept. Personality decides how they talk and
+            // how likely they were to end up brave; courage is then fixed, because a
+            // villager who is brave on alternate days is a dice roll, not a character.
+            var personalities = Api?.ModLoader?.GetModSystem<PersonalitySystem>();
+            if (personalities != null && WatchedAttributes.GetString(AttrPersonality, null) == null)
+            {
+                string rolled = personalities.Roll(World.Rand);
+                PersonalityCode = rolled;
+                Courage = personalities.RollCourage(rolled, Trade, World.Rand);
+            }
         }
 
         /// <summary>

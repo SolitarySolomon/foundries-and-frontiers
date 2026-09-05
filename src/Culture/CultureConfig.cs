@@ -57,15 +57,36 @@ namespace FoundriesFrontiers
         }
 
         public string RandomLine(string utteranceCode, Random rand)
+            => RandomLine(utteranceCode, null, rand);
+
+        /// <summary>
+        /// A line for this situation, in this personality's voice if it has one.
+        ///
+        /// Looks for "remark-whiny" and falls back to "remark", so a new personality
+        /// works immediately with the lines that already exist and can be given its own
+        /// voice one line at a time rather than needing a full set written up front.
+        /// </summary>
+        public string RandomLine(string utteranceCode, string tone, Random rand)
         {
-            if (Lines != null
-                && Lines.TryGetValue(utteranceCode, out string[] pool)
-                && pool != null && pool.Length > 0)
+            if (Lines == null) return null;
+
+            if (!string.IsNullOrEmpty(tone)
+                && Lines.TryGetValue(utteranceCode + "-" + tone, out string[] toned)
+                && toned != null && toned.Length > 0)
+            {
+                return toned[rand.Next(toned.Length)];
+            }
+
+            if (Lines.TryGetValue(utteranceCode, out string[] pool) && pool != null && pool.Length > 0)
             {
                 return pool[rand.Next(pool.Length)];
             }
             return null;
         }
+
+        /// <summary>Whether this culture has anything to say about a situation at all.</summary>
+        public bool HasLinesFor(string utteranceCode)
+            => Lines != null && Lines.TryGetValue(utteranceCode, out string[] pool) && pool != null && pool.Length > 0;
     }
 
     /// <summary>
