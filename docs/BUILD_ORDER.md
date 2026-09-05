@@ -98,6 +98,12 @@ Rules that apply to every step, because retrofitting any of them is painful.
       worth more than a stick. Commands: `/ff village ledger|give|take|set|deposit|day|table`.
       Unit tested offline for arithmetic, history capping and save round trip, including
       loading a save written before a pool existed.
+      *Corrected after review:* a day only enters the measured history if the village was
+      loaded for enough of it. An unwatched day is not evidence of zero production, and
+      filing it as one would have left every unvisited village reading as dead and then
+      being simulated forward at a rate it never had a chance to earn. The ledger also
+      carries a confidence figure now, which F1 blends against a per-tier default so a
+      village seen once is not projected forward on one day of luck.
 - [ ] **B3 · Blocks, block entities and dialogs:** the shared infrastructure for every
       placeable this mod adds. First customer is the **storehouse**: a block entity whose
       inventory is the ledger's visible, lootable face, with a dialog to open it.
@@ -216,6 +222,11 @@ Nothing in Phase D can place a building until this exists.
 
 ## Phase F: Persistence  *(M4)*
 
+- [ ] **F1a · Projected yield:** what a village *should* produce, computed from its own
+      workers, plots, tier and tools rather than from measurement. This is what an
+      unvisited village grows on, and what measured flow is blended against by confidence.
+      Without it a village nobody has walked past can never advance. Depends on B5 plots
+      and D6 labour, so it cannot move earlier than this.
 - [ ] **F1 · Fast-forward:** **RISK.** Self-calibrated rates from B2's measured flow, event
       stepping, season boundaries. Fairness is the hard part.
 - [ ] **F2 · Event log:** one line per applied event. Debugging tool *and* what the headman

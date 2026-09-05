@@ -40,6 +40,21 @@ namespace FoundriesFrontiers
         /// <summary>Total ever deposited, per resource. Never decreases. For the record.</summary>
         [JsonProperty] private float[] lifetimeIn = new float[VillageResources.Count];
 
+        /// <summary>
+        /// Samples taken today, and how many of them found the village loaded.
+        ///
+        /// This exists because a day nobody could produce during is not evidence that the
+        /// village produces nothing. Without it, a settlement left alone files a week of
+        /// zero days, reads as dead, and is then simulated forward at the rate it was
+        /// never given a chance to earn. Only days the village was actually running for
+        /// are allowed into the measured history.
+        /// </summary>
+        [JsonProperty] private int samplesToday;
+        [JsonProperty] private int observedSamplesToday;
+
+        /// <summary>How many observed days have ever been filed. Drives confidence.</summary>
+        [JsonProperty] private int observedDaysEver;
+
         // --- reading ---------------------------------------------------------------
 
         public float Get(EnumVillageResource r) => At(stock, r);
@@ -53,6 +68,26 @@ namespace FoundriesFrontiers
         /// <summary>Ignored on save: it is just the history length, and writing it twice
         /// only makes the save data bigger and easier to contradict itself.</summary>
         [JsonIgnore] public int DaysRecorded => history.Count;
+
+        /// <summary>Observed days ever filed, across the village's whole life.</summary>
+        [JsonIgnore] public int ObservedDaysEver => observedDaysEver;
+
+        /// <summary>
+        /// How far today has been watched, 0 to 1. Sampled rather than timed, because the
+        /// day clock ticks at a steady real-time interval and the ratio of ticks that
+        /// found the village loaded is the fraction of the day it was live for.
+        /// </summary>
+        [JsonIgnore]
+        public float ObservedFractionToday => samplesToday == 0 ? 0 : observedSamplesToday / (float)samplesToday;
+
+        /// <summary>
+        /// How much the measured flow is worth trusting, 0 to 1. One observed day is a
+        /// hint; a full week is evidence. Fast-forward blends the measured rate toward a
+        /// per-tier default in proportion to this, so a village seen once for an hour is
+        /// not simulated forward on an hour's worth of luck.
+        /// </summary>
+        [JsonIgnore]
+        public float FlowConfidence => Math.Min(1f, history.Count / (float)HistoryDays);
 
         /// <summary>
         /// Average net movement per day over the recorded history. Positive means the
@@ -142,10 +177,23 @@ namespace FoundriesFrontiers
         }
 
         /// <summary>
-        /// Closes the day: files today's net movement into the history and starts a fresh
-        /// pair of counters. Called once per in game day by the village day clock.
+        /// Notes whether the village was loaded at this moment. Called by the day clock
+        /// on every tick, whether or not the date has changed.
         /// </summary>
-        public void RollDay()
+        public void NoteObservation(bool observed)
+        {
+            samplesToday++;
+            if (observed) observedSamplesToday++;
+        }
+
+        /// <summary>
+        /// Closes the day and starts fresh counters.
+        ///
+        /// The day only enters the measured history if the village was actually running
+        /// for it. An unwatched day is not a day of zero production, it is a day with no
+        /// measurement, and the difference is the whole reason this class can be trusted.
+        /// </summary>
+        public void RollDay(bool observed)
         {
             Grow();
 
@@ -157,6 +205,12 @@ namespace FoundriesFrontiers
                 outToday[i] = 0;
             }
 
+            samplesToday = 0;
+            observedSamplesToday = 0;
+
+            if (!observed) return;
+
+            observedDaysEver++;
             history.Add(net);
             while (history.Count > HistoryDays) history.RemoveAt(0);
         }
@@ -218,8 +272,9 @@ namespace FoundriesFrontiers
                     + flow.ToString("+0.#;-0.#;0").PadLeft(10));
             }
             sb.Append(history.Count == 0
-                ? "No full day recorded yet, so every trend reads 0."
-                : "Trend averaged over " + history.Count + " day(s).");
+                ? "No observed day recorded yet, so every trend reads 0."
+                : "Trend averaged over " + history.Count + " observed day(s), confidence "
+                  + FlowConfidence.ToString("0.00") + ". " + observedDaysEver + " observed in total.");
             return sb.ToString();
         }
     }

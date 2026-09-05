@@ -320,10 +320,19 @@ namespace FoundriesFrontiers
 
             foreach (Village v in todays)
             {
+                bool observed = IsLoaded(v);
+                v.Ledger.NoteObservation(observed);
+
+                // A day counts as measured only if the village was running for enough of
+                // it. Below the threshold the day is left out of the history entirely and
+                // fast-forward accounts for it instead, which is F1's job.
+                bool measurable = v.Ledger.ObservedFractionToday
+                                  >= FFConfig.Current.Village.ObservedDayThreshold;
+
                 int caughtUp = 0;
                 while ((int)v.LastSimulatedDay < today && caughtUp < MaxDaysCaughtUpAtOnce)
                 {
-                    v.Ledger.RollDay();
+                    v.Ledger.RollDay(measurable);
                     v.DaysAtCurrentTier++;
                     v.LastSimulatedDay += 1;
                     caughtUp++;
@@ -341,11 +350,25 @@ namespace FoundriesFrontiers
             }
         }
 
-        /// <summary>Rolls one day by hand, for testing without touching the calendar.</summary>
+        /// <summary>
+        /// True when the village centre sits in a chunk the server currently has loaded.
+        /// That is the same condition that decides whether its villagers can do anything,
+        /// so it is the right definition of "this day happened".
+        /// </summary>
+        public bool IsLoaded(Village v)
+        {
+            if (v == null) return false;
+            return sapi.WorldManager.GetChunk(v.CentreX / 32, v.CentreY / 32, v.CentreZ / 32) != null;
+        }
+
+        /// <summary>
+        /// Rolls one day by hand, for testing without touching the calendar. Always filed
+        /// as observed: you asked for the day, so the day counts.
+        /// </summary>
         public void ForceDay(Village v)
         {
             if (v == null) return;
-            v.Ledger.RollDay();
+            v.Ledger.RollDay(true);
             v.DaysAtCurrentTier++;
             v.LastSimulatedDay += 1;
             OnNewDay?.Invoke(v);

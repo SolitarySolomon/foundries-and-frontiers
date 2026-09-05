@@ -92,6 +92,13 @@ namespace FoundriesFrontiers
             /// pair of tier 6 claims cannot overlap.
             /// </summary>
             [JsonProperty] public float MinBlocksBetweenCentres = 220f;
+
+            /// <summary>
+            /// How much of a day a village must have been loaded for before that day is
+            /// allowed into its measured production history. Below this the day is not
+            /// recorded as zero production, it is not recorded at all.
+            /// </summary>
+            [JsonProperty] public float ObservedDayThreshold = 0.5f;
         }
 
         public class PerformanceConfig
