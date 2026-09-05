@@ -179,6 +179,32 @@ namespace FoundriesFrontiers
         /// village cares about, the list is corrected on the spot rather than waiting
         /// for the next scan.
         /// </summary>
+        /// <summary>
+        /// A living village does not let you take its storehouse apart.
+        ///
+        /// Refused outright rather than made expensive, because the crate is the stores
+        /// made visible and knocking it down would read as having destroyed them when the
+        /// ledger would carry on regardless. Empty it through the dialog if you want what
+        /// is in it. Once the village is dead the crate is an ordinary box and this stops
+        /// applying.
+        /// </summary>
+        private void OnBreakBlock(IServerPlayer byPlayer, BlockSelection sel,
+                                  ref float dropQuantityMultiplier, ref EnumHandling handling)
+        {
+            if (sel?.Position == null) return;
+            if (sapi.World.BlockAccessor.GetBlockEntity(sel.Position) is not BlockEntityStorehouse crate) return;
+            if (crate.Abandoned || crate.VillageId == 0) return;
+
+            Village owner = Get(crate.VillageId);
+            if (owner == null) return;
+
+            // PreventDefault, not PreventSubsequent. Subsequent only stops other handlers
+            // from running; Default is the one that stops the block coming apart.
+            handling = EnumHandling.PreventDefault;
+            byPlayer?.SendIngameError("ffstorehouse", "This belongs to a living village. Empty it if you must.");
+            sapi.Logger.Notification("[F&F] Refused a break on {0}'s storehouse at {1}.", owner.Name, sel.Position);
+        }
+
         public void NoticeBlockChanged(BlockPos pos)
         {
             if (pos == null) return;

@@ -61,6 +61,12 @@ namespace FoundriesFrontiers
 
             // Keeping the facility list current as the world changes, so a scan is only
             // ever needed when something happened that these did not see.
+            // Refusing a break has to happen here, where the engine is still asking.
+            // Doing it in Block.OnBlockBroken is too late: the client has already
+            // predicted the break and taken its own block entity apart, which leaves a
+            // crate standing that nothing can open.
+            api.Event.BreakBlock += OnBreakBlock;
+
             api.Event.DidPlaceBlock += (player, id, sel, stack) => NoticeBlockChanged(sel?.Position);
             api.Event.DidBreakBlock += (player, id, sel) => NoticeBlockChanged(sel?.Position);
 
@@ -843,6 +849,37 @@ namespace FoundriesFrontiers
 
             sapi.Logger.Warning("[F&F] No room for {0}'s storehouse near {1}.", village.Name, village.Centre);
             return null;
+        }
+
+        /// <summary>
+        /// Puts a storehouse back exactly as it was: block, block entity and village link.
+        ///
+        /// The safety net behind the refusal. If a break ever gets past it, this restores
+        /// the crate whole rather than leaving one standing with nothing behind it, which
+        /// is the state that made it impossible to open.
+        /// </summary>
+        public bool RestoreStorehouse(Village village, BlockPos pos)
+        {
+            if (village == null || pos == null) return false;
+
+            Block crate = sapi.World.GetBlock(new AssetLocation(FoundriesFrontiersMod.ModId, "storehouse"));
+            if (crate == null) return false;
+
+            IBlockAccessor ba = sapi.World.BlockAccessor;
+            ba.SetBlock(crate.BlockId, pos);
+
+            if (ba.GetBlockEntity(pos) is BlockEntityStorehouse be)
+            {
+                be.VillageId = village.Id;
+                be.RebuildFromLedger();
+                be.MarkDirty(true);
+            }
+
+            village.StorehouseX = pos.X;
+            village.StorehouseY = pos.Y;
+            village.StorehouseZ = pos.Z;
+            village.HasStorehouse = true;
+            return true;
         }
 
         /// <summary>Takes the storehouse back out, if it is still there.</summary>

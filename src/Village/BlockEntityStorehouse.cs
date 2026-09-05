@@ -2,6 +2,7 @@ using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
+using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 
@@ -429,6 +430,28 @@ namespace FoundriesFrontiers
             }
 
             Inventory?.Clear();
+
+            // Second line of defence. The break should already have been refused before
+            // the engine got this far, so reaching here means something let it through.
+            // Put the crate back whole rather than leaving one standing with nothing
+            // behind it, which is the state that made it impossible to open.
+            if (Api?.Side == EnumAppSide.Server && VillageId != 0)
+            {
+                var registry = Api.ModLoader.GetModSystem<VillageRegistry>();
+                Village alive = registry?.Get(VillageId);
+                if (alive != null)
+                {
+                    BlockPos where = Pos.Copy();
+                    Api.Event.EnqueueMainThreadTask(() =>
+                    {
+                        registry.RestoreStorehouse(alive, where);
+                        Api.Logger.Warning(
+                            "[F&F] A break got past the refusal on {0}'s storehouse at {1}. Put it back.",
+                            alive.Name, where);
+                    }, "ffrestorestorehouse");
+                    return;
+                }
+            }
 
             Village v = Village;
             if (v != null && Api?.Side == EnumAppSide.Server)
