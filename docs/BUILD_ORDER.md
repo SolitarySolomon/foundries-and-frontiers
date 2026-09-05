@@ -196,6 +196,18 @@ Nothing in Phase D can place a building until this exists.
 ## Phase E: The ladder  *(M3)*
 
 - [ ] **E1 · Tiers and gates:** definitions, conditions, sustained-hold check, all config.
+      Every gate reads three kinds of condition, and all three matter:
+      **stock** (clay ≥ 200), **flow** (food surplus ≥ 20/day for 10 days, which is why
+      B2's measured rate had to be honest), and **coverage** (every bed heated, claim
+      enclosed, every trade staffed).
+      *Added:* a **housing standard** on every gate, at least 70% of dwellings built to
+      the previous tier's material or better, config as `HousingStandardFraction`.
+      Without it nothing ever forces a village to replace what it already has, and a
+      tier-4 settlement could be a field of tier-0 hovels with a bloomery beside them.
+      The gates as written only ask whether *new* things exist. This is what makes the
+      whole-village rebuild mandatory, and the rebuild is the single most legible thing
+      the ladder can show a player who has been away. Deliberately not 100%: one stubborn
+      old hovel in the corner of a stone town is character.
 - [ ] **E2 · Per-tier dwellings and walls:** one dwelling and one perimeter per tier, 0–4,
       two cultures. Tier-1 wall is stakes with gaps; tier-4 is mortared stone.
 - [ ] **E3 · Infrastructure buildings:** woodshed, well, compost yard, smokehouse, granary,
@@ -272,6 +284,21 @@ Nothing in Phase D can place a building until this exists.
       you**, storehouse access both ways, guards defend you, counted in the population.
 - [ ] **G10 · Founding a village:** founding stone, settlers arrive, then the brain takes over.
       **It runs itself; you don't command it.**
+
+- [ ] **G11 · Town life:** the density and activity that make a settlement read as alive,
+      deliberately **not** a tier. Every tier in this design is a material, and "more life"
+      has none, so it would be the one stage with no visual identity and an arbitrary gate.
+      It also should not switch on at the top: a tier-2 village wants a woodpile by the
+      door too, just fewer of them. So it scales continuously with population and
+      prosperity instead.
+      Market stalls around the square, count scaling with trade volume, staffed on market
+      days. Street furniture the builder places in leftover cells when there is nothing
+      left to construct: woodpiles, drying racks, benches, barrels, handcarts, washing
+      lines. Shop signs on job buildings. A market day that pulls the schedule to the
+      square instead of to work. Lighting density rising with prosperity rather than tier.
+      And **sprawl without a tier**: a tier-5 town keeps appending grid modules as its
+      population grows, so a town two hundred days old is visibly bigger than one that
+      just arrived. This is what the sixth tier was asking for, and none of it needs one.
 
 ---
 

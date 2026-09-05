@@ -76,10 +76,13 @@ namespace FoundriesFrontiers
         public class VillageConfig
         {
             /// <summary>
-            /// How far a village claims out from its centre, by tier 0 to 6. A claim is
+            /// How far a village claims out from its centre, by tier 0 to 5. A claim is
             /// a square, so a radius of 32 is a 65 block wide box.
+            ///
+            /// Six entries because there are six tiers. A tier-5 town keeps sprawling
+            /// after this by appending grid modules rather than by claiming further out.
             /// </summary>
-            [JsonProperty] public int[] ClaimRadiusByTier = { 24, 32, 40, 52, 64, 80, 96 };
+            [JsonProperty] public int[] ClaimRadiusByTier = { 24, 32, 44, 58, 74, 96 };
 
             /// <summary>How far the claim reaches above the centre block.</summary>
             [JsonProperty] public int ClaimHeightAbove = 40;

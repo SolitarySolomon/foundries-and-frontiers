@@ -388,7 +388,7 @@ namespace FoundriesFrontiers
         {
             if (village == null) return false;
 
-            tier = GameMath.Clamp(tier, 0, 6);
+            tier = GameMath.Clamp(tier, 0, MaxTier);
             if (tier == village.Tier) return false;
 
             string wasStage = StageForTier(village.Tier);
@@ -681,9 +681,18 @@ namespace FoundriesFrontiers
         {
             if (tier <= 1) return "rough";
             if (tier <= 3) return "cairn";
-            if (tier <= 4) return "column";
+            if (tier == 4) return "column";
             return "monument";
         }
+
+        /// <summary>
+        /// The top of the ladder. Six tiers, 0 to 5, with Town as the capstone.
+        ///
+        /// There is no tier 6. What a seventh tier was being asked for is density and
+        /// activity rather than another material, and that scales continuously with a
+        /// town's population instead of unlocking at a stage. See G11 in the build order.
+        /// </summary>
+        public const int MaxTier = 5;
 
         private Block CairnFor(BlockPos pos, int tier)
         {

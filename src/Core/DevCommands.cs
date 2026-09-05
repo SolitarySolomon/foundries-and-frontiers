@@ -177,7 +177,7 @@ namespace FoundriesFrontiers
                         .HandleWith(args => OnVillageTable(sapi))
                     .EndSubCommand()
                     .BeginSubCommand("tier")
-                        .WithDescription("Set a village's tier and watch its marker change. /ff village tier <0-6> [id]")
+                        .WithDescription("Set a village's tier and watch its marker change. /ff village tier <0-5> [id]")
                         .RequiresPlayer()
                         .WithArgs(sapi.ChatCommands.Parsers.Int("tier"),
                                   sapi.ChatCommands.Parsers.OptionalInt("id", 0))
@@ -1037,7 +1037,8 @@ namespace FoundriesFrontiers
         private static TextCommandResult OnVillageTier(ICoreServerAPI sapi, TextCommandCallingArgs args)
         {
             int tier = (int)args[0];
-            if (tier < 0 || tier > 6) return TextCommandResult.Error("Tier runs 0 to 6.");
+            if (tier < 0 || tier > VillageRegistry.MaxTier)
+                return TextCommandResult.Error("Tier runs 0 to " + VillageRegistry.MaxTier + ". Town is the capstone.");
 
             Village v = LedgerTarget(sapi, args, (int)args[1], out string error);
             if (v == null) return TextCommandResult.Error(error);
