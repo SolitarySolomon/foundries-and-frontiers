@@ -1,7 +1,6 @@
 {
   "foundriesfrontiers:modname": "Foundries & Frontiers",
   "foundriesfrontiers:moddesc": "Villages that grow on their own.",
-
   "foundriesfrontiers:item-creature-villager-male-forager": "Forager",
   "foundriesfrontiers:item-creature-villager-female-forager": "Forager",
   "foundriesfrontiers:item-creature-villager-male-builder": "Builder",
@@ -11,5 +10,6 @@
   "foundriesfrontiers:item-creature-villager-male-farmer": "Farmer",
   "foundriesfrontiers:item-creature-villager-female-farmer": "Farmer",
   "foundriesfrontiers:item-creature-villager-male-herder": "Herder",
-  "foundriesfrontiers:item-creature-villager-female-herder": "Herder"
+  "foundriesfrontiers:item-creature-villager-female-herder": "Herder",
+  "foundriesfrontiers:block-villagecairn": "Village Cairn"
 }

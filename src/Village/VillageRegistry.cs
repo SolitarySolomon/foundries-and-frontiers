@@ -117,6 +117,7 @@ namespace FoundriesFrontiers
                 if (d < minGap)
                 {
                     error = "Too close to " + other.Name + " (" + (int)d + " blocks, minimum is " + (int)minGap + ").";
+                    sapi.Logger.Notification("[F&F] Refused a village at {0}: {1}", centre, error);
                     return null;
                 }
             }
@@ -136,6 +137,8 @@ namespace FoundriesFrontiers
             byId[village.Id] = village;
             loadedMembers[village.Id] = new List<FFVillager>();
 
+            PlaceMarker(village);
+
             sapi.Logger.Notification("[F&F] Founded {0} at {1}", village, centre);
             return village;
         }
@@ -153,6 +156,8 @@ namespace FoundriesFrontiers
                 villager.VillageId = 0;
                 villager.RefreshNameTag();
             }
+
+            ClearMarker(v);
 
             byId.Remove(id);
             loadedMembers.Remove(id);
@@ -281,6 +286,94 @@ namespace FoundriesFrontiers
                 Get(id)?.MemberIds.Remove(villager.EntityId);
                 if (why == EnumDespawnReason.Death) DevStats.Bump(DevStats.VillagersDied);
             }
+        }
+
+        // --- the centre cairn ------------------------------------------------------
+
+        /// <summary>
+        /// Puts the marker at the village centre, or as close above it as there is room.
+        /// Returns where it went, or null if it could not be placed.
+        ///
+        /// The centre is wherever the founder stood, which may be inside a hillside or a
+        /// metre in the air. Rather than refuse, this walks up to find the first spot
+        /// that will take a block and settles it onto the ground beneath.
+        /// </summary>
+        public BlockPos PlaceMarker(Village village)
+        {
+            if (village == null) return null;
+
+            Block cairn = sapi.World.GetBlock(new AssetLocation(FoundriesFrontiersMod.ModId, "villagecairn"));
+            if (cairn == null)
+            {
+                sapi.Logger.Warning("[F&F] villagecairn block did not resolve. Is the blocktype JSON loading?");
+                return null;
+            }
+
+            IBlockAccessor ba = sapi.World.BlockAccessor;
+            BlockPos pos = village.Centre.Copy();
+
+            // Up out of any solid ground first.
+            for (int i = 0; i < 8 && !IsFree(ba, pos); i++) pos.Y++;
+            if (!IsFree(ba, pos)) return null;
+
+            // Then back down onto whatever is under it, so it never floats.
+            for (int i = 0; i < 8 && IsFree(ba, pos.DownCopy()); i++) pos.Y--;
+
+            ba.SetBlock(cairn.BlockId, pos);
+
+            if (ba.GetBlockEntity(pos) is BlockEntityVillageCairn be)
+            {
+                be.VillageId = village.Id;
+                be.MarkDirty(true);
+            }
+
+            village.MarkerX = pos.X;
+            village.MarkerY = pos.Y;
+            village.MarkerZ = pos.Z;
+            village.HasMarker = true;
+            return pos;
+        }
+
+        private static bool IsFree(IBlockAccessor ba, BlockPos pos)
+        {
+            Block b = ba.GetBlock(pos);
+            return b == null || b.BlockId == 0 || b.Replaceable >= 6000;
+        }
+
+        /// <summary>Takes the cairn back out of the world, if it is still there.</summary>
+        public void ClearMarker(Village village)
+        {
+            if (village == null || !village.HasMarker) return;
+
+            var pos = new BlockPos(village.MarkerX, village.MarkerY, village.MarkerZ, 0);
+            if (sapi.World.BlockAccessor.GetBlockEntity(pos) is BlockEntityVillageCairn be
+                && be.VillageId == village.Id)
+            {
+                sapi.World.BlockAccessor.SetBlock(0, pos);
+            }
+            village.HasMarker = false;
+        }
+
+        /// <summary>
+        /// Every loaded villager standing inside this claim who belongs to nobody.
+        /// Adoption is a deliberate act rather than something that happens on a timer,
+        /// because a village claiming passers-by automatically would be wrong.
+        /// </summary>
+        public int AdoptUnaffiliated(Village village)
+        {
+            if (village == null) return 0;
+
+            int adopted = 0;
+            foreach (Entity e in sapi.World.LoadedEntities.Values)
+            {
+                if (e is not FFVillager villager) continue;
+                if (villager.VillageId != 0) continue;
+                if (!village.Contains(villager.Pos.AsBlockPos)) continue;
+
+                Join(villager, village);
+                adopted++;
+            }
+            return adopted;
         }
 
         // --- persistence -----------------------------------------------------------

@@ -80,7 +80,12 @@ Rules that apply to every step, because retrofitting any of them is painful.
       JSON into world save data with a format version, and `/ff village create|list|info|remove|join|leave`.
       Claim is a square box sized by tier from config. Villagers spawned inside a claim
       join it automatically. A villager whose village no longer exists becomes an orphan
-      rather than a dangling reference.
+      rather than a dangling reference; walking to a new home is H3.
+      *Also done, pulled forward from B3:* the centre cairn, a block with a block entity
+      that names the village when you look at it. Breaking it leaves the village intact.
+      `/ff village show` outlines a claim on the ground for testing, `/ff village adopt`
+      takes in unaffiliated villagers standing inside it, `/ff village mark` replaces a
+      broken cairn, `/ff village remove all` clears the lot.
 - [ ] **B2 · Ledger:** six pools, plus **measured daily flow recorded from real deposits**
       (fast-forward depends on this being honest). *Test:* `/ff dump`
 - [ ] **B3 · Blocks, block entities and dialogs:** the shared infrastructure for every
@@ -240,7 +245,7 @@ Nothing in Phase D can place a building until this exists.
 - [ ] **H3 · Orphans:** when a village dies, the survivors don't simply vanish. They set
       out for the nearest living village within range and are adopted into it, bringing
       their trade and their name with them. A settlement that takes in refugees gains
-      population it didn't grow, and and the arrivals carry the memory of what happened,
+      population it did not grow, and the arrivals carry the memory of what happened,
       which is the headman's account of a neighbour's fall coming from someone who was
       there. Villagers with nowhere reachable to go die on the road.
 - [ ] **H4 · Reclamation:** thriving villages take over dead ones and inherit the walls.

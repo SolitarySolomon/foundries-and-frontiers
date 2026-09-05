@@ -46,6 +46,10 @@ namespace FoundriesFrontiers
             api.RegisterEntity("FFVillager", typeof(FFVillager));
             api.RegisterEntityBehaviorClass("ffchatter", typeof(EntityBehaviorVillagerChatter));
 
+            // Blocks. Both sides again: the client needs the class to draw and describe it.
+            api.RegisterBlockClass("BlockVillageCairn", typeof(BlockVillageCairn));
+            api.RegisterBlockEntityClass("VillageCairn", typeof(BlockEntityVillageCairn));
+
             // Our AI tasks. Registered by code so entity JSON can reference them,
             // which keeps tuning in data rather than requiring a rebuild.
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerLoiter>("ffloiter");

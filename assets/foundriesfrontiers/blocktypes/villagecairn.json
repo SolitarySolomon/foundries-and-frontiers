@@ -1,0 +1,26 @@
+{
+	code: "villagecairn",
+	class: "BlockVillageCairn",
+	entityClass: "VillageCairn",
+	drawtype: "json",
+	shape: { base: "block/villagecairn" },
+	textures: {
+		rock: { base: "survival:block/stone/rock/granite1" }
+	},
+	blockmaterial: "Stone",
+	creativeinventory: { "general": ["*"] },
+	resistance: 6,
+	requiredMiningTier: 1,
+	sidesolid: { all: false },
+	sideopaque: { all: false },
+	lightAbsorption: 0,
+	replaceable: 500,
+	collisionbox: { x1: 0.18, y1: 0, z1: 0.18, x2: 0.82, y2: 0.78, z2: 0.82 },
+	selectionbox: { x1: 0.18, y1: 0, z1: 0.18, x2: 0.82, y2: 0.78, z2: 0.82 },
+	sounds: {
+		place: "game:block/rock",
+		break: "game:block/rock",
+		hit: "game:block/rock",
+		walk: "game:walk/stone"
+	}
+}

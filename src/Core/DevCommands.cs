@@ -118,9 +118,27 @@ namespace FoundriesFrontiers
                         .HandleWith(args => OnVillageInfo(sapi, args))
                     .EndSubCommand()
                     .BeginSubCommand("remove")
-                        .WithDescription("Delete a village. /ff village remove <id>")
-                        .WithArgs(sapi.ChatCommands.Parsers.Int("id"))
+                        .WithDescription("Delete a village. /ff village remove <id|all>")
+                        .WithArgs(sapi.ChatCommands.Parsers.Word("id"))
                         .HandleWith(args => OnVillageRemove(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("show")
+                        .WithDescription("Outline a village claim. /ff village show [id|off]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("id"))
+                        .HandleWith(args => OnVillageShow(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("adopt")
+                        .WithDescription("Take every unaffiliated villager inside the claim into the village. /ff village adopt [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageAdopt(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("mark")
+                        .WithDescription("Put the centre cairn back if it was broken. /ff village mark [id]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalInt("id", 0))
+                        .HandleWith(args => OnVillageMark(sapi, args))
                     .EndSubCommand()
                     .BeginSubCommand("join")
                         .WithDescription("Put the villager you are looking at into a village. /ff village join [id]")
@@ -688,6 +706,9 @@ namespace FoundriesFrontiers
             sb.AppendLine("Founded    day " + (int)v.FoundedTotalDays + " (" + (int)age + " days ago)");
             sb.AppendLine("Centre     " + v.Centre);
             sb.AppendLine("Claim      " + v.ClaimRadius + " blocks, box " + v.ClaimBox);
+            sb.AppendLine("Cairn      " + (v.HasMarker
+                ? new BlockPos(v.MarkerX, v.MarkerY, v.MarkerZ, 0).ToString()
+                : "(gone, /ff village mark puts it back)"));
             sb.AppendLine("Roster     " + v.MemberIds.Count + " total, "
                           + reg.LoadedMembers(v.Id).Count + " loaded");
 
@@ -709,8 +730,28 @@ namespace FoundriesFrontiers
 
         private static TextCommandResult OnVillageRemove(ICoreServerAPI sapi, TextCommandCallingArgs args)
         {
-            int id = (int)args[0];
             var reg = Registry(sapi);
+            string arg = (args[0] as string ?? "").Trim();
+
+            if (arg.ToLowerInvariant() == "all")
+            {
+                var ids = new List<long>();
+                foreach (Village village in reg.All) ids.Add(village.Id);
+                int orphans = 0;
+                foreach (long vid in ids)
+                {
+                    orphans += reg.LoadedMembers(vid).Count;
+                    reg.Remove(vid);
+                }
+                return TextCommandResult.Success(
+                    "Removed " + ids.Count + " village(s). " + orphans + " loaded villager(s) are now unaffiliated.");
+            }
+
+            if (!long.TryParse(arg, out long id))
+            {
+                return TextCommandResult.Error("Give a village id, or 'all'. /ff village list shows the ids.");
+            }
+
             Village v = reg.Get(id);
             if (v == null) return TextCommandResult.Error("No village with id " + id + ".");
 
@@ -718,6 +759,112 @@ namespace FoundriesFrontiers
             reg.Remove(id);
             return TextCommandResult.Success(
                 "Removed " + v.Name + " (#" + id + "). " + orphaned + " loaded villager(s) are now unaffiliated.");
+        }
+
+        /// <summary>
+        /// Highlight slot for the claim outline. Any number will do as long as nothing
+        /// else in the mod reuses it, since a slot is overwritten wholesale each time.
+        /// </summary>
+        private const int ClaimHighlightSlot = 1701;
+
+        private static TextCommandResult OnVillageShow(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null) return TextCommandResult.Error("No player entity.");
+
+            string arg = (args[0] as string ?? "").Trim().ToLowerInvariant();
+            var reg = Registry(sapi);
+
+            if (arg == "off")
+            {
+                sapi.World.HighlightBlocks(player, ClaimHighlightSlot, new List<BlockPos>());
+                return TextCommandResult.Success("Claim outline off.");
+            }
+
+            Village v;
+            if (arg.Length > 0 && long.TryParse(arg, out long id))
+            {
+                v = reg.Get(id);
+                if (v == null) return TextCommandResult.Error("No village with id " + id + ".");
+            }
+            else
+            {
+                BlockPos here = player.Entity.Pos.AsBlockPos;
+                v = reg.VillageAt(here) ?? reg.Nearest(here, 400);
+                if (v == null) return TextCommandResult.Error("No village within 400 blocks. /ff village list");
+            }
+
+            // Walk the perimeter and hug the terrain, so the outline reads as a line on
+            // the ground rather than a floating square. Every fourth block keeps the
+            // marker count sane on a big claim without leaving visible gaps.
+            var blocks = new List<BlockPos>();
+            int r = v.ClaimRadius;
+            int step = r > 48 ? 2 : 1;
+
+            for (int d = -r; d <= r; d += step)
+            {
+                AddOutlineBlock(sapi, blocks, v.CentreX + d, v.CentreZ - r);
+                AddOutlineBlock(sapi, blocks, v.CentreX + d, v.CentreZ + r);
+                AddOutlineBlock(sapi, blocks, v.CentreX - r, v.CentreZ + d);
+                AddOutlineBlock(sapi, blocks, v.CentreX + r, v.CentreZ + d);
+            }
+
+            var colors = new List<int>();
+            int colour = ColorUtil.ToRgba(120, 70, 190, 255);
+            for (int i = 0; i < blocks.Count; i++) colors.Add(colour);
+
+            sapi.World.HighlightBlocks(player, ClaimHighlightSlot, blocks, colors);
+
+            return TextCommandResult.Success(
+                "Outlining " + v.Name + " (#" + v.Id + "), claim " + r + " blocks out from " + v.Centre
+                + ". " + blocks.Count + " markers. /ff village show off to clear.");
+        }
+
+        private static void AddOutlineBlock(ICoreServerAPI sapi, List<BlockPos> into, int x, int z)
+        {
+            var probe = new BlockPos(x, 0, z, 0);
+            int y = sapi.World.BlockAccessor.GetTerrainMapheightAt(probe);
+            into.Add(new BlockPos(x, y, z, 0));
+        }
+
+        private static TextCommandResult OnVillageAdopt(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null) return TextCommandResult.Error("No player entity.");
+
+            var reg = Registry(sapi);
+            int id = (int)args[0];
+            BlockPos here = player.Entity.Pos.AsBlockPos;
+            Village v = id > 0 ? reg.Get(id) : reg.VillageAt(here) ?? reg.Nearest(here, 400);
+
+            if (v == null)
+            {
+                return TextCommandResult.Error(id > 0
+                    ? "No village with id " + id + "."
+                    : "No village within 400 blocks.");
+            }
+
+            int adopted = reg.AdoptUnaffiliated(v);
+            return TextCommandResult.Success(adopted == 0
+                ? "Nobody inside " + v.Name + "'s claim needed adopting."
+                : v.Name + " adopted " + adopted + " villager(s). Roster: " + v.MemberIds.Count + ".");
+        }
+
+        private static TextCommandResult OnVillageMark(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null) return TextCommandResult.Error("No player entity.");
+
+            var reg = Registry(sapi);
+            int id = (int)args[0];
+            BlockPos here = player.Entity.Pos.AsBlockPos;
+            Village v = id > 0 ? reg.Get(id) : reg.VillageAt(here) ?? reg.Nearest(here, 400);
+            if (v == null) return TextCommandResult.Error("No village found. /ff village list");
+
+            BlockPos placed = reg.PlaceMarker(v);
+            return placed == null
+                ? TextCommandResult.Error("Could not find room for a cairn near " + v.Centre + ".")
+                : TextCommandResult.Success("Cairn for " + v.Name + " placed at " + placed + ".");
         }
 
         private static TextCommandResult OnVillageJoin(ICoreServerAPI sapi, TextCommandCallingArgs args)

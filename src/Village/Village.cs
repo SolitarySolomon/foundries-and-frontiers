@@ -43,6 +43,16 @@ namespace FoundriesFrontiers
         [JsonProperty] public List<long> MemberIds = new List<long>();
 
         /// <summary>
+        /// Whether the centre cairn is currently in the world. A broken cairn does not
+        /// destroy the village, it just leaves it unmarked until someone puts one back.
+        /// </summary>
+        [JsonProperty] public bool HasMarker;
+
+        [JsonProperty] public int MarkerX;
+        [JsonProperty] public int MarkerY;
+        [JsonProperty] public int MarkerZ;
+
+        /// <summary>
         /// Standing per player, keyed by player UID.
         ///
         /// A map rather than a single number because two players on one server must be
