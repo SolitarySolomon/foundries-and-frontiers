@@ -152,10 +152,19 @@ Rules that apply to every step, because retrofitting any of them is painful.
       villager quietly walking off the edge of the world while nobody is looking is the
       exact failure it exists to prevent.
 - [ ] **B5a · The earth pool:** a seventh resource, `Earth`, holding soil, sand, dry grass
-      and peat. It has nowhere to go today and it is what tier 0 to 2 build out of.
-      Folding it into clay would let a village build a kiln out of lawn; folding it into
-      stone is nonsense. It drives different behaviour from the other six, which is the
-      same argument they won on.
+      and peat.
+      **The case for it is fields, not construction.** Wood and stone are what a village
+      actually builds out of at every tier; earth is daub infill at tier 1 and cob at
+      tier 2 and then stops mattering for building at all. What does not stop is farmland:
+      soil grade is a five step progression that runs forever and is the one material a
+      village on poor ground cannot dig its way out of.
+      Folding it into clay is the thing to avoid. Pool value is fungible, so a village
+      that dug 200 units of dirt into the clay pool could afford a kiln's ledger cost
+      without being able to produce a single fired brick. Dirt has to be its own currency
+      or it buys pottery. Folding it into stone is nonsense for the same reason.
+      **If fields alone do not justify a seventh storehouse row in play, drop it.**
+      Nothing else depends on it and the ledger already handles pools coming and going
+      across saves.
       Cheap because the ledger stores pools as arrays sized from `VillageResources.Count`
       and `Grow()` already widens a save written before a pool existed, unit tested.
       **Soil grade is a forms ladder on this pool**, the same shape as firewood to planks.
@@ -242,11 +251,14 @@ Nothing in Phase D can place a building until this exists.
       blocks*, converting one into the other only for forms the tier has unlocked.
       Consumes from the ledger and **stalls visibly** when
       empty. *Test:* start a build with no wood; nothing happens until wood arrives.
-- [ ] **C5 · Terracing:** **the cut is where a tier-0 village gets its walls.** The game's
+- [ ] **C5 · Terracing:** **the cut is where an early village gets its building material.**
+      Cob and daub, which is what tiers 1 and 2 put up houses in, not the palisade or the
+      curtain wall: those are wood and stone and have nothing to do with earth. The game's
       own recipes settle this: cob is 5 soil and 4 dry grass, daub is soil, sand, clay and
       grass. So the spoil from levelling a site is not waste to be moved, it is the
-      material the building is made of, and a settlement that works its ground is
-      self-sufficient in walls before it has a clay pit.
+      material the building is made of, and a settlement that works its ground can put up
+      cob houses before it has a clay pit. Demand drops away at tier 3 when construction
+      moves to fired brick, so this is an early-game loop rather than a standing one.
       Blocks cut are broken properly and their drops go through the resource table into
       the ledger, so this mostly falls out of machinery that already exists.
       **Hard limit: only a queued building's footprint, never speculative.** A tier-5
