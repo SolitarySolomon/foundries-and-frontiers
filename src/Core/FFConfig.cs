@@ -35,6 +35,22 @@ namespace FoundriesFrontiers
 
             /// <summary>At or above this speed the run animation is used instead of walk.</summary>
             [JsonProperty] public float RunAnimationThreshold = 0.035f;
+
+            /// <summary>
+            /// How much of the claim a villager will stroll across, as a fraction of the
+            /// radius. Under 1 so a stroll rarely ends exactly on the boundary and hands
+            /// them straight to the tether.
+            /// </summary>
+            [JsonProperty] public float WanderClaimFraction = 0.85f;
+
+            /// <summary>How far an unaffiliated villager strolls from wherever they are.</summary>
+            [JsonProperty] public int WanderRadiusWithoutVillage = 16;
+
+            [JsonProperty] public double WanderCooldownMinSec = 6;
+            [JsonProperty] public double WanderCooldownMaxSec = 22;
+
+            /// <summary>Abandon a stroll that has not arrived after this long.</summary>
+            [JsonProperty] public double WanderGiveUpSec = 45;
         }
 
         public class ChatterConfig
@@ -128,7 +144,7 @@ namespace FoundriesFrontiers
             /// How far outside its claim a villager may drift before it turns round and
             /// walks home. A little slack so they can round a corner without being yanked.
             /// </summary>
-            [JsonProperty] public int TetherSlackBlocks = 8;
+            [JsonProperty] public int TetherSlackBlocks = 20;
         }
 
         public class ScheduleConfig

@@ -145,6 +145,10 @@ Rules that apply to every step, because retrofitting any of them is painful.
       wander task's `maxDistanceToSpawn`; this step re-anchors it to the claim centre and
       makes leaving require a reason: a job site, a caravan, a raid, fleeing.
       *Test:* a villager wanders a village and never drifts off across the map.
+      *Finished properly later:* the first pass only added the "come back" half and left
+      the game's own wander task anchored to the spawn point, so villagers stood where
+      they were put and never roamed the village at all. `ffwander` replaces it and
+      anchors to the claim.
       *Done:* `ffhome`, priority 1.6, above wandering and below an explicit order, because
       being told to go somewhere is itself a reason to leave. Triggers outside the claim
       plus a slack margin and walks them to the centre rather than to the boundary, since

@@ -320,26 +320,13 @@
 				aiCreatureType: "Humanoid",
 				aitasks: [
 					{
-						code: "wander",
+						// Ours, not the game's. The built in wander anchors to wherever an
+						// entity spawned, which is right on the day a villager is born and
+						// wrong every day after, and is why a village looked like a crowd
+						// standing where it was put. This one anchors to the claim.
+						code: "ffwander",
 						priority: 1.0,
-						movespeed: 0.030,
-
-						// Tether. Villagers belong somewhere and should not drift off across
-						// the map between jobs. Anchored to their spawn point for now; once
-						// villages exist this becomes the claim centre, and leaving it will
-						// require an actual reason - a job, a caravan, a raid.
-						maxDistanceToSpawn: 24,
-						wanderRangeMin: 3,
-						wanderRangeMax: 12,
-
-						preferredLightLevel: 12,
-						maxHeight: 5,
-						minTurnAnglePerSec: 120,
-						maxTurnAnglePerSec: 360,
-						mincooldown: 8000,
-						maxcooldown: 25000,
-						animation: "walk",
-						animationSpeed: 1.0
+						priorityForCancel: 1.0
 					},
 					{
 						code: "lookaround",

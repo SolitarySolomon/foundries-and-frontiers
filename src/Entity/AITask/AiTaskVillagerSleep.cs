@@ -23,6 +23,7 @@ namespace FoundriesFrontiers
         private BlockPos bedPos;
         private bool mounted;
         private double gaveUpChasingAt;
+        private double retryAt;
 
         /// <summary>Stop trying to reach a bed after this long and settle where you are.</summary>
         private const double WalkTimeoutSeconds = 120;
@@ -51,6 +52,7 @@ namespace FoundriesFrontiers
         protected override void OnStart()
         {
             mounted = false;
+            retryAt = 0;
             gaveUpChasingAt = entity.World.ElapsedMilliseconds / 1000.0 + WalkTimeoutSeconds;
 
             bedPos = FindBed();
@@ -80,13 +82,24 @@ namespace FoundriesFrontiers
                 return true;
             }
 
-            if (entity.World.ElapsedMilliseconds / 1000.0 > gaveUpChasingAt)
+            double now = entity.World.ElapsedMilliseconds / 1000.0;
+
+            if (now > gaveUpChasingAt)
             {
                 // Could not get there. Sleeping on the ground beats standing in a field
                 // walking into a wall all night.
                 Villager.CancelGoto();
                 bedPos = null;
                 DevStats.Bump(DevStats.PathsFailed);
+                return true;
+            }
+
+            // The walk ended without arriving, so ask for it again rather than standing
+            // there until the timeout. One refused path should not cost a night's sleep.
+            if (Villager.GotoTarget == null && now >= retryAt)
+            {
+                retryAt = now + 4;
+                Villager.OrderGoto(bedPos, MoveSpeeds.Walk);
             }
 
             return true;

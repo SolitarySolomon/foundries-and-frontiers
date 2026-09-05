@@ -22,6 +22,11 @@ namespace FoundriesFrontiers
     {
         private BlockPos target;
         private double startedAt;
+        private double retryAt;
+        private int failures;
+
+        /// <summary>Wait this long before asking for a path again after one fails.</summary>
+        private const double RetryDelaySeconds = 4;
 
         /// <summary>Give up rather than walk forever if the way home is blocked.</summary>
         private const double GiveUpAfterSeconds = 90;
@@ -60,6 +65,8 @@ namespace FoundriesFrontiers
             // leaves them standing on the line, one step from doing this again.
             target = village.Centre;
             startedAt = entity.World.ElapsedMilliseconds / 1000.0;
+            retryAt = 0;
+            failures = 0;
 
             Villager.OrderGoto(target, MoveSpeeds.Walk);
         }
@@ -75,15 +82,31 @@ namespace FoundriesFrontiers
                 return false;
             }
 
-            double elapsed = entity.World.ElapsedMilliseconds / 1000.0 - startedAt;
-            if (elapsed > GiveUpAfterSeconds)
+            double now = entity.World.ElapsedMilliseconds / 1000.0;
+
+            if (now - startedAt > GiveUpAfterSeconds)
             {
                 Villager.CancelGoto();
                 DevStats.Bump(DevStats.PathsFailed);
                 return false;
             }
 
-            // The goto task does the walking. This one only decides when it is done.
+            // The walk finished or failed and they are still out here, so ask again.
+            // Ordering the journey only once meant a single failed path left them
+            // standing in a field for the rest of the timeout doing nothing at all.
+            if (Villager.GotoTarget == null)
+            {
+                if (now < retryAt) return true;
+
+                failures++;
+                retryAt = now + RetryDelaySeconds;
+
+                // A long way from home is a long way for a pathfinder. After a couple of
+                // refusals, aim at a point part of the way back instead and make the
+                // journey in stages.
+                Villager.OrderGoto(failures <= 2 ? target : PartWayHome(village), MoveSpeeds.Walk);
+            }
+
             return true;
         }
 
@@ -94,6 +117,22 @@ namespace FoundriesFrontiers
             // because something more important came along is not a reason to abandon a
             // journey that something else is carrying out.
             target = null;
+        }
+
+        /// <summary>
+        /// A point between here and the village, on the ground. Splitting an impossible
+        /// journey into possible ones beats standing still, and beats teleporting.
+        /// </summary>
+        private BlockPos PartWayHome(Village village)
+        {
+            Vec3d here = entity.Pos.XYZ;
+            double toX = (here.X + village.CentreX) / 2;
+            double toZ = (here.Z + village.CentreZ) / 2;
+
+            var probe = new BlockPos((int)toX, 0, (int)toZ, 0);
+            int y = entity.World.BlockAccessor.GetTerrainMapheightAt(probe);
+
+            return y > 0 ? new BlockPos((int)toX, y + 1, (int)toZ, 0) : village.Centre;
         }
 
         private Village Home
