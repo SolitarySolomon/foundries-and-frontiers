@@ -355,6 +355,13 @@
 						priorityForCancel: 2.0
 					},
 					{
+						// Bedtime outranks the tether: a villager caught outside at dusk
+						// should be heading for their own bed, not for the village centre.
+						code: "ffsleep",
+						priority: 1.8,
+						priorityForCancel: 1.8
+					},
+					{
 						// The tether. Above wandering, below an explicit order, because
 						// being told to go somewhere is itself a reason to leave.
 						code: "ffhome",

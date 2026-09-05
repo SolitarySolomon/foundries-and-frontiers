@@ -1,0 +1,144 @@
+using Vintagestory.API.Common;
+using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Datastructures;
+using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
+using Vintagestory.GameContent;
+
+namespace FoundriesFrontiers
+{
+    /// <summary>
+    /// Goes to bed at dusk and gets up at dawn.
+    ///
+    /// The first task that makes a village look like it has a routine rather than a
+    /// crowd, and the frame every job hangs off: a job only runs during working hours,
+    /// and this is what owns the rest of the day.
+    ///
+    /// A villager with no bed still stops working and stands down. Sleeping rough is a
+    /// visible symptom of a village that has not built enough houses, which is exactly
+    /// the pressure the design wants housing to apply.
+    /// </summary>
+    public class AiTaskVillagerSleep : FFTaskBase
+    {
+        private BlockPos bedPos;
+        private bool mounted;
+        private double gaveUpChasingAt;
+
+        /// <summary>Stop trying to reach a bed after this long and settle where you are.</summary>
+        private const double WalkTimeoutSeconds = 120;
+
+        public AiTaskVillagerSleep(EntityAgent entity, JsonObject taskConfig, JsonObject aiConfig)
+            : base(entity, taskConfig, aiConfig) { }
+
+        protected override float ThinkIntervalSec => 2f;
+
+        /// <summary>
+        /// Runs unwatched. A village that only goes to bed when somebody is looking is
+        /// a village that never sleeps, and the daily tick reads this state.
+        /// </summary>
+        protected override float ObservedRangeBlocks => -1;
+
+        private EnumDayPhase Phase => VillageSchedule.PhaseFor(entity.Api, entity.Pos.AsBlockPos);
+
+        protected override bool ShouldRun()
+        {
+            if (Villager == null || Villager.VillageId == 0) return false;
+
+            EnumDayPhase phase = Phase;
+            return phase == EnumDayPhase.Sleep || phase == EnumDayPhase.Shelter;
+        }
+
+        protected override void OnStart()
+        {
+            mounted = false;
+            gaveUpChasingAt = entity.World.ElapsedMilliseconds / 1000.0 + WalkTimeoutSeconds;
+
+            bedPos = FindBed();
+            if (bedPos != null) Villager.OrderGoto(bedPos, MoveSpeeds.Walk);
+        }
+
+        protected override bool OnTick(float dt)
+        {
+            EnumDayPhase phase = Phase;
+            if (phase != EnumDayPhase.Sleep && phase != EnumDayPhase.Shelter) return false;
+
+            if (mounted) return true;
+
+            if (bedPos == null)
+            {
+                // No bed to go to. Stand down where they are rather than working through
+                // the night, so an overcrowded village looks overcrowded.
+                return true;
+            }
+
+            double distSq = entity.Pos.XYZ.SquareDistanceTo(bedPos.ToVec3d().Add(0.5, 0, 0.5));
+            float arrival = FFConfig.Current.Schedule.BedArrivalBlocks;
+
+            if (distSq <= arrival * arrival)
+            {
+                TryGetIntoBed();
+                return true;
+            }
+
+            if (entity.World.ElapsedMilliseconds / 1000.0 > gaveUpChasingAt)
+            {
+                // Could not get there. Sleeping on the ground beats standing in a field
+                // walking into a wall all night.
+                Villager.CancelGoto();
+                bedPos = null;
+                DevStats.Bump(DevStats.PathsFailed);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Actually lie down. The game's beds are mountable seats, so a villager uses one
+        /// the same way a player does, which is why they visibly lie in it rather than
+        /// standing beside it looking tired.
+        /// </summary>
+        private void TryGetIntoBed()
+        {
+            Villager.CancelGoto();
+
+            if (entity.World.BlockAccessor.GetBlockEntity(bedPos) is not BlockEntityBed bed) return;
+            if (bed.AnyMounted()) return;
+
+            IMountableSeat seat = (bed as IMountable)?.Seats?.Length > 0
+                ? ((IMountable)bed).Seats[0]
+                : null;
+
+            if (seat != null && seat.CanMount(entity) && entity.TryMount(seat))
+            {
+                mounted = true;
+            }
+        }
+
+        protected override void OnStop(bool cancelled)
+        {
+            if (mounted) entity.TryUnmount();
+            mounted = false;
+            bedPos = null;
+            Villager.CancelGoto();
+        }
+
+        private BlockPos FindBed()
+        {
+            var registry = (entity.Api as ICoreServerAPI)?.ModLoader.GetModSystem<VillageRegistry>();
+            Village village = registry?.Get(Villager.VillageId);
+            if (village == null) return null;
+
+            VillageFacility bed = VillageRegistry.BedOf(village, entity.EntityId);
+            if (bed != null) return bed.Pos;
+
+            // Not assigned one yet. Ask now rather than standing around until the daily
+            // tick gets round to it, because it is already bedtime.
+            return registry.AssignBed(village, Villager)?.Pos;
+        }
+
+        public override string DebugLabel()
+            => Phase == EnumDayPhase.Shelter
+                ? (mounted ? "sheltering in bed" : "sheltering")
+                : (mounted ? "asleep" : bedPos == null ? "no bed" : "going to bed");
+    }
+}

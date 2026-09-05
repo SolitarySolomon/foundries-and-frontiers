@@ -226,6 +226,12 @@ namespace FoundriesFrontiers
                     .EndSubCommand()
                 .EndSubCommand()
 
+                .BeginSubCommand("time")
+                    .WithDescription("Set the hour of day, to watch the schedule change. /ff time <0-24>")
+                    .WithArgs(sapi.ChatCommands.Parsers.OptionalFloat("hour", 12))
+                    .HandleWith(args => OnTime(sapi, args))
+                .EndSubCommand()
+
                 .BeginSubCommand("credits")
                     .WithDescription("Who made the parts of this mod that were not made here")
                     .RequiresPrivilege(Privilege.chat)
@@ -377,6 +383,9 @@ namespace FoundriesFrontiers
             sb.AppendLine("Gender     " + (v.IsFemale ? "female" : "male"));
             sb.AppendLine("Village    " + VillageLabel(sapi, v));
             sb.AppendLine("Bed        " + BedLabel(sapi, v));
+            sb.AppendLine("Schedule   " + VillageSchedule.Describe(
+                              VillageSchedule.PhaseFor(sapi, v.Pos.AsBlockPos))
+                          + "  (hour " + sapi.World.Calendar.HourOfDay.ToString("0.0") + ")");
             sb.AppendLine("Position   " + v.Pos.AsBlockPos);
             sb.AppendLine("Health     " + v.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("currenthealth") + " / "
                                         + v.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("maxhealth"));
@@ -1202,6 +1211,24 @@ namespace FoundriesFrontiers
             return TextCommandResult.Success(
                 (villager.GivenName == "" ? "#" + villager.EntityId : villager.GivenName)
                 + " left " + (v?.Name ?? "their village") + ".");
+        }
+
+        private static TextCommandResult OnTime(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            float want = GameMath.Clamp((float)args[0], 0f, 23.99f);
+            float now = (float)sapi.World.Calendar.HourOfDay;
+
+            // The calendar only moves forwards, so going "back" means going round.
+            float hours = want - now;
+            if (hours < 0) hours += 24;
+
+            sapi.World.Calendar.Add(hours);
+
+            return TextCommandResult.Success(
+                "Hour is now " + sapi.World.Calendar.HourOfDay.ToString("0.0")
+                + ". Villagers should be " + VillageSchedule.Describe(
+                    VillageSchedule.PhaseFor(sapi, args.Caller.Player?.Entity?.Pos.AsBlockPos
+                                                   ?? new BlockPos(0, 0, 0, 0))) + ".");
         }
 
         private static TextCommandResult OnTrades()

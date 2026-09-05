@@ -194,8 +194,18 @@ Rules that apply to every step, because retrofitting any of them is painful.
       comes straight out of the storehouse. The grading itself is not a plot mechanic and
       not a separate system: it is the earth pool's forms table, exactly as wood already
       works. See B5a.
-- [ ] **B6 · Daily schedule:** sleep at night in an owned bed, work by day, shelter during
+- [x] **B6 · Daily schedule:** sleep at night in an owned bed, work by day, shelter during
       temporal storms. The frame every job slots into. *Test:* villagers go to bed at dusk.
+      *Done:* `VillageSchedule` is the one place that decides what an hour means, so no job
+      ever reasons about the time itself; it asks whether these are working hours.
+      Sheltering outranks the clock, read from the game's own temporal stability rather
+      than a timer of ours, so a village hides during exactly the storms a player would.
+      `ffsleep` at priority 1.8, above the tether, because a villager caught out at dusk
+      should be heading for their own bed rather than the village centre. **Beds are
+      mountable seats, so villagers genuinely lie in them** rather than standing beside
+      one looking tired. A villager with no bed still stands down where they are, which
+      makes an overcrowded village visibly overcrowded, and that is the pressure housing
+      is meant to apply. `/ff time <hour>` to watch it change.
 - [ ] **B7 · Work loop base:** shared task: travel → act over time → carry → deposit.
       Every producing job below is a subclass.
       *Also the home of maintenance:* a builder who walks over and rebuilds a broken

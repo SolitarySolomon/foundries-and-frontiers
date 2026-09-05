@@ -23,6 +23,7 @@ namespace FoundriesFrontiers
         [JsonProperty] public ChatterConfig Chatter = new ChatterConfig();
         [JsonProperty] public VillagerConfig Villager = new VillagerConfig();
         [JsonProperty] public VillageConfig Village = new VillageConfig();
+        [JsonProperty] public ScheduleConfig Schedule = new ScheduleConfig();
         [JsonProperty] public PerformanceConfig Performance = new PerformanceConfig();
 
         public class MovementConfig
@@ -128,6 +129,31 @@ namespace FoundriesFrontiers
             /// walks home. A little slack so they can round a corner without being yanked.
             /// </summary>
             [JsonProperty] public int TetherSlackBlocks = 8;
+        }
+
+        public class ScheduleConfig
+        {
+            /// <summary>Hour of day work begins. The game runs a 24 hour clock.</summary>
+            [JsonProperty] public float WorkStartHour = 7f;
+
+            /// <summary>And ends. Between this and sleeping, villagers are off duty.</summary>
+            [JsonProperty] public float WorkEndHour = 19f;
+
+            /// <summary>Hour they head for bed.</summary>
+            [JsonProperty] public float SleepStartHour = 21f;
+
+            /// <summary>And get up. Wraps past midnight, so this is a small number.</summary>
+            [JsonProperty] public float SleepEndHour = 6f;
+
+            /// <summary>
+            /// Temporal stability below which a storm counts as bad enough to hide from.
+            /// The game's own figure, so villagers shelter during the storms a player
+            /// would shelter from rather than during ones we invented.
+            /// </summary>
+            [JsonProperty] public float ShelterBelowStability = 0.7f;
+
+            /// <summary>How close to their bed counts as being in it, if mounting fails.</summary>
+            [JsonProperty] public float BedArrivalBlocks = 1.8f;
         }
 
         public class PerformanceConfig
