@@ -83,7 +83,12 @@ namespace FoundriesFrontiers
         /// </summary>
         private bool foodFallbackFromNutrition = true;
 
-        public override bool ShouldLoad(EnumAppSide side) => side == EnumAppSide.Server;
+        /// <summary>
+        /// Both sides. The server needs it to value deposits, and the client needs it to
+        /// know which slot will accept what, because a slot that refuses on the client
+        /// never sends anything to the server to be judged.
+        /// </summary>
+        public override bool ShouldLoad(EnumAppSide side) => true;
 
         public override double ExecuteOrder() => 0.25;
 

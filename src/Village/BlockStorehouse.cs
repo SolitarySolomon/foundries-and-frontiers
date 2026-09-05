@@ -20,7 +20,12 @@ namespace FoundriesFrontiers
 
             var sb = new System.Text.StringBuilder();
             be.GetBlockInfo(forPlayer, sb);
-            return sb.ToString();
+
+            // Never hand back an empty string. An empty result reads as "this block has
+            // nothing to say" and the hover panel shows nothing at all, which is exactly
+            // what it was doing.
+            string text = sb.ToString().Trim();
+            return text.Length > 0 ? text : base.GetPlacedBlockInfo(world, pos, forPlayer);
         }
 
         /// <summary>

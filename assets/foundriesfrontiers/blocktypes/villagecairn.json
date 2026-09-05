@@ -42,9 +42,9 @@
 		"*": { x1: 0.1, y1: 0, z1: 0.1, x2: 0.9, y2: 1, z2: 0.9 }
 	},
 	sounds: {
-		place: "game:block/rock",
-		break: "game:block/rock",
-		hit: "game:block/rock",
+		place: "game:block/loosestone",
+		break: "game:block/loosestone",
+		hit: "game:block/loosestone",
 		walk: "game:walk/stone"
 	}
 }

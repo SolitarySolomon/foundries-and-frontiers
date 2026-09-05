@@ -33,6 +33,12 @@ namespace FoundriesFrontiers
         /// <summary>Whose stores these were, for the hover text once they are nobody's.</summary>
         public string RuinedName = "";
 
+        /// <summary>
+        /// The village's name, copied here so the client can label the crate. The client
+        /// has no village registry to ask, so anything it needs to show has to be sent.
+        /// </summary>
+        public string VillageName = "";
+
         private StorehouseInventory inventory;
         private bool rebuilding;
 
@@ -91,6 +97,8 @@ namespace FoundriesFrontiers
             try
             {
                 var table = Api.ModLoader.GetModSystem<ResourceTable>();
+                int tier = v.Tier;
+                VillageName = v.Name;
 
                 foreach (EnumVillageResource pool in VillageResources.All)
                 {
@@ -100,31 +108,48 @@ namespace FoundriesFrontiers
                     float held = v.Ledger.Get(pool);
                     shownValue[(int)pool] = 0;
                     displayTotals[(int)pool] = held <= 0 ? "" : held.ToString("0.#");
-
                     if (held <= 0) continue;
 
-                    ItemStack sample = SampleStack(pool);
-                    if (sample == null) continue;
+                    // Every shape the village has learned to make gets its own slot, so a
+                    // place that can saw still offers you firewood and logs rather than
+                    // silently replacing them with planks. Taking one debits the pool by
+                    // what that shape is worth, and the shelves are refilled straight
+                    // after, so you can keep drawing until the pool is empty.
+                    var forms = table?.UnlockedForms(pool, tier);
+                    if (forms == null || forms.Count == 0) continue;
 
-                    float perItem = Math.Max(0.01f, table?.UnitValue(sample, pool) ?? 1f);
-                    int wanted = (int)Math.Floor(held / perItem);
-                    float placed = 0;
+                    // Each shape gets an equal share of the pool, so offering three of
+                    // them never adds up to more than the village actually has and no
+                    // single shape starves the others.
+                    float budget = held / forms.Count;
+                    float placedTotal = 0;
+                    int slot = first;
 
-                    for (int c = 0; c < StorehouseInventory.Columns && wanted > 0; c++)
+                    foreach (ResourceForm form in forms)
                     {
-                        int take = Math.Min(wanted, sample.Collectible.MaxStackSize);
+                        if (slot >= first + StorehouseInventory.Columns) break;
+
+                        ItemStack sample = StackFromCode(form.Code);
+                        if (sample == null) continue;
+
+                        float perItem = Math.Max(0.01f, table.UnitValue(sample, pool));
+                        int count = (int)Math.Floor(budget / perItem);
+                        count = Math.Min(count, sample.Collectible.MaxStackSize);
+                        if (count <= 0) continue;
+
                         ItemStack stack = sample.Clone();
-                        stack.StackSize = take;
-                        inventory[first + c].Itemstack = stack;
-                        wanted -= take;
-                        placed += take * perItem;
+                        stack.StackSize = count;
+                        inventory[slot].Itemstack = stack;
+                        slot++;
+
+                        placedTotal += count * perItem;
                     }
 
-                    shownValue[(int)pool] = placed;
+                    shownValue[(int)pool] = placedTotal;
 
-                    // Say so when the shelves cannot hold everything, rather than quietly
-                    // showing a fraction and letting the number look like the whole.
-                    if (wanted > 0)
+                    // Say so when the shelves hold less than the village does, rather
+                    // than letting a partial figure read as the whole.
+                    if (placedTotal < held - 0.01f)
                     {
                         displayTotals[(int)pool] = held.ToString("0.#") + " held";
                     }
@@ -214,6 +239,11 @@ namespace FoundriesFrontiers
                 // without anybody depositing it, which is the signal it will read.
                 Api.Logger.Notification("[F&F] {0} lost {1:0.#} {2} from its storehouse.", v.Name, -delta, pool);
             }
+
+            // Put the shelves back to what the village now holds. This is what lets you
+            // keep taking stack after stack until the pool is actually empty, and it is
+            // what absorbs a deposit larger than a slot could ever show.
+            RebuildFromLedger();
         }
 
         // --- opening it -------------------------------------------------------------
@@ -326,6 +356,7 @@ namespace FoundriesFrontiers
                 tree.SetString("ffTotal" + i, displayTotals[i] ?? "");
             }
             tree.SetString("ffRuinedName", RuinedName ?? "");
+            tree.SetString("ffVillageName", VillageName ?? "");
         }
 
         public override void FromTreeAttributes(ITreeAttribute tree, IWorldAccessor worldForResolve)
@@ -338,8 +369,14 @@ namespace FoundriesFrontiers
                 displayTotals[i] = tree.GetString("ffTotal" + i, "");
             }
             RuinedName = tree.GetString("ffRuinedName", "");
+            VillageName = tree.GetString("ffVillageName", "");
         }
 
+        /// <summary>
+        /// The hover text, built from figures that travel with the block entity rather
+        /// than from the registry, because the registry is server side and the player
+        /// looking at the crate is not.
+        /// </summary>
         public override void GetBlockInfo(IPlayer forPlayer, System.Text.StringBuilder sb)
         {
             if (Abandoned)
@@ -347,24 +384,21 @@ namespace FoundriesFrontiers
                 sb.AppendLine(string.IsNullOrEmpty(RuinedName)
                     ? "An abandoned storehouse."
                     : "What is left of " + RuinedName + "'s storehouse.");
-                base.GetBlockInfo(forPlayer, sb);
                 return;
             }
 
-            Village v = Village;
-            if (v == null)
-            {
-                sb.AppendLine(VillageId == 0 ? "An unclaimed storehouse." : "Storehouse.");
-                return;
-            }
+            sb.AppendLine(string.IsNullOrEmpty(VillageName) ? "Storehouse" : VillageName + " storehouse");
 
-            sb.AppendLine(v.Name + " storehouse");
+            bool anything = false;
             foreach (EnumVillageResource pool in VillageResources.All)
             {
-                float amount = v.Ledger.Get(pool);
-                if (amount <= 0) continue;
-                sb.AppendLine("  " + pool.ToString().ToLowerInvariant().PadRight(7) + amount.ToString("0.#"));
+                string total = displayTotals[(int)pool];
+                if (string.IsNullOrEmpty(total)) continue;
+                sb.AppendLine("  " + pool.ToString().ToLowerInvariant().PadRight(7) + total);
+                anything = true;
             }
+
+            if (!anything) sb.AppendLine("  empty");
         }
 
         /// <summary>
