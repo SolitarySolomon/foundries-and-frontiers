@@ -412,5 +412,79 @@
       }
     ],
     "excludeExact": []
+  },
+  "earth": {
+    "match": [
+      "soil",
+      "sand",
+      "drygrass",
+      "peat",
+      "compost",
+      "termitemound",
+      "muddygravel"
+    ],
+    "exclude": [
+      "sandstone",
+      "sandwavy",
+      "metalnailsandstrips",
+      "grindstone",
+      "devastatedsoil",
+      "bonysoil",
+      "peatbrick",
+      "aquatic-",
+      "tallgrass",
+      "creativegrass",
+      "muskgrass",
+      "seagrass",
+      "sandwich",
+      "composter"
+    ],
+    "excludeExact": [],
+    "defaultWeight": 0.5,
+    "weights": {
+      "drygrass": 0.5,
+      "sand": 0.5,
+      "peat": 1,
+      "peatpile": 0.25,
+      "soil": 1,
+      "soil-verylow": 0.5,
+      "soil-low": 1,
+      "soil-medium": 1.5,
+      "soil-compost": 2,
+      "soil-high": 3,
+      "compost": 2,
+      "termitemound": 1
+    },
+    "forms": [
+      {
+        "code": "game:soil-verylow-none",
+        "tier": 0,
+        "primary": true
+      },
+      {
+        "code": "game:drygrass",
+        "tier": 0
+      },
+      {
+        "code": "game:soil-low-none",
+        "tier": 1,
+        "primary": true
+      },
+      {
+        "code": "game:soil-medium-none",
+        "tier": 2,
+        "primary": true
+      },
+      {
+        "code": "game:soil-compost-none",
+        "tier": 3,
+        "primary": true
+      },
+      {
+        "code": "game:soil-high-none",
+        "tier": 5,
+        "primary": true
+      }
+    ]
   }
 }

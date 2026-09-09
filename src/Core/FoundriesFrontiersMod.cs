@@ -60,6 +60,15 @@ namespace FoundriesFrontiers
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerSleep>("ffsleep");
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerWander>("ffwander");
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerReact>("ffreact");
+
+            // The producing jobs. All four are the same work loop with different answers
+            // to what counts as a target, so a villager only ever runs the one whose
+            // trade matches theirs and the rest cost a field comparison to refuse.
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerLumberjack>("fflumberjack");
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerFarmer>("fffarmer");
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerHerder>("ffherder");
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerForager>("ffforager");
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerDigger>("ffdigger");
         }
 
         public override void StartServerSide(ICoreServerAPI sapi)

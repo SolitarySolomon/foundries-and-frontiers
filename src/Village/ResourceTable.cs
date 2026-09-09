@@ -122,11 +122,43 @@ namespace FoundriesFrontiers
                     rules[r.Value] = kv.Value;
                 }
                 api.Logger.Notification("[F&F] Resource table loaded for {0} pool(s).", rules.Count);
+                VerifyForms(api);
             }
             catch (Exception e)
             {
                 api.Logger.Error("[F&F] resources.json failed to parse: {0}", e.Message);
             }
+        }
+
+        /// <summary>
+        /// Checks every form code actually resolves to something in the game.
+        ///
+        /// A form code with a typo in it does not fail loudly. It produces a storehouse
+        /// row that is simply empty, which looks exactly like a village that has none of
+        /// that resource, and the only way to tell the difference is to already suspect
+        /// the config. Checking once at load turns a silent mystery into a log line.
+        /// </summary>
+        private void VerifyForms(ICoreAPI api)
+        {
+            int bad = 0;
+            foreach (var kv in rules)
+            {
+                if (kv.Value.Forms == null) continue;
+                foreach (ResourceForm form in kv.Value.Forms)
+                {
+                    if (form?.Code == null) continue;
+                    var loc = new AssetLocation(form.Code);
+                    if (api.World.GetItem(loc) != null) continue;
+                    if (api.World.GetBlock(loc) != null) continue;
+
+                    bad++;
+                    api.Logger.Warning(
+                        "[F&F] {0} lists a form '{1}' that is not a real item or block. "
+                        + "That row will look empty in the storehouse.",
+                        kv.Key.ToString().ToLowerInvariant(), form.Code);
+                }
+            }
+            if (bad == 0) api.Logger.Notification("[F&F] All resource forms resolve.");
         }
 
         /// <summary>

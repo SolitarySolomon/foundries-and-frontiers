@@ -65,6 +65,20 @@ namespace FoundriesFrontiers
         [JsonProperty] public List<VillageFacility> Facilities = new List<VillageFacility>();
 
         /// <summary>
+        /// Ground the village has set aside for a purpose: woodlots, fields, pastures,
+        /// quarries, clay pits, mine heads, terraces.
+        ///
+        /// Every producing job works a plot rather than roaming, which is what stops a
+        /// lumberjack clear-cutting the forest a player is standing in and what gives a
+        /// village something to improve. A plot is a record, not a block: the ground
+        /// itself stays ordinary world.
+        /// </summary>
+        [JsonProperty] public List<VillagePlot> Plots = new List<VillagePlot>();
+
+        /// <summary>Next plot id. Kept on the village so ids are never reused after a removal.</summary>
+        [JsonProperty] public int NextPlotId = 1;
+
+        /// <summary>
         /// Entity ids of everyone who belongs here, including those in unloaded chunks.
         /// A villager's own ffVillage attribute is the authoritative link; this is the
         /// reverse index, so it gets reconciled rather than trusted blindly.

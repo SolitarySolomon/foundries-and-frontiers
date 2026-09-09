@@ -25,6 +25,8 @@ namespace FoundriesFrontiers
         [JsonProperty] public VillageConfig Village = new VillageConfig();
         [JsonProperty] public ScheduleConfig Schedule = new ScheduleConfig();
         [JsonProperty] public PerformanceConfig Performance = new PerformanceConfig();
+        [JsonProperty] public PlotConfig Plots = new PlotConfig();
+        [JsonProperty] public WorkConfig Work = new WorkConfig();
 
         public class MovementConfig
         {
@@ -217,6 +219,95 @@ namespace FoundriesFrontiers
 
             /// <summary>Beyond this distance from any player, tasks are throttled.</summary>
             [JsonProperty] public float ObservedRangeBlocks = 48f;
+        }
+
+        public class PlotConfig
+        {
+            /// <summary>
+            /// Half the width of a new plot, by kind, in the order the enum declares
+            /// them: woodlot, field, pasture, quarry, clay pit, mine head, terrace.
+            /// A half size of 6 makes a 13x13 plot.
+            /// </summary>
+            [JsonProperty] public int[] HalfSizeByKind = { 8, 6, 7, 5, 4, 2, 6 };
+
+            /// <summary>How many people each kind of plot has room for.</summary>
+            [JsonProperty] public int[] WorkerCapByKind = { 2, 2, 1, 2, 1, 2, 3 };
+
+            /// <summary>
+            /// How many of each kind a village may hold, by tier. A hamlet with four
+            /// quarries is not a hamlet. Indexed by tier, then by kind.
+            /// </summary>
+            [JsonProperty] public int[] MaxPlotsByTier = { 2, 4, 6, 9, 12, 16 };
+
+            /// <summary>Keep plots this far apart, so work on one does not land on another.</summary>
+            [JsonProperty] public int SeparationBlocks = 2;
+
+            /// <summary>Keep plots this far inside the claim edge.</summary>
+            [JsonProperty] public int ClaimEdgeMarginBlocks = 6;
+
+            /// <summary>
+            /// Keep plots this far from the village centre, so nobody sites a quarry on
+            /// the town square. Smaller than it sounds: it is measured from the cairn.
+            /// </summary>
+            [JsonProperty] public int CentreClearanceBlocks = 10;
+
+            /// <summary>
+            /// The most the ground may rise and fall across a plot before it is rejected.
+            /// A field on a cliff is not a field.
+            /// </summary>
+            [JsonProperty] public int FlatnessTolerance = 5;
+
+            /// <summary>How many candidate sites to try before giving up on a plot.</summary>
+            [JsonProperty] public int SiteAttempts = 60;
+
+            /// <summary>
+            /// How many columns to sample when scoring a candidate. Every column would be
+            /// exact and pointless: a 17x17 woodlot is 289 height lookups per candidate
+            /// per attempt, and the answer barely moves.
+            /// </summary>
+            [JsonProperty] public int SampleColumns = 24;
+
+            /// <summary>
+            /// A plot nobody has worked for this many days is called exhausted rather
+            /// than left on the books as active forever.
+            /// </summary>
+            [JsonProperty] public int IdleDaysBeforeExhausted = 20;
+        }
+
+        public class WorkConfig
+        {
+            /// <summary>How close a worker must be to a block to act on it.</summary>
+            [JsonProperty] public float ReachBlocks = 2.6f;
+
+            /// <summary>
+            /// Seconds of work for one block, before tools and skill. Deliberately slow:
+            /// a villager who strips a forest in a minute is a machine, not a person.
+            /// </summary>
+            [JsonProperty] public float SecondsPerBlock = 2.2f;
+
+            /// <summary>Each tool tier takes this fraction off the time.</summary>
+            [JsonProperty] public float ToolTierSpeedBonus = 0.12f;
+
+            /// <summary>Fastest a villager may ever work, as a fraction of the base time.</summary>
+            [JsonProperty] public float MinWorkTimeFraction = 0.35f;
+
+            /// <summary>
+            /// Carry this much before heading for the storehouse. Lower means more
+            /// walking and a village that looks busier; higher means fewer trips.
+            /// </summary>
+            [JsonProperty] public int HaulAtCarriedCount = 12;
+
+            /// <summary>Give up on a job site after this long and pick another.</summary>
+            [JsonProperty] public float GiveUpAfterSec = 120f;
+
+            /// <summary>How far a job may look outside its plot for a target. Zero means never.</summary>
+            [JsonProperty] public int SearchSlackBlocks = 2;
+
+            /// <summary>Replant this fraction of what gets felled, when the village has seed.</summary>
+            [JsonProperty] public float ReplantChance = 1f;
+
+            /// <summary>Pause between finishing one block and starting the next, in seconds.</summary>
+            [JsonProperty] public float BetweenBlocksSec = 0.6f;
         }
 
         // --- loading ---------------------------------------------------------------

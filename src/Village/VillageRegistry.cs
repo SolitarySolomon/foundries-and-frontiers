@@ -231,6 +231,7 @@ namespace FoundriesFrontiers
 
             UnregisterFacilities(v);
             HideClaimEverywhere(id);
+            HidePlotsEverywhere(id);
             byId.Remove(id);
             loadedMembers.Remove(id);
 
@@ -261,6 +262,7 @@ namespace FoundriesFrontiers
             ClearStorehouse(v);
             UnregisterFacilities(v);
             HideClaimEverywhere(id);
+            HidePlotsEverywhere(id);
 
             byId.Remove(id);
             loadedMembers.Remove(id);
@@ -557,6 +559,7 @@ namespace FoundriesFrontiers
 
                     RepairMarkers(v);
                     AssignBeds(v);
+                    AgePlots(v);
                     OnNewDay?.Invoke(v);
                 }
 
@@ -614,6 +617,7 @@ namespace FoundriesFrontiers
         {
             if (v == null) return;
             RepairMarkers(v);
+            AgePlots(v);
             v.Ledger.RollDay(true);
             v.DaysAtCurrentTier++;
             v.LastSimulatedDay += 1;

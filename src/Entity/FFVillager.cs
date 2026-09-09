@@ -28,6 +28,7 @@ namespace FoundriesFrontiers
         private const string AttrCulture = "ffCulture";
         private const string AttrPersonality = "ffPersonality";
         private const string AttrCourage = "ffCourage";
+        private const string AttrPlotId = "ffPlot";
 
         /// <summary>Players this far away won't see what a villager says.</summary>
         private static double SpeechTextRange => FFConfig.Current.Chatter.SpeechTextRangeBlocks;
@@ -105,6 +106,26 @@ namespace FoundriesFrontiers
             get => WatchedAttributes.GetLong(AttrVillageId, 0);
             set => WatchedAttributes.SetLong(AttrVillageId, value);
         }
+
+        /// <summary>
+        /// Which plot in their village they have been assigned to, or 0 for none.
+        ///
+        /// Held on the villager rather than looked up every tick because a job asks this
+        /// constantly, and because a villager who has been reassigned should notice on
+        /// their next thought rather than the next time somebody walks the plot list.
+        /// The village's worker roster is the reverse index, same as with membership.
+        /// </summary>
+        public int PlotId
+        {
+            get => WatchedAttributes.GetInt(AttrPlotId, 0);
+            private set => WatchedAttributes.SetInt(AttrPlotId, value);
+        }
+
+        public bool HasPlot => PlotId != 0;
+
+        public void SetPlot(int plotId) => PlotId = plotId;
+
+        public void ClearPlot() => PlotId = 0;
 
         /// <summary>
         /// Which personality this villager was born with. Decides how they talk and how

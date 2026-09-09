@@ -368,6 +368,43 @@
 						priorityForCancel: 1.6
 					},
 					{
+						// The producing jobs, all at the same priority.
+						//
+						// Above the tether and below sleep on purpose. A villager who has
+						// wandered out of the claim during working hours is more usefully
+						// felling a tree than being walked back to the square, but dusk
+						// still beats a day's work: nobody keeps chopping in the dark.
+						//
+						// Each one refuses immediately unless the villager's trade matches,
+						// so listing all of them costs a field comparison per thought.
+						code: "fflumberjack",
+						priority: 1.7,
+						priorityForCancel: 1.7
+					},
+					{
+						code: "fffarmer",
+						priority: 1.7,
+						priorityForCancel: 1.7
+					},
+					{
+						code: "ffherder",
+						priority: 1.7,
+						priorityForCancel: 1.7
+					},
+					{
+						code: "ffdigger",
+						priority: 1.7,
+						priorityForCancel: 1.7
+					},
+					{
+						// Below the rest: foraging is what a villager does when their real
+						// trade has nothing for them, and it is the one job that always
+						// has somewhere to go.
+						code: "ffforager",
+						priority: 1.65,
+						priorityForCancel: 1.65
+					},
+					{
 						code: "ffloiter",
 						priority: 0.8,
 						chance: 0.15

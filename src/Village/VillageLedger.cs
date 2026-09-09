@@ -180,6 +180,26 @@ namespace FoundriesFrontiers
         }
 
         /// <summary>
+        /// Puts back something that was withdrawn for a job that then did not happen.
+        ///
+        /// This is not a deposit and must never be one. A deposit is a claim that somebody
+        /// carried something home, and it feeds the measured flow that fast-forward runs
+        /// on. Booking a refund as income would have a village that repeatedly fails to
+        /// sow a field reporting a rising food yield, which is precisely the invented rate
+        /// this whole class exists to make impossible. So the stock comes back and the
+        /// spending is unwound, and nothing else moves.
+        /// </summary>
+        public void Refund(EnumVillageResource r, float amount)
+        {
+            if (amount <= 0) return;
+            int i = (int)r;
+            Grow();
+
+            stock[i] += amount;
+            outToday[i] = Math.Max(0, outToday[i] - amount);
+        }
+
+        /// <summary>
         /// Spends as much as is available and reports how much that was. For consumption,
         /// where a village short of food eats what it has rather than refusing to eat.
         /// </summary>

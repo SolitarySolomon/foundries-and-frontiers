@@ -155,7 +155,7 @@ Rules that apply to every step, because retrofitting any of them is painful.
       stopping on the line leaves them one step from doing it again. Runs unobserved: a
       villager quietly walking off the edge of the world while nobody is looking is the
       exact failure it exists to prevent.
-- [ ] **B5a · The earth pool:** a seventh resource, `Earth`, holding soil, sand, dry grass
+- [x] **B5a · The earth pool:** a seventh resource, `Earth`, holding soil, sand, dry grass
       and peat.
       **The case for it is fields, not construction.** Wood and stone are what a village
       actually builds out of at every tier; earth is daub infill at tier 1 and cob at
@@ -189,15 +189,49 @@ Rules that apply to every step, because retrofitting any of them is painful.
       dirt for one of the best soil in the game, so improving ground costs real labour
       without needing a system of its own. There is no terra preta in Vintage Story;
       `soil-high` at 80 is the best there is.
-      **Lands with C5, not before:** until terracing gives it a source and C2 gives it a
-      cost, it is a storehouse row full of nothing.
+      *Done:* `Earth` is pool 6, and the ledger widened itself on load exactly as
+      designed, so old saves gained a row without a migration. The forms ladder above is
+      what shipped, minus sand and peat as things a village hands back out: they can be
+      deposited, but nobody wants sand returned to them.
+      **It did not have to wait for C5 after all.** The digger arrived with it, so the
+      pool has a source on day one: a Terrace plot is ground being cut level, and the
+      spoil is the material. That was the whole argument for the pool existing and it is
+      now a loop you can watch rather than a paragraph.
+      *Also done, and worth more than the pool:* every form code in `resources.json` is
+      now checked against the running game at load, and anything that does not resolve to
+      a real item or block says so in the log. Two hours of this project have been spent
+      on a block code typed from memory that quietly did not exist.
 
-- [ ] **B5 · Plots:** first-class `VillagePlot`: type, bounds, tier, state. Woodlot, field,
+- [x] **B5 · Plots:** first-class `VillagePlot`: type, bounds, tier, state. Woodlot, field,
       pasture, quarry, clay pit and mine head all hang off this.
       For a field, the plot's tier records **which grade of soil was laid down**, which
       comes straight out of the storehouse. The grading itself is not a plot mechanic and
       not a separate system: it is the earth pool's forms table, exactly as wood already
       works. See B5a.
+      *Done:* a plot is a record on the village, not a block and not a set of marker
+      posts, for the same reason a facility is: the ground is ordinary world and the plot
+      is the village's opinion about it. So siting one costs nothing but a decision, and a
+      plot survives a player rearranging the terrain inside it.
+      **Siting is the part that decides whether a village looks planned or scattered**,
+      and the rules are deliberately few enough to read: inside the claim, off the town
+      square, off other plots, prefer flat, and prefer ground that already has what the
+      plot is for. That last one is what puts a woodlot in the trees and keeps a clay pit
+      off granite. It takes the best of sixty random candidates rather than searching
+      twenty thousand columns, because a village that took the best of sixty looks exactly
+      as deliberate and costs a thousandth as much.
+      Workers are a roster with a cap rather than a single owner, so a field big enough to
+      feed a town is not a one person job and a village does not have to site six
+      overlapping fields to employ six farmers.
+      No point of interest registration, unlike beds: a village has a handful of plots and
+      walking the list is free, where a town has hundreds of beds and needed the index.
+      `/ff village plot list|show|add <kind>|site <kind>|remove <id>|clear`, each kind in
+      its own colour on the ground. `site` lets the village choose; `add` puts one where
+      you are standing, which is the difference between testing the siting rules and
+      testing everything downstream of them.
+      *Corrected before shipping:* the height map returns zero for an unloaded chunk
+      rather than an error, and a plot that recorded a floor of zero would have had its
+      digger excavate the whole column to bedrock. Siting now refuses rather than persist
+      a number that means "do not know".
 - [x] **B6 · Daily schedule:** sleep at night in an owned bed, work by day, shelter during
       temporal storms. The frame every job slots into. *Test:* villagers go to bed at dusk.
       *Done:* `VillageSchedule` is the one place that decides what an hour means, so no job
@@ -233,23 +267,108 @@ Rules that apply to every step, because retrofitting any of them is painful.
       not written one. Fewer words, more of them worth hearing.
       *Test:* `/ff dump` shows manner and courage; hit a villager and watch what they do.
 
-- [ ] **B7 · Work loop base:** shared task: travel → act over time → carry → deposit.
+- [x] **B7 · Work loop base:** shared task: travel → act over time → carry → deposit.
       Every producing job below is a subclass.
-      *Also the home of maintenance:* a builder who walks over and rebuilds a broken
-      cairn or storehouse out of stone the village actually has. Until then the day
-      clock puts them back for free, gated on the village still having people in it.
-- [ ] **B8 · Lumberjack:** fell wild trunks in a radius, replant, haul. `BreakBlock` gives
+      *Done:* `AiTaskVillagerWork` owns the loop as a four step state machine, and the
+      subclasses answer three questions: what counts as a target, what happens when you
+      reach it, and what to do afterwards. A state machine rather than a chain of
+      callbacks because it has to survive being interrupted anywhere. A villager can be
+      attacked, sent to bed or dragged home by the tether mid swing, and has to pick up
+      somewhere sensible rather than from the beginning.
+      It inherits the rule the sleep bug taught us: **walking belongs to `ffgoto`**, and a
+      deciding task never cancels a journey it handed over, only when its own job is done.
+      Jobs sit at priority 1.7, above the tether and below sleep. A villager who has
+      drifted out of the claim during working hours is more usefully felling a tree than
+      being walked back to the square, but dusk still beats a day's work.
+      *Four things came out of the review before this shipped, all of them real:*
+      breaking a block was spawning its drops on the ground **and** putting them in the
+      villager's hands, so every harvest was doubled; a villager holding something no pool
+      accepts could never empty their hands and stood at the storehouse door forever;
+      nothing remembered a target that had just been given up on, so the loop walked back
+      to the same unreachable block every second; and the scan budget restarted at the
+      same corner every pass, so the far side of any plot larger than the budget was never
+      looked at at all. All four were the same shape of bug, which is code that reports
+      what it meant to do rather than what happened.
+      *Maintenance is still the day clock's:* a builder who rebuilds a broken cairn out of
+      stone the village actually has waits for Phase C.
+- [x] **B8 · Lumberjack:** fell wild trunks in a radius, replant, haul. `BreakBlock` gives
       us drops, but **the game exposes no "these logs are one tree" helper:** we write a
       flood-fill over connected log and leaf blocks ourselves. *Test:* tree falls, ledger wood rises.
-- [ ] **B9 · Farmer:** till, sow from retained seed, water, reap, replant, rotate against
+      *Done, and the flood fill is the whole job.* Blocks know they are logs and leaves;
+      nothing anywhere says which four hundred of them are one oak. The fill walks all
+      twenty six directions, because canopies in this game are not face connected and a
+      six way fill leaves half a crown hanging. Leaves are an edge rather than a bridge,
+      or two touching oaks become one very large oak. It never walks below where it
+      started, so a trunk touching a neighbour's roots does not take the neighbour down.
+      Only grown trunks count: `log-placed` is what a player builds a cabin out of, and a
+      lumberjack who cannot tell the difference eventually dismantles somebody's house and
+      files it as timber.
+      A redwood is over a thousand blocks, so felling happens sixty blocks at a time
+      across several ticks, top down. All at once was a visible server stall and looked
+      like a tree blinking out of existence rather than coming down.
+      Replanting uses **whatever sapling the tree itself dropped**, not a sapling code
+      written down here. A tree that gives nothing plantable gets nothing planted, which
+      is honest: the wood runs out and the village has to widen its woodlot.
+- [x] **B9 · Farmer:** till, sow from retained seed, water, reap, replant, rotate against
       the game's real N/P/K.
       *Plus soil improvement:* relaying a field with the best grade the storehouse can
       currently produce, so a village's fields visibly improve as it climbs. The grading
       is the earth pool's job (B5a); the farmer's job is digging the raw material and
       laying the result.
-- [ ] **B10 · Herder:** troughs from stored grain, cull to cap, eggs and wool.
-- [ ] **B11 · Trickle jobs:** forager and deadfall gatherer. The low-yield renewable
+      *Done:* reap, relay, till, sow, in that order. Reaping first because a ripe crop
+      left standing is the only one of the four that can be lost.
+      **Seed comes out of the village's own food**, which is what makes sowing a decision
+      rather than free growth. A village down to its last meal cannot plant its way out.
+      **The bug worth recording:** farmland takes its nutrient levels from the soil block
+      it was made from, and laying a farmland block without telling it which soil it came
+      from produces ground with zero fertility that recovers toward zero forever. It looks
+      like the best soil in the game and grows crops at a tenth speed. So `Till` calls
+      `OnCreatedFromSoil` exactly as the game's own hoe does, and `Relay` carries the old
+      field's moisture and nutrients across before raising its ceiling, rather than paying
+      two earth to make an established field worse.
+      *Still to come:* watering, and rotation against the real N/P/K rather than sowing at
+      random.
+- [x] **B10 · Herder:** troughs from stored grain, cull to cap, eggs and wool.
+      *Done:* what goes in a trough comes from **the trough's own content list** rather
+      than a guess, since each one declares what it takes and how much makes a fill level.
+      Feeding is paid for out of the food pool, so animals are a way of turning grain into
+      meat and eggs rather than a source of free food.
+      Culling reads the animal's own drop table, so it gives what a player butchering the
+      same animal would get and works unchanged for modded animals. Adults only, never
+      below a floor: a herd should be trimmed, not eaten out of existence.
+      Fertilised eggs are left alone, because a fertile egg is a chicken the village has
+      not got yet. That made "how many eggs are here" and "how many can I have" different
+      questions, and asking the wrong one had the herder walking back to a full nest he
+      could never empty.
+- [x] **B11 · Trickle jobs:** forager and deadfall gatherer. The low-yield renewable
       bootstrap that stops a badly-sited village being dead on arrival.
+      *Done as one job.* Everything else in the mod needs something the ground has to
+      already have: a village on bare rock has no woodlot to fell and no field worth
+      tilling, and would starve while its lumberjack waited for a forest. A forager finds
+      something almost anywhere, slowly, and slowly is the design. A village that could
+      live off berries forever would never need to farm.
+      It works the claim rather than a plot, because fencing off a berry patch is absurd.
+      Berry bushes are **picked, not pulled up**: the fruit comes off and the bush stays,
+      or a renewable bootstrap gives one harvest and then nothing forever.
+      What is worth picking is decided by asking the resource table, not by a second list
+      of mushroom names kept in sync by hand, so the forager walks past the deathcaps.
+
+- [x] **B12 · Digger, which is C5 arriving early:** the builder cuts a Terrace plot level
+      and keeps the spoil.
+      This was going to wait for Phase C, and it should not have. The earth pool needed a
+      source or it was a storehouse row full of nothing, and terracing is that source.
+      The point, which took two wrong answers to arrive at: **earth is not what a village
+      builds its walls out of.** Walls are wood and stone. Earth is cob and daub, which
+      the game's own recipes make from soil and dry grass, and which is what tier 1 and
+      tier 2 houses are made of. So the spoil from levelling a site is not waste to cart
+      off, it is the material the building is made from, and levelling the ground and
+      gathering the material are one job rather than two.
+      It cuts down to the plot's recorded floor and no further, and refuses to work at all
+      on a plot whose floor was never properly read. A digger with no floor to stop at
+      excavates to bedrock.
+      Rock is deliberately not diggable: cutting a terrace through a hillside of soil is a
+      day with a shovel, and cutting one through granite is a quarry, which is a different
+      plot and a different worker.
 
 ---
 

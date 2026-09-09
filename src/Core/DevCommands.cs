@@ -123,6 +123,13 @@ namespace FoundriesFrontiers
                         .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("id"))
                         .HandleWith(args => OnVillageRemove(sapi, args))
                     .EndSubCommand()
+                    .BeginSubCommand("plot")
+                        .WithDescription("Village plots. /ff village plot list|add <kind>|site <kind>|remove <id>|show [off]|clear")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("action"),
+                                  sapi.ChatCommands.Parsers.OptionalWord("what"))
+                        .HandleWith(args => OnVillagePlot(sapi, args))
+                    .EndSubCommand()
                     .BeginSubCommand("show")
                         .WithDescription("Outline a village claim. /ff village show [id|off]")
                         .RequiresPlayer()
@@ -390,6 +397,7 @@ namespace FoundriesFrontiers
                               : "(calm)"));
             sb.AppendLine("Village    " + VillageLabel(sapi, v));
             sb.AppendLine("Bed        " + BedLabel(sapi, v));
+            sb.AppendLine("Plot       " + PlotLabel(sapi, v));
             sb.AppendLine("Schedule   " + VillageSchedule.Describe(
                               VillageSchedule.PhaseFor(sapi, v.Pos.AsBlockPos))
                           + "  (hour " + sapi.World.Calendar.HourOfDay.ToString("0.0") + ")");
@@ -755,6 +763,23 @@ namespace FoundriesFrontiers
                 : "none, and the village has no spare";
         }
 
+        /// <summary>Which plot a villager is assigned to, for /ff dump.</summary>
+        private static string PlotLabel(ICoreServerAPI sapi, FFVillager v)
+        {
+            if (v.VillageId == 0) return "(no village, so no plot)";
+
+            var reg = Registry(sapi);
+            Village village = reg?.Get(v.VillageId);
+            if (village == null) return "(village missing)";
+
+            VillagePlot plot = reg.PlotOf(village, v.EntityId);
+            if (plot != null) return plot.ToString();
+
+            return village.Plots.Count == 0
+                ? "none, and the village has sited none at all"
+                : "none, though the village has " + village.Plots.Count;
+        }
+
         private static TextCommandResult OnVillageCreate(ICoreServerAPI sapi, TextCommandCallingArgs args)
         {
             IServerPlayer player = args.Caller.Player as IServerPlayer;
@@ -904,6 +929,131 @@ namespace FoundriesFrontiers
             reg.Remove(id);
             return TextCommandResult.Success(
                 "Removed " + v.Name + " (#" + id + "). " + orphaned + " loaded villager(s) are now unaffiliated.");
+        }
+
+        /// <summary>
+        /// Everything to do with plots, in one command.
+        ///
+        /// Kept as one subcommand with a verb rather than six subcommands because plots
+        /// are a testing tool at this stage and the whole point is being able to try
+        /// something, look at it, and undo it without leaving the spot you are standing in.
+        /// </summary>
+        private static TextCommandResult OnVillagePlot(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null) return TextCommandResult.Error("No player entity.");
+
+            var reg = Registry(sapi);
+            BlockPos here = player.Entity.Pos.AsBlockPos;
+            Village v = reg.VillageAt(here) ?? reg.Nearest(here, 400);
+
+            string action = (args[0] as string ?? "list").Trim().ToLowerInvariant();
+            string what = (args[1] as string ?? "").Trim().ToLowerInvariant();
+
+            if (action == "show" && what == "off")
+            {
+                reg.HidePlots(player);
+                return TextCommandResult.Success("Plot outlines off.");
+            }
+
+            if (v == null) return TextCommandResult.Error("No village within 400 blocks. " + reg.IdList() + ".");
+
+            switch (action)
+            {
+                case "list": return PlotList(v);
+                case "show":
+                    reg.ShowPlots(player, v);
+                    return TextCommandResult.Success(
+                        "Outlining " + v.Plots.Count + " plot(s) in " + v.Name
+                        + ". /ff village plot show off to clear.");
+
+                case "add":
+                {
+                    if (!ParseKind(what, out EnumPlotKind kind)) return UnknownKind(what);
+                    VillagePlot plot = reg.PlacePlot(v, kind, here, VillageRegistry.HalfSizeFor(kind));
+                    if (plot == null)
+                    {
+                        return TextCommandResult.Error(
+                            "That would overlap an existing plot. /ff village plot list to see them.");
+                    }
+                    reg.ShowPlots(player, v);
+                    return TextCommandResult.Success("Added " + plot + ".");
+                }
+
+                case "site":
+                {
+                    if (!ParseKind(what, out EnumPlotKind kind)) return UnknownKind(what);
+                    VillagePlot plot = reg.SitePlot(v, kind, out string error);
+                    if (plot == null) return TextCommandResult.Error(error ?? "Could not site it.");
+                    reg.ShowPlots(player, v);
+                    return TextCommandResult.Success(
+                        "Sited " + plot + ". The village chose the spot, not you.");
+                }
+
+                case "remove":
+                {
+                    if (!int.TryParse(what, out int id))
+                    {
+                        return TextCommandResult.Error("Which plot? /ff village plot remove <id>");
+                    }
+                    if (!reg.RemovePlot(v, id))
+                    {
+                        return TextCommandResult.Error("No plot #" + id + " in " + v.Name + ".");
+                    }
+                    reg.ShowPlots(player, v);
+                    return TextCommandResult.Success("Removed plot #" + id + ".");
+                }
+
+                case "clear":
+                {
+                    int n = v.Plots.Count;
+                    var ids = new List<int>();
+                    foreach (VillagePlot p in v.Plots) ids.Add(p.Id);
+                    foreach (int id in ids) reg.RemovePlot(v, id);
+                    reg.HidePlots(player);
+                    return TextCommandResult.Success("Cleared " + n + " plot(s) from " + v.Name + ".");
+                }
+
+                default:
+                    return TextCommandResult.Error(
+                        "Unknown action '" + action + "'. Try list, show, add, site, remove or clear.");
+            }
+        }
+
+        private static TextCommandResult PlotList(Village v)
+        {
+            if (v.Plots.Count == 0)
+            {
+                return TextCommandResult.Success(
+                    v.Name + " has no plots. /ff village plot site woodlot to let it choose one, "
+                    + "or /ff village plot add woodlot to put one where you are standing.");
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine(v.Name + " holds " + VillageRegistry.CountPlots(v) + " working plot(s) of "
+                          + VillageRegistry.MaxPlotsFor(v) + " allowed at tier " + v.Tier + ":");
+
+            foreach (VillagePlot p in v.Plots)
+            {
+                sb.Append("  ").Append(p);
+                if (p.LifetimeYield > 0) sb.Append(", ").Append(p.LifetimeYield.ToString("0")).Append(" worked");
+                sb.AppendLine();
+            }
+            return TextCommandResult.Success(sb.ToString().TrimEnd());
+        }
+
+        private static bool ParseKind(string name, out EnumPlotKind kind)
+        {
+            kind = EnumPlotKind.Woodlot;
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            return Enum.TryParse(name, true, out kind);
+        }
+
+        private static TextCommandResult UnknownKind(string given)
+        {
+            return TextCommandResult.Error(
+                "Unknown plot kind '" + given + "'. One of: "
+                + string.Join(", ", Enum.GetNames(typeof(EnumPlotKind))).ToLowerInvariant() + ".");
         }
 
         private static TextCommandResult OnVillageShow(ICoreServerAPI sapi, TextCommandCallingArgs args)
