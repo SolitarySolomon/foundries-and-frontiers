@@ -388,7 +388,7 @@ Nothing in Phase D can place a building until this exists.
       structures (hovel, log house, farmhouse, storehouse, shed, forge, well, wall segment)
       exported via WorldEdit. Deliberately ugly; real ones come at E2 once the ladder stops
       moving. **Nothing in Phase C or D can be tested without them.**
-- [ ] **C2 · Schematic catalogue:** **every building carries two costs, and both are
+- [x] **C2 · Schematic catalogue:** **every building carries two costs, and both are
       read out of the schematic, never written by hand.** The *bill of blocks* is what
       physically gets placed, 15 oak logs and 6 planks. The *ledger cost* is what those
       blocks are worth in pool value, so 15 logs at 4 each plus 6 planks at 1 is 66 wood.
@@ -402,6 +402,59 @@ Nothing in Phase D can place a building until this exists.
       per-culture manifest carrying what a schematic can't know about itself: which need it
       satisfies, which trade it houses, its tier, its footprint in cells.
       *Test:* `/ff buildings` lists what loaded with its costs.
+      *Done, and it ships loading nothing,* because C1 has not happened yet: the folder is
+      there with instructions in it, `config/buildings.json` is an empty list with the
+      field meanings written out, and `/ff buildings` says so rather than looking broken.
+      Both costs come out of the file. The bill of blocks is a count per block code; the
+      ledger cost is each of those blocks valued through the same resource table the
+      storehouse uses, so the two numbers cannot drift apart the way two hand written
+      numbers would.
+      **Two bugs here would each have sunk the whole phase, and both were silent.** The
+      numbers in a schematic's `BlockIds` are keys into *its own* code table, not block
+      ids in this world, and they came from whichever machine exported the file: treating
+      one as a live id builds a house out of whatever happens to sit at that slot in the
+      player's registry, which changes the moment they install another mod. And
+      `Assets.GetMany` takes a `loadAsset` flag that defaults to true; passing false left
+      every schematic unhydrated, so each one read as an empty string and failed to parse
+      with no error text at all, which looked exactly like an empty folder.
+      Block positions are unpacked by the schematic's own `GetJustPositions` rather than
+      by picking the packed integer apart here. That bit layout is the engine's file
+      format and reimplementing it would work right up until the day it silently did not.
+- [x] **C3 · Build site:** marker block, scaffold, progressive construction over in-game days.
+      *Done, without the marker block.* A build site is a record on the village, the same
+      shape as a plot and for the same reason, and the thing you see is the building
+      itself going up eight blocks at a time. A scaffold block would be a second thing to
+      keep in sync with the record, and the record is what is true.
+      Progress is a block count rather than a percentage, because what actually happens is
+      that a builder places blocks one at a time and the count is where they got to. A
+      percentage would be a number derived from that and then trusted instead of it, which
+      is the shape of most of this project's bugs.
+      *The save hazard worth recording:* that count is an index into a list rebuilt from
+      the world's block registry at every startup. Install another mod and the list is a
+      different length, so the cursor now points somewhere else, and left alone that
+      quietly marks a third built house finished. The site records the length it was
+      created against and starts over when it does not match, which is cheap: placing a
+      block that is already there costs nothing.
+      Fluids go on their own block layer. Writing one into the solid layer erases the
+      block placed under it a moment earlier, which is how a well becomes a hole.
+- [x] **C4 · Builder draws materials:** spends the *ledger cost* and places the *bill of
+      blocks*, converting one into the other only for forms the tier has unlocked.
+      Consumes from the ledger and **stalls visibly** when
+      empty. *Test:* start a build with no wood; nothing happens until wood arrives.
+      *Done.* Materials come out **once, before a single block goes down**, and the site
+      refuses to start otherwise. Paying per block would leave a village that ran dry
+      halfway with a shell it could neither finish nor recover the stone from; the rule is
+      that a stalled build stalls at the start.
+      A stalled site carries the shortfall in words, so a player walking past a site that
+      has not moved in three days can look at it and read that the village is forty stone
+      short.
+      Abandoning a site that was paid for refunds it. A village that loses sixty wood to a
+      bug is a village whose ledger stopped meaning anything.
+      *And the builder stands down rather than standing about:* waiting at a site the
+      village cannot afford used to hold the highest priority slot for the whole working
+      day, which meant the one villager who might have closed the shortfall was the one
+      prevented from working. They now go and do something else for two minutes and come
+      back.
 - [ ] **C3 · Build site:** marker block, scaffold, progressive construction over in-game days.
 - [ ] **C4 · Builder draws materials:** spends the *ledger cost* and places the *bill of
       blocks*, converting one into the other only for forms the tier has unlocked.

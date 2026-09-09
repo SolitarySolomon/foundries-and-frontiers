@@ -1,0 +1,14 @@
+[
+  // What each schematic is for. The schematic itself supplies its size, its
+  // bill of blocks and its cost, so none of that belongs here.
+  //
+  // code     must match the schematic file name without .json
+  // need     Housing, Workshop, Storage, Amenity, Defence, Civic
+  // houses   which trade a workshop is for. Ignored for anything else.
+  // tier     the earliest tier a village will put this up
+  // quality  1 for a hovel, 5 for something a town would be proud of
+  // cultures leave empty for every culture
+  //
+  // Nothing is listed yet because no schematics have been exported. Add an
+  // entry here for each one as it lands in worldgen/schematics/.
+]

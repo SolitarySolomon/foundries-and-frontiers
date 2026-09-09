@@ -560,6 +560,7 @@ namespace FoundriesFrontiers
                     RepairMarkers(v);
                     AssignBeds(v);
                     AgePlots(v);
+                    ConsiderBuilding(v);
                     OnNewDay?.Invoke(v);
                 }
 
@@ -618,6 +619,7 @@ namespace FoundriesFrontiers
             if (v == null) return;
             RepairMarkers(v);
             AgePlots(v);
+            ConsiderBuilding(v);
             v.Ledger.RollDay(true);
             v.DaysAtCurrentTier++;
             v.LastSimulatedDay += 1;

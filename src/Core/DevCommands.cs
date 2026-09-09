@@ -28,6 +28,10 @@ namespace FoundriesFrontiers
                     .HandleWith(args => OnStatus(sapi, mod, args))
                 .EndSubCommand()
 
+                .BeginSubCommand("buildings")
+                    .WithDescription("List the building schematics that loaded, with their two costs")
+                    .HandleWith(args => OnBuildings(sapi, args))
+                .EndSubCommand()
                 .BeginSubCommand("spawn")
                     .WithDescription("Spawn a villager. /ff spawn [trade] [culture], e.g. /ff spawn farmer norse")
                     .RequiresPlayer()
@@ -129,6 +133,13 @@ namespace FoundriesFrontiers
                         .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("action"),
                                   sapi.ChatCommands.Parsers.OptionalWord("what"))
                         .HandleWith(args => OnVillagePlot(sapi, args))
+                    .EndSubCommand()
+                    .BeginSubCommand("build")
+                        .WithDescription("Village building. /ff village build list|next|<code>|cancel <id>")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("action"),
+                                  sapi.ChatCommands.Parsers.OptionalWord("what"))
+                        .HandleWith(args => OnVillageBuild(sapi, args))
                     .EndSubCommand()
                     .BeginSubCommand("show")
                         .WithDescription("Outline a village claim. /ff village show [id|off]")
@@ -1054,6 +1065,127 @@ namespace FoundriesFrontiers
             return TextCommandResult.Error(
                 "Unknown plot kind '" + given + "'. One of: "
                 + string.Join(", ", Enum.GetNames(typeof(EnumPlotKind))).ToLowerInvariant() + ".");
+        }
+
+        /// <summary>
+        /// What loaded, what it costs, and what is wrong with it.
+        ///
+        /// The complaints half matters as much as the list. A schematic that failed to
+        /// load or has no manifest entry is invisible in play, and the only way to find
+        /// out used to be to notice that no village ever built it.
+        /// </summary>
+        private static TextCommandResult OnBuildings(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            var catalogue = sapi.ModLoader.GetModSystem<BuildingCatalogue>();
+            if (catalogue == null) return TextCommandResult.Error("Building catalogue is not loaded.");
+
+            var sb = new System.Text.StringBuilder();
+
+            if (catalogue.Count == 0)
+            {
+                sb.AppendLine("No building schematics loaded.");
+                sb.AppendLine("Export some with WorldEdit into assets/foundriesfrontiers/worldgen/schematics/");
+                sb.AppendLine("and give each one an entry in config/buildings.json.");
+            }
+            else
+            {
+                sb.AppendLine(catalogue.Count + " building(s):");
+                foreach (BuildingPlan plan in catalogue.All)
+                {
+                    sb.AppendLine("  " + plan.Name + " (" + plan.Code + ")");
+                    sb.AppendLine("    " + plan.SizeX + "x" + plan.SizeY + "x" + plan.SizeZ
+                                  + ", " + plan.SolidBlockCount + " blocks"
+                                  + ", tier " + (plan.Manifest?.Tier ?? 0)
+                                  + ", " + (plan.Manifest?.Need.ToString().ToLowerInvariant() ?? "?"));
+                    sb.AppendLine("    costs " + plan.CostLine());
+
+                    // The three commonest blocks, which is enough to tell at a glance
+                    // whether a building is timber, stone or mud.
+                    var top = new List<KeyValuePair<string, int>>(plan.BillOfBlocks);
+                    top.Sort((a, b) => b.Value.CompareTo(a.Value));
+                    var bits = new List<string>();
+                    for (int i = 0; i < top.Count && i < 3; i++)
+                    {
+                        bits.Add(top[i].Value + "x " + top[i].Key.Replace("game:", ""));
+                    }
+                    if (bits.Count > 0) sb.AppendLine("    mostly " + string.Join(", ", bits));
+                }
+            }
+
+            if (catalogue.Complaints.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Problems:");
+                foreach (string c in catalogue.Complaints) sb.AppendLine("  " + c);
+            }
+
+            return TextCommandResult.Success(sb.ToString().TrimEnd());
+        }
+
+        private static TextCommandResult OnVillageBuild(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null) return TextCommandResult.Error("No player entity.");
+
+            var reg = Registry(sapi);
+            BlockPos here = player.Entity.Pos.AsBlockPos;
+            Village v = reg.VillageAt(here) ?? reg.Nearest(here, 400);
+            if (v == null) return TextCommandResult.Error("No village within 400 blocks. " + reg.IdList() + ".");
+
+            string action = (args[0] as string ?? "list").Trim().ToLowerInvariant();
+            string what = (args[1] as string ?? "").Trim();
+
+            switch (action)
+            {
+                case "list":
+                {
+                    if (v.BuildSites.Count == 0)
+                    {
+                        return TextCommandResult.Success(
+                            v.Name + " has built nothing. /ff village build next to let it choose one.");
+                    }
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine(v.Name + " has " + v.BuildSites.Count + " building(s):");
+                    foreach (VillageBuildSite s in v.BuildSites) sb.AppendLine("  " + s);
+                    return TextCommandResult.Success(sb.ToString().TrimEnd());
+                }
+
+                case "next":
+                {
+                    VillageBuildSite site = reg.StartBuild(v, out string error);
+                    if (site == null) return TextCommandResult.Error(error ?? "Nothing to build.");
+                    return TextCommandResult.Success(
+                        v.Name + " has decided on " + site + ". A builder will start when it can pay.");
+                }
+
+                case "cancel":
+                {
+                    if (!int.TryParse(what, out int id)) return TextCommandResult.Error("Which site? /ff village build cancel <id>");
+                    VillageBuildSite site = reg.SiteById(v, id);
+                    if (site == null) return TextCommandResult.Error("No site #" + id + " in " + v.Name + ".");
+
+                    site.State = EnumBuildState.Abandoned;
+                    site.BuilderEntityId = 0;
+                    return TextCommandResult.Success("Abandoned site #" + id + ". What was placed stays where it is.");
+                }
+
+                default:
+                {
+                    // Anything else is a schematic code, so the exact building can be
+                    // tested without waiting for the village to want it.
+                    var catalogue = sapi.ModLoader.GetModSystem<BuildingCatalogue>();
+                    BuildingPlan plan = catalogue?.Get(action);
+                    if (plan == null)
+                    {
+                        return TextCommandResult.Error(
+                            "No building called '" + action + "'. /ff buildings to see what loaded.");
+                    }
+
+                    VillageBuildSite site = reg.StartBuild(v, plan, out string error);
+                    if (site == null) return TextCommandResult.Error(error ?? "Could not site it.");
+                    return TextCommandResult.Success("Sited " + site + ", costing " + plan.CostLine() + ".");
+                }
+            }
         }
 
         private static TextCommandResult OnVillageShow(ICoreServerAPI sapi, TextCommandCallingArgs args)

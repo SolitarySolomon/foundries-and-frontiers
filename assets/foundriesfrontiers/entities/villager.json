@@ -397,6 +397,14 @@
 						priorityForCancel: 1.7
 					},
 					{
+						// Above the digger, so a builder with a site to work goes and
+						// works it rather than levelling ground for a building nobody has
+						// started yet. Levelling is what they do when there is no site.
+						code: "ffbuilder",
+						priority: 1.75,
+						priorityForCancel: 1.75
+					},
+					{
 						// Below the rest: foraging is what a villager does when their real
 						// trade has nothing for them, and it is the one job that always
 						// has somewhere to go.

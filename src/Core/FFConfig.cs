@@ -27,6 +27,7 @@ namespace FoundriesFrontiers
         [JsonProperty] public PerformanceConfig Performance = new PerformanceConfig();
         [JsonProperty] public PlotConfig Plots = new PlotConfig();
         [JsonProperty] public WorkConfig Work = new WorkConfig();
+        [JsonProperty] public BuildConfig Build = new BuildConfig();
 
         public class MovementConfig
         {
@@ -308,6 +309,37 @@ namespace FoundriesFrontiers
 
             /// <summary>Pause between finishing one block and starting the next, in seconds.</summary>
             [JsonProperty] public float BetweenBlocksSec = 0.6f;
+        }
+
+        public class BuildConfig
+        {
+            /// <summary>How many buildings one village may have going up at once.</summary>
+            [JsonProperty] public int MaxSitesAtOnce = 1;
+
+            /// <summary>Candidate spots to try before giving up on siting a building.</summary>
+            [JsonProperty] public int SiteAttempts = 80;
+
+            /// <summary>
+            /// The most the ground may rise and fall across a footprint. Stricter than a
+            /// field: a farm can be lumpy and a house cannot.
+            /// </summary>
+            [JsonProperty] public int FlatnessTolerance = 2;
+
+            /// <summary>Keep buildings this far apart, and this far off any plot.</summary>
+            [JsonProperty] public int SeparationBlocks = 2;
+
+            /// <summary>
+            /// Blocks a builder lays per trip to the site. Low on purpose: a building
+            /// that goes up over in game days is the point of the whole phase, and one
+            /// that appears in a puff is a schematic being pasted.
+            /// </summary>
+            [JsonProperty] public int BlocksPerVisit = 8;
+
+            /// <summary>Seconds between one batch of blocks and the next.</summary>
+            [JsonProperty] public float SecondsPerBatch = 3f;
+
+            /// <summary>How close a builder stands to the site while working.</summary>
+            [JsonProperty] public float WorkFromBlocks = 3.5f;
         }
 
         // --- loading ---------------------------------------------------------------

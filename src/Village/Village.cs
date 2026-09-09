@@ -79,6 +79,18 @@ namespace FoundriesFrontiers
         [JsonProperty] public int NextPlotId = 1;
 
         /// <summary>
+        /// Buildings the village has decided on: standing, going up, or waiting on
+        /// materials.
+        ///
+        /// A finished building stays on this list rather than being cleared, because the
+        /// list is how the village knows it already has three houses and does not need a
+        /// fourth, and how the tier gate counts building quality.
+        /// </summary>
+        [JsonProperty] public List<VillageBuildSite> BuildSites = new List<VillageBuildSite>();
+
+        [JsonProperty] public int NextBuildSiteId = 1;
+
+        /// <summary>
         /// Entity ids of everyone who belongs here, including those in unloaded chunks.
         /// A villager's own ffVillage attribute is the authoritative link; this is the
         /// reverse index, so it gets reconciled rather than trusted blindly.
