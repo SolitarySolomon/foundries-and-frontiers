@@ -70,6 +70,7 @@ namespace FoundriesFrontiers
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerForager>("ffforager");
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerDigger>("ffdigger");
             Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerBuilder>("ffbuilder");
+            Vintagestory.GameContent.AiTaskRegistry.Register<AiTaskVillagerFetchTool>("fffetchtool");
         }
 
         public override void StartServerSide(ICoreServerAPI sapi)

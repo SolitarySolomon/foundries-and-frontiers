@@ -125,6 +125,29 @@ namespace FoundriesFrontiers
             [JsonProperty] public int[] BestToolTierByVillageTier = { 0, 1, 2, 3, 4, 5 };
 
             /// <summary>
+            /// How many made tools the village keeps waiting on the rack.
+            ///
+            /// A cap rather than unlimited, because a village that turns its entire metal
+            /// supply into spare hoes has made a bad decision on its own behalf.
+            /// </summary>
+            [JsonProperty] public int ToolRackCap = 8;
+
+            /// <summary>
+            /// Tools a village can make in a day with nobody whose job it is.
+            /// Somebody knaps something in the evening; it is slow and that is the point.
+            /// </summary>
+            [JsonProperty] public int ToolsPerDayWithoutSmith = 1;
+
+            /// <summary>
+            /// Tools each smith turns out in a day.
+            ///
+            /// This is the whole argument for having a smith. A village that makes four
+            /// tools a day gets its workers back on their feet four times as fast after a
+            /// bad week, and every one of those days is work nobody else had to lose.
+            /// </summary>
+            [JsonProperty] public int ToolsPerDayPerSmith = 4;
+
+            /// <summary>
             /// Chance an ordinary villager is bold enough to fight back rather than run.
             /// Low on purpose: a village where every farmer swings at a drifter is a
             /// village that loses its farmers. Guards ignore this and are always bold.

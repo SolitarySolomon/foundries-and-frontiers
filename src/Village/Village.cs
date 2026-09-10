@@ -91,6 +91,32 @@ namespace FoundriesFrontiers
         [JsonProperty] public int NextBuildSiteId = 1;
 
         /// <summary>
+        /// Made tools waiting at the storehouse for whoever needs one.
+        ///
+        /// A count per item code rather than a pool, because a tool is not fungible value:
+        /// six wood of axe is meaningless, and a village with four axes and no hoes is in
+        /// a different position from one with two of each.
+        ///
+        /// This is what a smith fills. Without a rack a broken tool could only be replaced
+        /// at the moment somebody needed one and the village happened to be able to pay,
+        /// so a place with plenty of metal still had workers standing about bare handed.
+        /// A rack means the smith works ahead of the need, which is what a smith is for.
+        /// </summary>
+        [JsonProperty] public Dictionary<string, int> ToolRack = new Dictionary<string, int>();
+
+        /// <summary>How many tools are on the rack, of any kind.</summary>
+        [JsonIgnore]
+        public int ToolsInStock
+        {
+            get
+            {
+                int n = 0;
+                foreach (int c in ToolRack.Values) n += c;
+                return n;
+            }
+        }
+
+        /// <summary>
         /// Entity ids of everyone who belongs here, including those in unloaded chunks.
         /// A villager's own ffVillage attribute is the authoritative link; this is the
         /// reverse index, so it gets reconciled rather than trusted blindly.

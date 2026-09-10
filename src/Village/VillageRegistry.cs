@@ -567,7 +567,7 @@ namespace FoundriesFrontiers
                     RepairMarkers(v);
                     AssignBeds(v);
                     AgePlots(v);
-                    ReplaceBrokenTools(v);
+                    StockToolRack(v);
                     ConsiderBuilding(v);
                     OnNewDay?.Invoke(v);
                 }
@@ -675,7 +675,7 @@ namespace FoundriesFrontiers
             if (v == null) return;
             RepairMarkers(v);
             AgePlots(v);
-            ReplaceBrokenTools(v);
+            StockToolRack(v);
             ConsiderBuilding(v);
             v.Ledger.RollDay(true);
             v.DaysAtCurrentTier++;
@@ -723,17 +723,16 @@ namespace FoundriesFrontiers
         /// that cannot pay leaves them bare handed, which is a real state with a real cost
         /// rather than a hidden one, and it says so in the log.
         /// </summary>
-        public bool TryIssueTool(Village village, FFVillager villager, out string outcome)
+        public bool TryMakeTool(Village village, EnumTrade trade, out string outcome)
         {
             outcome = null;
-            if (village == null || villager == null) { outcome = "nobody to give it to"; return false; }
-            if (villager.ToolStack != null) { outcome = "already has one"; return false; }
+            if (village == null) { outcome = "no village"; return false; }
 
             var catalogue = sapi.ModLoader.GetModSystem<WorldCatalogue>();
-            Item tool = catalogue?.ToolFor(villager.Trade, village.Tier);
+            Item tool = catalogue?.ToolFor(trade, village.Tier);
             if (tool == null)
             {
-                outcome = villager.Trade.ToString().ToLowerInvariant() + " works with nothing in hand";
+                outcome = trade.ToString().ToLowerInvariant() + " works with nothing in hand";
                 return false;
             }
 
@@ -748,8 +747,7 @@ namespace FoundriesFrontiers
                 || village.Ledger.Get(EnumVillageResource.Stone) < stone
                 || village.Ledger.Get(EnumVillageResource.Wood) < wood)
             {
-                outcome = "cannot afford a " + tool.Code.Path
-                        + " (" + Cost(metal, stone, wood) + ")";
+                outcome = "cannot afford a " + tool.Code.Path + " (" + Cost(metal, stone, wood) + ")";
                 return false;
             }
 
@@ -760,14 +758,85 @@ namespace FoundriesFrontiers
             village.Ledger.Withdraw(EnumVillageResource.Wood, wood);
             RefreshStorehouse(village);
 
-            villager.GiveTool(new ItemStack(tool));
+            string code = tool.Code.ToShortString();
+            village.ToolRack.TryGetValue(code, out int had);
+            village.ToolRack[code] = had + 1;
 
             outcome = "made a " + tool.Code.Path + " for " + Cost(metal, stone, wood);
-            sapi.Logger.Notification(
-                "[F&F] {0} {1} for {2}.",
-                village.Name, outcome,
-                villager.GivenName == "" ? "#" + villager.EntityId : villager.GivenName);
+            sapi.Logger.Notification("[F&F] {0} {1}. The rack now holds {2}.",
+                village.Name, outcome, village.ToolsInStock);
             return true;
+        }
+
+        /// <summary>
+        /// Takes a tool off the rack and puts it in a villager's hands.
+        ///
+        /// Only ever called with the villager standing at the storehouse. A tool appearing
+        /// in somebody's hand from across the village is the poof-magic this design keeps
+        /// refusing everywhere else, and it would be no better here.
+        /// </summary>
+        public bool TryCollectTool(Village village, FFVillager villager, out string outcome)
+        {
+            outcome = null;
+            if (village == null || villager == null) { outcome = "nobody to give it to"; return false; }
+            if (villager.ToolStack != null) { outcome = "already has one"; return false; }
+
+            var catalogue = sapi.ModLoader.GetModSystem<WorldCatalogue>();
+            Item wants = catalogue?.ToolFor(villager.Trade, village.Tier);
+            if (wants?.Tool == null)
+            {
+                outcome = villager.Trade.ToString().ToLowerInvariant() + " works with nothing in hand";
+                return false;
+            }
+
+            // Anything of the right kind will do, best first. A village that knapped a
+            // stone axe last month should hand it over rather than refuse because the
+            // smith has since learned copper.
+            string found = FindOnRack(village, wants.Tool.Value);
+            if (found == null)
+            {
+                outcome = "the rack has no " + wants.Tool.Value.ToString().ToLowerInvariant();
+                return false;
+            }
+
+            village.ToolRack[found]--;
+            if (village.ToolRack[found] <= 0) village.ToolRack.Remove(found);
+
+            Item taken = sapi.World.GetItem(new AssetLocation(found));
+            villager.GiveTool(new ItemStack(taken));
+
+            outcome = "took a " + taken.Code.Path + " off the rack";
+            sapi.Logger.Notification("[F&F] {0} {1} at {2}. The rack now holds {3}.",
+                villager.GivenName == "" ? "#" + villager.EntityId : villager.GivenName,
+                outcome, village.Name, village.ToolsInStock);
+            return true;
+        }
+
+        private string FindOnRack(Village village, EnumTool kind)
+        {
+            string found = null;
+            int bestTier = -1;
+
+            foreach (var kv in village.ToolRack)
+            {
+                if (kv.Value <= 0) continue;
+
+                Item onRack = sapi.World.GetItem(new AssetLocation(kv.Key));
+                if (onRack?.Tool != kind) continue;
+
+                if (onRack.ToolTier > bestTier) { bestTier = onRack.ToolTier; found = kv.Key; }
+            }
+            return found;
+        }
+
+        /// <summary>Whether it is worth a villager walking over for a tool at all.</summary>
+        public bool RackHasToolFor(Village village, EnumTrade trade)
+        {
+            if (village == null || village.ToolsInStock == 0) return false;
+
+            var catalogue = sapi.ModLoader.GetModSystem<WorldCatalogue>();
+            EnumTool? kind = catalogue?.ToolFor(trade, village.Tier)?.Tool;
+            return kind != null && FindOnRack(village, kind.Value) != null;
         }
 
         private static float At(float[] table, int i)
@@ -792,17 +861,39 @@ namespace FoundriesFrontiers
         /// instant it snaps reads as magic, and because a worker finishing the afternoon
         /// bare handed and starting fresh in the morning is what actually happens.
         /// </summary>
-        private void ReplaceBrokenTools(Village village)
+        private void StockToolRack(Village village)
         {
             if (!FFConfig.Current.Villager.GiveTradeToolsOnSpawn) return;
 
+            var cfg = FFConfig.Current.Villager;
+            if (village.ToolsInStock >= cfg.ToolRackCap) return;
+
+            // How many the village can turn out in a day. One without a smith, more with
+            // one, which is the whole reason to have a smith: a village that makes four
+            // tools a day gets its workers back on their feet four times as fast after a
+            // bad week.
+            int smiths = 0;
+            var wanted = new List<EnumTrade>();
+
             foreach (FFVillager v in LoadedMembers(village.Id))
             {
-                if (v.ToolStack != null) continue;
-                if (!TryIssueTool(village, v, out string why))
-                {
-                    sapi.Logger.VerboseDebug("[F&F] {0} stays bare handed: {1}", v.EntityId, why);
-                }
+                if (v.Trade == EnumTrade.Smith) smiths++;
+                if (v.ToolStack == null && !wanted.Contains(v.Trade)) wanted.Add(v.Trade);
+            }
+
+            if (wanted.Count == 0) return;
+
+            int canMake = Math.Max(cfg.ToolsPerDayWithoutSmith, smiths * cfg.ToolsPerDayPerSmith);
+            int made = 0;
+
+            // Make what is actually wanted, which is the trades of whoever is currently
+            // bare handed. No point knapping hoes for a village of lumberjacks.
+            foreach (EnumTrade trade in wanted)
+            {
+                if (made >= canMake || village.ToolsInStock >= cfg.ToolRackCap) break;
+
+                if (TryMakeTool(village, trade, out string why)) made++;
+                else sapi.Logger.VerboseDebug("[F&F] {0} did not make a tool: {1}", village.Name, why);
             }
         }
 

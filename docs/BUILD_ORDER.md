@@ -332,7 +332,23 @@ Rules that apply to every step, because retrofitting any of them is painful.
       The timber lands on the ground, because that is what the game's felling does, and
       the lumberjack gathers it. That reads better than logs teleporting into somebody's
       arms, and a player walking past a fresh stump finds whatever has not been picked up.
-      **Tools wear out and now come back.** Before this a lumberjack whose axe broke
+      **Tools wear out, and coming back is a walk.** A village makes tools ahead of the
+      need and racks them at the storehouse; a villager with nothing in their hands walks
+      over and collects one. The first version had the tool appear in their hand wherever
+      they happened to be standing, which is the same poof-magic the storehouse and the
+      build sites both refuse, and Corey caught it in the same breath as asking for a rack.
+      The rack is what makes a smith worth having. A village without one knaps something
+      in the evening and turns out a single tool a day; each smith makes four. After a bad
+      week that is the difference between a workforce back on its feet tomorrow and one
+      bare handed for most of a season.
+      What gets made is what is actually wanted, which is the trades of whoever is
+      currently empty handed. No point knapping hoes for a village of lumberjacks.
+      **Knapping itself is not simulated**, and that is worth saying plainly rather than
+      letting it read as a feature: nobody kneels at a knapping surface, the village
+      simply spends the stone. Making it visible is a toolmaker job and belongs with the
+      craft chain in Phase E.
+
+      Before this a lumberjack whose axe broke
       quietly went back to taking one log at a time and nothing anywhere said why, which
       is a village that stops growing for a reason nobody can see. Each morning the
       village re-equips anyone bare handed, paying metal or stone for the head depending

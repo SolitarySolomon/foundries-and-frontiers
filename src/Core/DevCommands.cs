@@ -134,6 +134,13 @@ namespace FoundriesFrontiers
                                   sapi.ChatCommands.Parsers.OptionalWord("what"))
                         .HandleWith(args => OnVillagePlot(sapi, args))
                     .EndSubCommand()
+                    .BeginSubCommand("tools")
+                        .WithDescription("The village tool rack. /ff village tools [make <trade>]")
+                        .RequiresPlayer()
+                        .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("action"),
+                                  sapi.ChatCommands.Parsers.OptionalWord("trade"))
+                        .HandleWith(args => OnVillageTools(sapi, args))
+                    .EndSubCommand()
                     .BeginSubCommand("build")
                         .WithDescription("Village building. /ff village build list|next|<code>|cancel <id>")
                         .RequiresPlayer()
@@ -1115,12 +1122,90 @@ namespace FoundriesFrontiers
                 }
             }
 
+            if (catalogue.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Pricing: " + catalogue.PricingReport + ".");
+            }
+
             if (catalogue.Complaints.Count > 0)
             {
                 sb.AppendLine();
                 sb.AppendLine("Problems:");
                 foreach (string c in catalogue.Complaints) sb.AppendLine("  " + c);
             }
+
+            return TextCommandResult.Success(sb.ToString().TrimEnd());
+        }
+
+        /// <summary>
+        /// What is on the tool rack, and a way to put something on it by hand.
+        ///
+        /// Worth its own command because a village with bare handed workers and no
+        /// obvious reason is exactly the state that used to be invisible.
+        /// </summary>
+        private static TextCommandResult OnVillageTools(ICoreServerAPI sapi, TextCommandCallingArgs args)
+        {
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
+            if (player?.Entity == null) return TextCommandResult.Error("No player entity.");
+
+            var reg = Registry(sapi);
+            BlockPos here = player.Entity.Pos.AsBlockPos;
+            Village v = reg.VillageAt(here) ?? reg.Nearest(here, 400);
+            if (v == null) return TextCommandResult.Error("No village within 400 blocks. " + reg.IdList() + ".");
+
+            string action = (args[0] as string ?? "").Trim().ToLowerInvariant();
+            string what = (args[1] as string ?? "").Trim();
+
+            if (action == "make")
+            {
+                if (!Enum.TryParse(what, true, out EnumTrade trade))
+                {
+                    return TextCommandResult.Error(
+                        "Which trade? /ff village tools make lumberjack. /ff trades lists them.");
+                }
+
+                bool made = reg.TryMakeTool(v, trade, out string outcome);
+                return made
+                    ? TextCommandResult.Success(v.Name + " " + outcome + ".")
+                    : TextCommandResult.Error(v.Name + " " + outcome + ".");
+            }
+
+            var sb = new System.Text.StringBuilder();
+            var cfg = FFConfig.Current.Villager;
+
+            sb.AppendLine(v.Name + "'s tool rack: " + v.ToolsInStock + " of " + cfg.ToolRackCap + ".");
+
+            if (v.ToolRack.Count == 0)
+            {
+                sb.AppendLine("  empty");
+            }
+            else
+            {
+                foreach (var kv in v.ToolRack)
+                {
+                    sb.AppendLine("  " + kv.Value + "x " + kv.Key.Replace("game:", ""));
+                }
+            }
+
+            // Who is waiting on one, which is the whole reason to look.
+            var bare = new List<string>();
+            int smiths = 0;
+            foreach (FFVillager m in reg.LoadedMembers(v.Id))
+            {
+                if (m.Trade == EnumTrade.Smith) smiths++;
+                if (m.ToolStack == null)
+                {
+                    bare.Add((m.GivenName == "" ? "#" + m.EntityId : m.GivenName)
+                             + " the " + m.Trade.ToString().ToLowerInvariant());
+                }
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Bare handed: " + (bare.Count == 0 ? "nobody" : string.Join(", ", bare)));
+            sb.AppendLine("Makes " + Math.Max(cfg.ToolsPerDayWithoutSmith, smiths * cfg.ToolsPerDayPerSmith)
+                          + " a day (" + smiths + " smith(s) here)."
+                          + " /ff village day to run one.");
 
             return TextCommandResult.Success(sb.ToString().TrimEnd());
         }

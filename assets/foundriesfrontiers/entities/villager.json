@@ -405,6 +405,15 @@
 						priorityForCancel: 1.75
 					},
 					{
+						// Above every job, because a worker with no tool is a worker doing
+						// a fraction of their job and the walk pays for itself many times
+						// over. It only ever runs when the rack actually has something of
+						// the right kind, so it is not a standing interruption.
+						code: "fffetchtool",
+						priority: 1.78,
+						priorityForCancel: 1.78
+					},
+					{
 						// Below the rest: foraging is what a villager does when their real
 						// trade has nothing for them, and it is the one job that always
 						// has somewhere to go.
