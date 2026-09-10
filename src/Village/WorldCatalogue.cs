@@ -129,6 +129,13 @@ namespace FoundriesFrontiers
                     {
                         basicToolByType[kind] = item;
                     }
+
+                    if (!toolsByType.TryGetValue(kind, out List<Item> list))
+                    {
+                        list = new List<Item>();
+                        toolsByType[kind] = list;
+                    }
+                    list.Add(item);
                 }
 
                 if (item is not ItemPlantableSeed) continue;
@@ -236,6 +243,43 @@ namespace FoundriesFrontiers
         /// <summary>The simplest tool of this kind the game offers, or null.</summary>
         public Item BasicTool(EnumTool kind)
             => basicToolByType.TryGetValue(kind, out Item item) ? item : null;
+
+        /// <summary>Every tool of a kind, cheapest first. For picking one a village can make.</summary>
+        private readonly Dictionary<EnumTool, List<Item>> toolsByType =
+            new Dictionary<EnumTool, List<Item>>();
+
+        /// <summary>
+        /// The best tool of this kind at or below the tier given, or null.
+        ///
+        /// "At or below" rather than "exactly", because tool tiers are not contiguous in
+        /// every world and a village that can make bronze should not be stuck when the
+        /// only bronze axe is missing.
+        /// </summary>
+        public Item ToolUpToTier(EnumTool kind, int maxTier)
+        {
+            if (!toolsByType.TryGetValue(kind, out List<Item> list)) return null;
+
+            Item best = null;
+            foreach (Item item in list)
+            {
+                if (item.ToolTier > maxTier) continue;
+                if (best == null || item.ToolTier > best.ToolTier) best = item;
+            }
+            return best;
+        }
+
+        /// <summary>The best tool a village of this tier could make for this trade.</summary>
+        public Item ToolFor(EnumTrade trade, int villageTier)
+        {
+            if (!toolByTrade.TryGetValue(trade, out EnumTool kind)) return null;
+
+            int[] ladder = FFConfig.Current.Villager.BestToolTierByVillageTier;
+            int max = ladder == null || ladder.Length == 0
+                ? 0
+                : ladder[Math.Clamp(villageTier, 0, ladder.Length - 1)];
+
+            return ToolUpToTier(kind, max) ?? BasicTool(kind);
+        }
 
         /// <summary>Which tool type each trade works with, loaded from config/tools.json.</summary>
         private readonly Dictionary<EnumTrade, EnumTool> toolByTrade =

@@ -332,6 +332,19 @@ Rules that apply to every step, because retrofitting any of them is painful.
       The timber lands on the ground, because that is what the game's felling does, and
       the lumberjack gathers it. That reads better than logs teleporting into somebody's
       arms, and a player walking past a fresh stump finds whatever has not been picked up.
+      **Tools wear out and now come back.** Before this a lumberjack whose axe broke
+      quietly went back to taking one log at a time and nothing anywhere said why, which
+      is a village that stops growing for a reason nobody can see. Each morning the
+      village re-equips anyone bare handed, paying metal or stone for the head depending
+      on what it has learned to work and wood for the handle either way, and a village
+      that cannot pay leaves them bare handed and says so. A day rather than the instant
+      it snaps, because a tool reappearing the moment it breaks reads as magic and a
+      worker finishing the afternoon bare handed does not.
+      Which tier of tool a village can make is its own ladder,
+      `BestToolTierByVillageTier`, so a founding hamlet knaps stone and replaces a broken
+      axe with another stone one rather than a steel one. Every trade's tool type lives in
+      `config/tools.json` rather than in code, because whether a herder carries shears or
+      a knife is a balance decision worth arguing with without a rebuild.
       **Replanting does not run on vanilla luck, but only for lumberjacks.** Leaf drops
       are rare enough that a woodlot living off them thins out and never recovers, which
       makes the plot pointless, so a lumberjack keeps two saplings from each tree they

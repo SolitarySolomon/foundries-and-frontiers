@@ -567,6 +567,7 @@ namespace FoundriesFrontiers
                     RepairMarkers(v);
                     AssignBeds(v);
                     AgePlots(v);
+                    ReplaceBrokenTools(v);
                     ConsiderBuilding(v);
                     OnNewDay?.Invoke(v);
                 }
@@ -674,6 +675,7 @@ namespace FoundriesFrontiers
             if (v == null) return;
             RepairMarkers(v);
             AgePlots(v);
+            ReplaceBrokenTools(v);
             ConsiderBuilding(v);
             v.Ledger.RollDay(true);
             v.DaysAtCurrentTier++;
@@ -704,6 +706,104 @@ namespace FoundriesFrontiers
             if (village == null) return;
             village.Ledger.Refund(r, amount);
             RefreshStorehouse(village);
+        }
+
+        // --- tools -------------------------------------------------------------------
+
+        /// <summary>
+        /// Replaces a villager's tool out of the village's own stores.
+        ///
+        /// Tools wear out and break. Before this they simply did not come back, so a
+        /// lumberjack whose axe gave up quietly stopped felling trees and started taking
+        /// one log at a time, and nothing anywhere said why. A village that cannot notice
+        /// its own workers going bare handed is a village that silently stops growing.
+        ///
+        /// The tool is made, not conjured: metal or stone for the head depending on what
+        /// the village has learned to work, and wood for the handle either way. A village
+        /// that cannot pay leaves them bare handed, which is a real state with a real cost
+        /// rather than a hidden one, and it says so in the log.
+        /// </summary>
+        public bool TryIssueTool(Village village, FFVillager villager, out string outcome)
+        {
+            outcome = null;
+            if (village == null || villager == null) { outcome = "nobody to give it to"; return false; }
+            if (villager.ToolStack != null) { outcome = "already has one"; return false; }
+
+            var catalogue = sapi.ModLoader.GetModSystem<WorldCatalogue>();
+            Item tool = catalogue?.ToolFor(villager.Trade, village.Tier);
+            if (tool == null)
+            {
+                outcome = villager.Trade.ToString().ToLowerInvariant() + " works with nothing in hand";
+                return false;
+            }
+
+            var cfg = FFConfig.Current.Villager;
+            int tier = Math.Max(0, tool.ToolTier);
+
+            float metal = At(cfg.ToolMetalCostByTier, tier);
+            float stone = At(cfg.ToolStoneCostByTier, tier);
+            float wood = cfg.ToolWoodCost;
+
+            if (village.Ledger.Get(EnumVillageResource.Metal) < metal
+                || village.Ledger.Get(EnumVillageResource.Stone) < stone
+                || village.Ledger.Get(EnumVillageResource.Wood) < wood)
+            {
+                outcome = "cannot afford a " + tool.Code.Path
+                        + " (" + Cost(metal, stone, wood) + ")";
+                return false;
+            }
+
+            // All three or none. Taking the wood and then failing on the metal would
+            // charge a village for a tool it never received.
+            village.Ledger.Withdraw(EnumVillageResource.Metal, metal);
+            village.Ledger.Withdraw(EnumVillageResource.Stone, stone);
+            village.Ledger.Withdraw(EnumVillageResource.Wood, wood);
+            RefreshStorehouse(village);
+
+            villager.GiveTool(new ItemStack(tool));
+
+            outcome = "made a " + tool.Code.Path + " for " + Cost(metal, stone, wood);
+            sapi.Logger.Notification(
+                "[F&F] {0} {1} for {2}.",
+                village.Name, outcome,
+                villager.GivenName == "" ? "#" + villager.EntityId : villager.GivenName);
+            return true;
+        }
+
+        private static float At(float[] table, int i)
+        {
+            if (table == null || table.Length == 0) return 0;
+            return table[Math.Clamp(i, 0, table.Length - 1)];
+        }
+
+        private static string Cost(float metal, float stone, float wood)
+        {
+            var parts = new List<string>();
+            if (metal > 0) parts.Add(metal.ToString("0.#") + " metal");
+            if (stone > 0) parts.Add(stone.ToString("0.#") + " stone");
+            if (wood > 0) parts.Add(wood.ToString("0.#") + " wood");
+            return parts.Count == 0 ? "nothing" : string.Join(" and ", parts);
+        }
+
+        /// <summary>
+        /// Once a day, re-equip anyone whose tool has worn out.
+        ///
+        /// A day rather than the moment it breaks, because a village replacing a tool the
+        /// instant it snaps reads as magic, and because a worker finishing the afternoon
+        /// bare handed and starting fresh in the morning is what actually happens.
+        /// </summary>
+        private void ReplaceBrokenTools(Village village)
+        {
+            if (!FFConfig.Current.Villager.GiveTradeToolsOnSpawn) return;
+
+            foreach (FFVillager v in LoadedMembers(village.Id))
+            {
+                if (v.ToolStack != null) continue;
+                if (!TryIssueTool(village, v, out string why))
+                {
+                    sapi.Logger.VerboseDebug("[F&F] {0} stays bare handed: {1}", v.EntityId, why);
+                }
+            }
         }
 
         // --- deposits --------------------------------------------------------------

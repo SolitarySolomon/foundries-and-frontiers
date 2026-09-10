@@ -1097,7 +1097,10 @@ namespace FoundriesFrontiers
                                   + ", " + plan.SolidBlockCount + " blocks"
                                   + ", tier " + (plan.Manifest?.Tier ?? 0)
                                   + ", " + (plan.Manifest?.Need.ToString().ToLowerInvariant() ?? "?"));
-                    sb.AppendLine("    costs " + plan.CostLine());
+                    sb.AppendLine("    costs " + plan.CostLine()
+                                  + (plan.Unpriced > 0
+                                      ? "   (" + plan.Unpriced + " block(s) nothing could price)"
+                                      : ""));
 
                     // The three commonest blocks, which is enough to tell at a glance
                     // whether a building is timber, stone or mud.

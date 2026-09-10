@@ -1,0 +1,74 @@
+{
+  // What a building block is worth when the resource table has no opinion about it.
+  //
+  // The resource table answers "would a village take this off a villager's hands", which
+  // is a different question from "what did this cost to build". A bed, a door, a chest,
+  // a pane of glass, a thatched roof: nobody carries those into a storehouse, so the
+  // table rightly ignores them, and for a while that meant every one of them was free in
+  // a building's bill. A hovel made of cob and thatch cost a village nothing at all.
+  //
+  // So build cost falls back to the block's own material, which the game already knows
+  // for every block including modded ones. Value is per block, in pool units.
+
+  "byMaterial": {
+    "Soil":    { "pool": "earth", "value": 1 },
+    "Gravel":  { "pool": "stone", "value": 0.5 },
+    "Sand":    { "pool": "earth", "value": 0.5 },
+    "Wood":    { "pool": "wood",  "value": 1 },
+    "Leaves":  { "pool": "earth", "value": 0.5 },
+    "Plant":   { "pool": "earth", "value": 0.5 },
+    "Stone":   { "pool": "stone", "value": 1 },
+    "Ore":     { "pool": "stone", "value": 1 },
+    "Metal":   { "pool": "metal", "value": 3 },
+    "Glass":   { "pool": "clay",  "value": 3 },
+    "Ceramic": { "pool": "clay",  "value": 1 },
+    "Brick":   { "pool": "clay",  "value": 1.5 },
+    "Cloth":   { "pool": "cloth", "value": 2 },
+    "Snow":    { "pool": "earth", "value": 0 },
+    "Ice":     { "pool": "earth", "value": 0 },
+    "Water":   { "pool": "earth", "value": 0 },
+    "Lava":    { "pool": "stone", "value": 0 },
+    "Other":   { "pool": "stone", "value": 0.5 }
+  },
+
+  // A few blocks are worth much more than the material they are made of, because making
+  // one is a job rather than a shaping. Matched as code fragments, longest wins, and
+  // these override the material table above.
+  //
+  // The numbers are roughly what the thing takes to craft, in pool units, so a village
+  // paying for a farmhouse pays for its four beds rather than getting them thrown in.
+  "byCode": {
+    "bed-":        { "pool": "wood",  "value": 4 },   // per block; a bed is two
+    "chest":       { "pool": "wood",  "value": 8 },
+    "crate":       { "pool": "wood",  "value": 6 },
+    "barrel":      { "pool": "wood",  "value": 6 },
+    "door":        { "pool": "wood",  "value": 6 },
+    "trapdoor":    { "pool": "wood",  "value": 4 },
+    "bookshelf":   { "pool": "wood",  "value": 6 },
+    "shelf":       { "pool": "wood",  "value": 4 },
+    "table":       { "pool": "wood",  "value": 4 },
+    "chair":       { "pool": "wood",  "value": 4 },
+    "bench":       { "pool": "wood",  "value": 4 },
+    "workbench":   { "pool": "wood",  "value": 8 },
+    "ladder":      { "pool": "wood",  "value": 2 },
+    "sign":        { "pool": "wood",  "value": 2 },
+    "trough":      { "pool": "wood",  "value": 6 },
+    "henbox":      { "pool": "wood",  "value": 4 },
+
+    "anvil":       { "pool": "metal", "value": 20 },
+    "bloomery":    { "pool": "clay",  "value": 12 },
+    "forge":       { "pool": "stone", "value": 10 },
+    "bellows":     { "pool": "cloth", "value": 8 },
+    "quern":       { "pool": "stone", "value": 8 },
+    "clayoven":    { "pool": "clay",  "value": 10 },
+    "pitkiln":     { "pool": "wood",  "value": 4 },
+    "firepit":     { "pool": "wood",  "value": 2 },
+    "lantern":     { "pool": "metal", "value": 4 },
+    "torch":       { "pool": "wood",  "value": 1 },
+
+    "cob":         { "pool": "earth", "value": 5 },
+    "cobble":      { "pool": "stone", "value": 1 },   // beats "cob" by length
+    "thatch":      { "pool": "earth", "value": 1 },
+    "wattle":      { "pool": "wood",  "value": 2 }
+  }
+}

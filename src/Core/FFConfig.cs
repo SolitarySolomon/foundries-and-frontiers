@@ -100,6 +100,31 @@ namespace FoundriesFrontiers
             [JsonProperty] public bool GiveTradeToolsOnSpawn = true;
 
             /// <summary>
+            /// What the village spends replacing a worn out tool, by the tier of the tool
+            /// it is making. Index 0 is flint and stone, 1 and 2 copper and bronze, 3 and
+            /// up iron and steel.
+            ///
+            /// Paired arrays rather than one number because a stone axe is knapped and an
+            /// iron one is smelted, and the pools they come out of are the whole point.
+            /// A village with no metal makes stone tools and works slower for it.
+            /// </summary>
+            [JsonProperty] public float[] ToolMetalCostByTier = { 0, 6, 8, 12, 16, 20 };
+
+            [JsonProperty] public float[] ToolStoneCostByTier = { 4, 0, 0, 0, 0, 0 };
+
+            /// <summary>Every tool needs a handle, whatever it is made of.</summary>
+            [JsonProperty] public float ToolWoodCost = 2f;
+
+            /// <summary>
+            /// The best tool tier a village of each tier knows how to make.
+            ///
+            /// A hamlet knaps stone. A place with a bloomery makes iron. This is what
+            /// stops a founding village replacing a broken axe with a steel one, and it
+            /// is the same ladder the storehouse forms use.
+            /// </summary>
+            [JsonProperty] public int[] BestToolTierByVillageTier = { 0, 1, 2, 3, 4, 5 };
+
+            /// <summary>
             /// Chance an ordinary villager is bold enough to fight back rather than run.
             /// Low on purpose: a village where every farmer swings at a drifter is a
             /// village that loses its farmers. Guards ignore this and are always bold.

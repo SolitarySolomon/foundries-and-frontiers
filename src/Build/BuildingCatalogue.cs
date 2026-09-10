@@ -104,6 +104,13 @@ namespace FoundriesFrontiers
         public int SolidBlockCount;
 
         /// <summary>
+        /// Blocks nothing could put a price on. A high number here means a building the
+        /// village is getting most of for free, which is worth seeing rather than
+        /// discovering later as an economy that does not bite.
+        /// </summary>
+        public int Unpriced;
+
+        /// <summary>
         /// Where each block goes, relative to the building's corner, and which block it is.
         ///
         /// Decoded once at load through the schematic's own unpacking rather than by
@@ -152,6 +159,72 @@ namespace FoundriesFrontiers
     }
 
     /// <summary>
+    /// What one block costs a village to build with, and out of which pool.
+    /// </summary>
+    public class BuildCost
+    {
+        [JsonProperty] public string Pool;
+        [JsonProperty] public float Value;
+    }
+
+    /// <summary>
+    /// The fallback that stops a building being free.
+    ///
+    /// The resource table answers a different question from this one. It decides whether
+    /// a village would take something off a villager's hands, and it is right to ignore
+    /// beds, doors, panes of glass and thatched roofs, because nobody carries those into
+    /// a storehouse. But a building is made of exactly those things, and for a while that
+    /// meant every one of them was free: a hovel of cob and thatch cost a village nothing
+    /// at all, which quietly made the whole two-cost design meaningless.
+    ///
+    /// So build cost falls back to the block's own material, which the game already knows
+    /// for every block including modded ones, with a short override list for the things
+    /// that are a job to make rather than a shaping.
+    /// </summary>
+    public class BuildCostTable
+    {
+        [JsonProperty("byMaterial")] public Dictionary<string, BuildCost> ByMaterial =
+            new Dictionary<string, BuildCost>(StringComparer.OrdinalIgnoreCase);
+
+        [JsonProperty("byCode")] public Dictionary<string, BuildCost> ByCode =
+            new Dictionary<string, BuildCost>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// What this block costs. The longest matching code fragment wins over the
+        /// material, so a wooden bed is a bed rather than eight planks' worth of wood.
+        /// </summary>
+        public bool CostOf(Block block, out EnumVillageResource pool, out float value)
+        {
+            pool = default;
+            value = 0;
+            if (block?.Code == null) return false;
+
+            string code = block.Code.Path.ToLowerInvariant();
+
+            BuildCost best = null;
+            int bestLen = -1;
+            foreach (var kv in ByCode)
+            {
+                if (kv.Key.Length > bestLen && code.Contains(kv.Key.ToLowerInvariant()))
+                {
+                    best = kv.Value;
+                    bestLen = kv.Key.Length;
+                }
+            }
+
+            if (best == null) ByMaterial.TryGetValue(block.BlockMaterial.ToString(), out best);
+            if (best == null) return false;
+
+            EnumVillageResource? r = VillageResources.Parse(best.Pool);
+            if (r == null) return false;
+
+            pool = r.Value;
+            value = best.Value;
+            return value > 0;
+        }
+    }
+
+    /// <summary>
     /// Loads every schematic the mod ships, works out what each one costs, and answers
     /// "what should this village build next".
     ///
@@ -167,6 +240,8 @@ namespace FoundriesFrontiers
 
         /// <summary>Problems found at load, kept so a command can show them in game.</summary>
         private readonly List<string> complaints = new List<string>();
+
+        private BuildCostTable costs = new BuildCostTable();
 
         public override bool ShouldLoad(EnumAppSide side) => side == EnumAppSide.Server;
 
@@ -196,6 +271,7 @@ namespace FoundriesFrontiers
             plans.Clear();
             complaints.Clear();
 
+            costs = LoadCostTable(api);
             Dictionary<string, BuildingManifest> manifests = LoadManifests(api);
             // loadAsset defaults to true and must stay that way. Passing false leaves
             // every asset unhydrated, so ToText returns "" and each schematic fails to
@@ -326,17 +402,52 @@ namespace FoundriesFrontiers
                 plan.BillOfBlocks.TryGetValue(blockCode, out int had);
                 plan.BillOfBlocks[blockCode] = had + 1;
 
-                if (table == null) continue;
+                // Cost it as the item a player would hold where the resource table has an
+                // opinion, because that is what the storehouse deals in and what the
+                // ledger is denominated in. Only blocks that will actually be placed are
+                // costed, so a village never pays for something it does not get.
+                if (table != null)
+                {
+                    ItemStack stack = new ItemStack(block);
+                    EnumVillageResource? pool = table.Classify(stack);
+                    if (pool != null)
+                    {
+                        plan.LedgerCost[(int)pool.Value] += table.UnitValue(stack, pool.Value);
+                        continue;
+                    }
+                }
 
-                // Cost it as the item a player would hold, because that is what the
-                // storehouse deals in and what the ledger is denominated in. Only blocks
-                // that will actually be placed are costed, so a village never pays for
-                // something it does not get.
-                ItemStack stack = new ItemStack(block);
-                EnumVillageResource? pool = table.Classify(stack);
-                if (pool == null) continue;
+                // Nothing a village would accept as a deposit, which is most of what a
+                // building is made of. Fall back to what it costs to build with.
+                if (costs.CostOf(block, out EnumVillageResource bpool, out float bvalue))
+                {
+                    plan.LedgerCost[(int)bpool] += bvalue;
+                    continue;
+                }
 
-                plan.LedgerCost[(int)pool.Value] += table.UnitValue(stack, pool.Value);
+                plan.Unpriced++;
+            }
+        }
+
+        private BuildCostTable LoadCostTable(ICoreServerAPI api)
+        {
+            IAsset asset = api.Assets.TryGet(
+                new AssetLocation(FoundriesFrontiersMod.ModId, "config/buildcosts.json"));
+
+            if (asset == null)
+            {
+                complaints.Add("config/buildcosts.json is missing, so most of a building is free.");
+                return new BuildCostTable();
+            }
+
+            try
+            {
+                return JsonConvert.DeserializeObject<BuildCostTable>(asset.ToText()) ?? new BuildCostTable();
+            }
+            catch (Exception e)
+            {
+                complaints.Add("config/buildcosts.json would not parse: " + e.Message);
+                return new BuildCostTable();
             }
         }
 
