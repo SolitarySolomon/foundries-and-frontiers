@@ -315,18 +315,31 @@ Rules that apply to every step, because retrofitting any of them is painful.
       A redwood is over a thousand blocks, so felling happens sixty blocks at a time
       across several ticks, top down. All at once was a visible server stall and looked
       like a tree blinking out of existence rather than coming down.
-      Felling starts at the base of the trunk and the rest comes down after it, which is
-      what a lumberjack does and what it looks like from a distance. That needed a hook in
-      the work loop, `StillBusyAt`, because the block the villager was sent to is gone
-      after the first cut and the loop would otherwise decide the job was done and wander
-      off to the next tree with half of this one hanging in the air.
-      **Replanting does not run on vanilla luck.** Leaf drops are rare enough that a
-      woodlot living off them thins out and never recovers, which makes the plot
-      pointless, so a felled tree yields a set number of saplings for the tree it was, on
-      top of anything the leaves happened to give. Two per tree by default, so a managed
-      woodlot slowly thickens. Which sapling comes from the world catalogue, matched to
-      the log, so an oak woodlot stays an oak woodlot. Set `SaplingsPerTree` to zero for
-      vanilla rates only.
+      **Corrected: the flood fill was a reimplementation of something the game already
+      does, and the wrong thing was doing it.** Vintage Story fells a tree when the base
+      of the trunk is cut, and it is the *axe* that does it, not the block:
+      `ItemAxe.OnBlockBrokenWith` finds the whole tree and takes it down with the game's
+      own felling groups, its reduced drops from leaves and branchy wood, and its
+      durability cost. Villagers were breaking blocks with no tool at all, so none of that
+      ever fired, and the fill written here would have drifted out of step with the real
+      rules the first time the game changed them.
+      So the lumberjack swings an axe the way a player does, and a villager with no axe
+      gets one log for exactly the reason a player with no axe gets one log. That makes
+      the tool matter for a real reason rather than as a speed multiplier, which is why
+      villagers are now handed the simplest tool their trade needs at spawn
+      (`GiveTradeToolsOnSpawn`, found by asking the item registry rather than by writing a
+      code down).
+      The timber lands on the ground, because that is what the game's felling does, and
+      the lumberjack gathers it. That reads better than logs teleporting into somebody's
+      arms, and a player walking past a fresh stump finds whatever has not been picked up.
+      **Replanting does not run on vanilla luck, but only for lumberjacks.** Leaf drops
+      are rare enough that a woodlot living off them thins out and never recovers, which
+      makes the plot pointless, so a lumberjack keeps two saplings from each tree they
+      fell. That is a lumberjack's skill and nothing else: the saplings are created in
+      their hands rather than by changing what leaves drop, so a player breaking the same
+      leaves gets exactly the rare chance they always did. Which sapling comes from the
+      world catalogue, matched to the log, so an oak woodlot stays an oak woodlot. Set
+      `SaplingsPerTree` to zero for vanilla rates only.
 - [x] **B9 · Farmer:** till, sow from retained seed, water, reap, replant, rotate against
       the game's real N/P/K.
       *Plus soil improvement:* relaying a field with the best grade the storehouse can

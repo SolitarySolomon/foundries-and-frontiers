@@ -90,6 +90,16 @@ namespace FoundriesFrontiers
             [JsonProperty] public int CarryCapacity = 16;
 
             /// <summary>
+            /// Whether a villager is handed the basic tool for their trade when they spawn.
+            ///
+            /// On by default because a tool is not a speed bonus in this game: an axe is
+            /// what makes a tree fall rather than a log come off it, so a lumberjack with
+            /// empty hands cannot do the job at all. Turn it off once the craft chain can
+            /// make tools and villages have to earn them.
+            /// </summary>
+            [JsonProperty] public bool GiveTradeToolsOnSpawn = true;
+
+            /// <summary>
             /// Chance an ordinary villager is bold enough to fight back rather than run.
             /// Low on purpose: a village where every farmer swings at a drifter is a
             /// village that loses its farmers. Guards ignore this and are always bold.

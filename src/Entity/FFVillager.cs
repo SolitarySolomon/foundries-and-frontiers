@@ -360,6 +360,31 @@ namespace FoundriesFrontiers
             WatchedAttributes.MarkPathDirty(AttrHands);
         }
 
+        /// <summary>
+        /// Writes whatever is actually in the hands back into the attributes.
+        ///
+        /// Needed because the game can change a held stack without going through the
+        /// setters above: an axe swung at a tree takes durability damage and eventually
+        /// breaks, and both of those happen on the slot. Without this the attribute copy
+        /// still describes the axe as it was, so a reload hands the villager back a
+        /// pristine axe, or an axe that broke an hour ago.
+        /// </summary>
+        public void RefreshHands()
+        {
+            ITreeAttribute hands = WatchedAttributes.GetOrAddTreeAttribute(AttrHands);
+
+            Mirror(hands, HandCarried, LeftHandItemSlot?.Itemstack);
+            Mirror(hands, HandTool, RightHandItemSlot?.Itemstack);
+
+            WatchedAttributes.MarkPathDirty(AttrHands);
+        }
+
+        private static void Mirror(ITreeAttribute hands, string key, ItemStack stack)
+        {
+            if (stack == null || stack.StackSize <= 0) hands.RemoveAttribute(key);
+            else hands.SetItemstack(key, stack.Clone());
+        }
+
         /// <summary>Rebuilds the hand slots from the synced attributes.</summary>
         private void ReadHandsFromAttributes()
         {
@@ -665,6 +690,33 @@ namespace FoundriesFrontiers
                 PersonalityCode = rolled;
                 Courage = personalities.RollCourage(rolled, Trade, World.Rand);
             }
+
+            GiveTradeTool();
+        }
+
+        /// <summary>
+        /// Hands a villager the basic tool their trade works with, if they have none.
+        ///
+        /// Not a convenience. The game puts real behaviour on tools rather than just a
+        /// speed bonus: an axe fells a whole tree where bare hands take one log off it,
+        /// and a lumberjack with nothing in their hands is a lumberjack who cannot do the
+        /// job at all. Until the craft chain exists to make them, the village is assumed
+        /// to have managed the simplest one.
+        ///
+        /// The tool is the lowest tier the game offers, found by asking the registry, so
+        /// it is a starting point rather than a gift and a modded axe works as well as a
+        /// vanilla one. Turn it off with GiveTradeToolsOnSpawn.
+        /// </summary>
+        private void GiveTradeTool()
+        {
+            if (Api?.Side != EnumAppSide.Server) return;
+            if (!FFConfig.Current.Villager.GiveTradeToolsOnSpawn) return;
+            if (ToolStack != null) return;
+
+            Item tool = Api.ModLoader.GetModSystem<WorldCatalogue>()?.ToolFor(Trade);
+            if (tool == null) return;
+
+            GiveTool(new ItemStack(tool));
         }
 
         /// <summary>

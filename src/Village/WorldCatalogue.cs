@@ -54,6 +54,17 @@ namespace FoundriesFrontiers
         private readonly Dictionary<string, Block> saplingByTree =
             new Dictionary<string, Block>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// The cheapest working example of each tool the game offers, by tool type.
+        ///
+        /// Villagers need real tools rather than a work-rate multiplier, because the game
+        /// puts real behaviour on them: an axe fells a whole tree where bare hands take
+        /// one log. Found by asking the registry which items are tools and what tier they
+        /// are, so a modded axe is as good as a vanilla one.
+        /// </summary>
+        private readonly Dictionary<EnumTool, Item> basicToolByType =
+            new Dictionary<EnumTool, Item>();
+
         public override bool ShouldLoad(EnumAppSide side) => side == EnumAppSide.Server;
 
         /// <summary>After the resource table, before anything asks a question of it.</summary>
@@ -108,6 +119,18 @@ namespace FoundriesFrontiers
 
             foreach (Item item in api.World.Items)
             {
+                if (item?.Code != null && item.Tool != null)
+                {
+                    // The lowest tier of each kind, because a village starting out should
+                    // be swinging the cheapest thing that works, not a steel axe.
+                    EnumTool kind = item.Tool.Value;
+                    if (!basicToolByType.TryGetValue(kind, out Item had)
+                        || item.ToolTier < had.ToolTier)
+                    {
+                        basicToolByType[kind] = item;
+                    }
+                }
+
                 if (item is not ItemPlantableSeed) continue;
                 string path = item.Code?.Path;
                 if (path == null) continue;
@@ -125,9 +148,9 @@ namespace FoundriesFrontiers
 
             api.Logger.Notification(
                 "[F&F] World catalogue: {0} farmland grade(s), {1} soil grade(s), {2} seed(s), "
-                + "{3} of them matched to a crop, {4} sapling type(s).",
+                + "{3} of them matched to a crop, {4} sapling type(s), {5} tool type(s).",
                 farmlandByFertility.Count, soilByFertility.Count, seeds.Count,
-                cropForSeed.Count, saplingByTree.Count);
+                cropForSeed.Count, saplingByTree.Count, basicToolByType.Count);
 
             if (farmlandByFertility.Count == 0)
             {
@@ -205,6 +228,32 @@ namespace FoundriesFrontiers
         /// <summary>Which grade a village of this tier lays, for comparing against the above.</summary>
         public static int GradeForTier(int tier)
             => tier >= 5 ? 4 : tier >= 3 ? 3 : Math.Min(tier, 2);
+
+        // --- tools ------------------------------------------------------------------
+
+        /// <summary>The simplest tool of this kind the game offers, or null.</summary>
+        public Item BasicTool(EnumTool kind)
+            => basicToolByType.TryGetValue(kind, out Item item) ? item : null;
+
+        /// <summary>
+        /// What a villager of this trade works with.
+        ///
+        /// Returns null for trades that need nothing in particular, which is most of them
+        /// for now. The ones listed here need a tool for a real reason rather than for a
+        /// speed bonus: an axe is what makes a tree fall rather than a log come off it.
+        /// </summary>
+        public Item ToolFor(EnumTrade trade)
+        {
+            switch (trade)
+            {
+                case EnumTrade.Lumberjack: return BasicTool(EnumTool.Axe);
+                case EnumTrade.Farmer: return BasicTool(EnumTool.Hoe);
+                case EnumTrade.Builder: return BasicTool(EnumTool.Shovel);
+                case EnumTrade.Quarrier:
+                case EnumTrade.Miner: return BasicTool(EnumTool.Pickaxe);
+                default: return null;
+            }
+        }
 
         // --- trees ------------------------------------------------------------------
 
