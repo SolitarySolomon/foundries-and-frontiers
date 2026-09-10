@@ -97,7 +97,26 @@ namespace FoundriesFrontiers
         /// not simulated forward on an hour's worth of luck.
         /// </summary>
         [JsonIgnore]
-        public float FlowConfidence => Math.Min(1f, history.Count / (float)HistoryDays);
+        public float FlowConfidence => ConfidenceIn(EnumVillageResource.Food);
+
+        /// <summary>
+        /// How much the measured flow for one pool is worth trusting, 0 to 1.
+        ///
+        /// Counted per pool rather than off the history length, because a row filed
+        /// before a pool existed covers every pool but that one. Counting it anyway is
+        /// how a newly added resource came to read as a fully trusted zero for a week
+        /// after an update.
+        /// </summary>
+        public float ConfidenceIn(EnumVillageResource r)
+        {
+            int i = (int)r;
+            int covering = 0;
+            foreach (float[] day in history)
+            {
+                if (day != null && i < day.Length) covering++;
+            }
+            return Math.Min(1f, covering / (float)HistoryDays);
+        }
 
         /// <summary>
         /// Average net movement per day over the recorded history. Positive means the
@@ -283,6 +302,15 @@ namespace FoundriesFrontiers
             inToday = Resize(inToday);
             outToday = Resize(outToday);
             lifetimeIn = Resize(lifetimeIn);
+
+            // History rows are deliberately NOT padded.
+            //
+            // A row filed before a pool existed has nothing to say about that pool, and
+            // padding it with a zero turns "no data" into a measured zero. That is worse
+            // than the problem it was meant to fix: DailyFlow would then report a
+            // confident 0 per day for the new pool, fast-forward would blend toward
+            // nothing, and the starvation check could never fire for it. Short rows stay
+            // short and every reader treats them as the absence of evidence they are.
             history ??= new System.Collections.Generic.List<float[]>();
 
             if (lastItemCode == null || lastItemCode.Length != VillageResources.Count)

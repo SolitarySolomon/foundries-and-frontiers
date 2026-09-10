@@ -552,7 +552,14 @@ namespace FoundriesFrontiers
                 int caughtUp = 0;
                 while ((int)v.LastSimulatedDay < today && caughtUp < MaxDaysCaughtUpAtOnce)
                 {
-                    v.Ledger.RollDay(measurable);
+                    // Only the first day round can possibly have been observed.
+                    //
+                    // Rolling a day zeroes today's totals, so every later turn of this loop
+                    // files an all-zero row. Marking those observed was the old "unwatched
+                    // days count as zero production" bug arriving through the back door: a
+                    // village a week behind would end up with one real day, six invented
+                    // ones, full confidence, and a measured rate a seventh of the truth.
+                    v.Ledger.RollDay(measurable && caughtUp == 0);
                     v.DaysAtCurrentTier++;
                     v.LastSimulatedDay += 1;
                     caughtUp++;
@@ -582,7 +589,12 @@ namespace FoundriesFrontiers
         public bool IsLoaded(Village v)
         {
             if (v == null) return false;
-            return sapi.WorldManager.GetChunk(v.CentreX / 32, v.CentreY / 32, v.CentreZ / 32) != null;
+            // Shift, not divide. Integer division truncates toward zero, so -10 / 32 is 0
+            // rather than -1, and every village at a negative coordinate was asking about
+            // a chunk on the wrong side of the axis. That answer feeds the observed-day
+            // sampling, so half the map was either inventing production or throwing away
+            // days it had genuinely earned.
+            return sapi.WorldManager.GetChunk(v.CentreX >> 5, v.CentreY >> 5, v.CentreZ >> 5) != null;
         }
 
         /// <summary>
@@ -595,18 +607,61 @@ namespace FoundriesFrontiers
         /// at least one member, because a place with nobody left in it should stay
         /// broken. That is what a ruin is.
         /// </summary>
+        /// <summary>
+        /// Puts the cairn and the storehouse back when they are missing, and charges the
+        /// village for the materials.
+        ///
+        /// It used to do this for free, which was a hole: a player could break a village's
+        /// storehouse every morning and the village would conjure a new one out of nothing
+        /// by lunchtime. Everything else in the mod obeys the rule that nothing enters or
+        /// leaves the ledger without a reason anyone can point at, and this did not.
+        ///
+        /// A village that cannot pay stays broken and says so. That is the same visible
+        /// stall a half built house has, applied to the two things a village cannot really
+        /// do without, which makes losing them matter.
+        /// </summary>
         private void RepairMarkers(Village v)
         {
             if (v == null || v.MemberIds.Count == 0) return;
 
-            if (!v.HasMarker && PlaceMarker(v) != null)
+            var cfg = FFConfig.Current.Village;
+
+            if (!v.HasMarker)
             {
-                sapi.Logger.Notification("[F&F] {0} put its stones back up.", v.Name);
+                if (!Spend(v, EnumVillageResource.Stone, cfg.MarkerRepairStone))
+                {
+                    sapi.Logger.VerboseDebug(
+                        "[F&F] {0} wants its stones back up and is short of stone.", v.Name);
+                }
+                else if (PlaceMarker(v) != null)
+                {
+                    sapi.Logger.Notification(
+                        "[F&F] {0} put its stones back up for {1} stone.", v.Name, cfg.MarkerRepairStone);
+                }
+                else
+                {
+                    // Nowhere to put it. Give the stone back rather than charging for a
+                    // cairn that never appeared.
+                    Unspend(v, EnumVillageResource.Stone, cfg.MarkerRepairStone);
+                }
             }
 
-            if (!v.HasStorehouse && PlaceStorehouse(v) != null)
+            if (!v.HasStorehouse)
             {
-                sapi.Logger.Notification("[F&F] {0} rebuilt its storehouse.", v.Name);
+                if (!Spend(v, EnumVillageResource.Wood, cfg.StorehouseRepairWood))
+                {
+                    sapi.Logger.VerboseDebug(
+                        "[F&F] {0} wants its storehouse back and is short of wood.", v.Name);
+                }
+                else if (PlaceStorehouse(v) != null)
+                {
+                    sapi.Logger.Notification(
+                        "[F&F] {0} rebuilt its storehouse for {1} wood.", v.Name, cfg.StorehouseRepairWood);
+                }
+                else
+                {
+                    Unspend(v, EnumVillageResource.Wood, cfg.StorehouseRepairWood);
+                }
             }
         }
 
@@ -624,6 +679,31 @@ namespace FoundriesFrontiers
             v.DaysAtCurrentTier++;
             v.LastSimulatedDay += 1;
             OnNewDay?.Invoke(v);
+        }
+
+        /// <summary>
+        /// Spends from a village's stores and keeps the crate honest about it.
+        ///
+        /// Every withdrawal outside the storehouse dialog must go through here. The crate
+        /// caches what it is showing, and anything that debits the ledger behind its back
+        /// leaves the shelves displaying the old figure. A player who then empties the row
+        /// takes goods the village no longer has, which is items created from nothing.
+        /// </summary>
+        public bool Spend(Village village, EnumVillageResource r, float amount)
+        {
+            if (village == null) return false;
+            if (!village.Ledger.Withdraw(r, amount)) return false;
+
+            RefreshStorehouse(village);
+            return true;
+        }
+
+        /// <summary>Puts back a failed spend, and keeps the crate in step.</summary>
+        public void Unspend(Village village, EnumVillageResource r, float amount)
+        {
+            if (village == null) return;
+            village.Ledger.Refund(r, amount);
+            RefreshStorehouse(village);
         }
 
         // --- deposits --------------------------------------------------------------
@@ -657,6 +737,13 @@ namespace FoundriesFrontiers
 
             float value = table.ValueOf(stack);
             village.Ledger.Deposit(pool.Value, value, stack.Collectible?.Code?.ToShortString());
+
+            // A meal arrives in something, and the shelves get rebuilt from the ledger, so
+            // the pot would otherwise be thrown away for nothing. Credit it separately.
+            if (table.ContainerOf(stack, out EnumVillageResource cpool, out float cvalue))
+            {
+                village.Ledger.Deposit(cpool, cvalue, null);
+            }
 
             int count = stack.StackSize;
             string name = stack.GetName();
@@ -758,7 +845,11 @@ namespace FoundriesFrontiers
                 int[] topRock = mc?.TopRockIdMap;
                 if (topRock != null && topRock.Length > 0)
                 {
-                    int index = (pos.Z % 32) * 32 + (pos.X % 32);
+                    // Mask rather than modulo, for the same reason. C# leaves the sign on
+                    // a negative remainder, so this went negative west or north of origin
+                    // and every village over there quietly got a granite cairn whatever
+                    // its bedrock was.
+                    int index = (pos.Z & 31) * 32 + (pos.X & 31);
                     if (index >= 0 && index < topRock.Length)
                     {
                         Block rockBlock = sapi.World.GetBlock(topRock[index]);

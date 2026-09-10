@@ -41,7 +41,7 @@ namespace FoundriesFrontiers
 
         protected FFVillager Villager => entity as FFVillager;
 
-        private float thinkAccum;
+        private double lastThoughtAt = double.NegativeInfinity;
         private readonly float stagger;
 
         protected FFTaskBase(EntityAgent entity, JsonObject taskConfig, JsonObject aiConfig)
@@ -50,7 +50,6 @@ namespace FoundriesFrontiers
             // Deterministic per entity, so a villager keeps the same phase across reloads
             // and the load stays evenly spread rather than re-clumping.
             stagger = (entity.EntityId % 97) / 97f;
-            thinkAccum = stagger * ThinkIntervalSec;
 
             baseConfig(taskConfig);
         }
@@ -72,9 +71,22 @@ namespace FoundriesFrontiers
                 interval *= UnobservedThrottle;
             }
 
-            thinkAccum += 1f / 30f;   // server ticks are not passed in here; approximate
-            if (thinkAccum < interval) return false;
-            thinkAccum = 0;
+            // Real elapsed time, not a count of calls.
+            //
+            // The engine only asks a task whether it wants to run when it could actually
+            // win the slot, so counting calls measured a task's interval in *eligible*
+            // ticks. A low priority task froze completely while something else held the
+            // slot, then had to wait its full interval again from the moment the slot
+            // freed, by which point a higher priority task with a shorter interval had
+            // already taken it. The tether lost that race every time.
+            double now = entity.World.ElapsedMilliseconds / 1000.0;
+
+            // First time through, back-date the clock by the villager's own offset so
+            // thirty of them do not all think on the same tick for the rest of the save.
+            if (double.IsNegativeInfinity(lastThoughtAt)) lastThoughtAt = now - stagger * interval;
+
+            if (now - lastThoughtAt < interval) return false;
+            lastThoughtAt = now;
 
             bool run = ShouldRun();
             if (run) DevStats.Bump(DevStats.TasksStarted);

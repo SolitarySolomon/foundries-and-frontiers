@@ -129,11 +129,19 @@ namespace FoundriesFrontiers
         /// breaking keep the list current between scans. This is for founding, for a
         /// tier change, and for when a player asks.
         /// </summary>
+        /// <summary>
+        /// Whether the chunk holding this block is in memory.
+        ///
+        /// Shifts rather than divides: integer division truncates toward zero, so a
+        /// negative coordinate lands on the wrong side of the axis and the answer is
+        /// wrong for everything west or north of the origin.
+        /// </summary>
+        private bool IsChunkLoaded(int x, int y, int z)
+            => sapi.WorldManager.GetChunk(x >> 5, y >> 5, z >> 5) != null;
+
         public int ScanFacilities(Village v)
         {
             if (v == null) return 0;
-
-            foreach (VillageFacility old in v.Facilities) pois?.RemovePOI(old);
 
             // Ownership is worth keeping across a rescan. Losing everyone's bed because
             // somebody typed a command would be a poor way to behave.
@@ -143,7 +151,23 @@ namespace FoundriesFrontiers
                 if (old.OwnerEntityId != 0) owners[old.X + "," + old.Y + "," + old.Z] = old.OwnerEntityId;
             }
 
+            // Keep everything the scan cannot see.
+            //
+            // WalkBlocks does not load chunks from disk, it skips them, so a scan only
+            // ever covers the part of a claim that happens to be resident. Clearing the
+            // list first and rebuilding from the walk therefore deleted every bed in an
+            // unloaded corner, and a tier 5 claim is far bigger than the loaded region.
+            // The result was a town where most of the population was permanently homeless
+            // because a rescan quietly forgot where their beds were.
+            var kept = new List<VillageFacility>();
+            foreach (VillageFacility old in v.Facilities)
+            {
+                if (IsChunkLoaded(old.X, old.Y, old.Z)) pois?.RemovePOI(old);
+                else kept.Add(old);
+            }
+
             v.Facilities.Clear();
+            v.Facilities.AddRange(kept);
 
             int r = v.ClaimRadius;
             var cfg = FFConfig.Current.Village;
@@ -165,12 +189,21 @@ namespace FoundriesFrontiers
 
                 if (owners.TryGetValue(x + "," + y + "," + z, out long owner)) facility.OwnerEntityId = owner;
 
+                // A kept facility from an unloaded chunk could in principle be walked over
+                // if that chunk loaded between the two steps, so do not file it twice.
+                foreach (VillageFacility already in v.Facilities)
+                {
+                    if (already.X == x && already.Y == y && already.Z == z) return;
+                }
+
                 v.Facilities.Add(facility);
                 pois?.AddPOI(facility);
             }, true);
 
-            sapi.Logger.Notification("[F&F] {0}: found {1} bed(s) and {2} workstation(s).",
-                v.Name, CountOf(v, EnumFacilityKind.Bed), CountOf(v, EnumFacilityKind.Workstation));
+            sapi.Logger.Notification(
+                "[F&F] {0}: found {1} bed(s) and {2} workstation(s) ({3} kept from unloaded chunks).",
+                v.Name, CountOf(v, EnumFacilityKind.Bed), CountOf(v, EnumFacilityKind.Workstation),
+                kept.Count);
 
             return v.Facilities.Count;
         }

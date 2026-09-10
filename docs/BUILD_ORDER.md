@@ -289,8 +289,17 @@ Rules that apply to every step, because retrofitting any of them is painful.
       same corner every pass, so the far side of any plot larger than the budget was never
       looked at at all. All four were the same shape of bug, which is code that reports
       what it meant to do rather than what happened.
-      *Maintenance is still the day clock's:* a builder who rebuilds a broken cairn out of
-      stone the village actually has waits for Phase C.
+      *Maintenance now costs something.* The day clock used to put a broken cairn or
+      storehouse back for free, which was a hole: a player could break a village's
+      storehouse every morning and it would reappear by lunchtime out of nothing, while
+      every other part of the mod obeyed the rule that nothing enters or leaves the ledger
+      without a reason. It is stone and wood out of the village's own stores now, and a
+      village that cannot pay stays broken and says so.
+      **The question that fixed the deadlock:** if the storehouse is what a village stores
+      things in, how does it pay for a new one after losing it? It does not need to: the
+      stores live in the ledger and the crate is the player's window onto them, so
+      villagers now deliver to the village centre when there is no crate standing. Without
+      that, one swing of an axe at the wrong moment killed a settlement permanently.
 - [x] **B8 · Lumberjack:** fell wild trunks in a radius, replant, haul. `BreakBlock` gives
       us drops, but **the game exposes no "these logs are one tree" helper:** we write a
       flood-fill over connected log and leaf blocks ourselves. *Test:* tree falls, ledger wood rises.
@@ -306,9 +315,18 @@ Rules that apply to every step, because retrofitting any of them is painful.
       A redwood is over a thousand blocks, so felling happens sixty blocks at a time
       across several ticks, top down. All at once was a visible server stall and looked
       like a tree blinking out of existence rather than coming down.
-      Replanting uses **whatever sapling the tree itself dropped**, not a sapling code
-      written down here. A tree that gives nothing plantable gets nothing planted, which
-      is honest: the wood runs out and the village has to widen its woodlot.
+      Felling starts at the base of the trunk and the rest comes down after it, which is
+      what a lumberjack does and what it looks like from a distance. That needed a hook in
+      the work loop, `StillBusyAt`, because the block the villager was sent to is gone
+      after the first cut and the loop would otherwise decide the job was done and wander
+      off to the next tree with half of this one hanging in the air.
+      **Replanting does not run on vanilla luck.** Leaf drops are rare enough that a
+      woodlot living off them thins out and never recovers, which makes the plot
+      pointless, so a felled tree yields a set number of saplings for the tree it was, on
+      top of anything the leaves happened to give. Two per tree by default, so a managed
+      woodlot slowly thickens. Which sapling comes from the world catalogue, matched to
+      the log, so an oak woodlot stays an oak woodlot. Set `SaplingsPerTree` to zero for
+      vanilla rates only.
 - [x] **B9 · Farmer:** till, sow from retained seed, water, reap, replant, rotate against
       the game's real N/P/K.
       *Plus soil improvement:* relaying a field with the best grade the storehouse can
@@ -326,8 +344,15 @@ Rules that apply to every step, because retrofitting any of them is painful.
       `OnCreatedFromSoil` exactly as the game's own hoe does, and `Relay` carries the old
       field's moisture and nutrients across before raising its ceiling, rather than paying
       two earth to make an established field worse.
-      *Still to come:* watering, and rotation against the real N/P/K rather than sowing at
-      random.
+      **Rotation is in, and it is a rung on the ladder rather than a switch.** From tier 2
+      a farmer reads the ground's own nitrogen, phosphorus and potassium off the farmland
+      and sows whichever crop eats the nutrient the soil still has most of, so a field
+      that has been growing cabbage until its nitrogen is gone gets something that wants
+      phosphorus next and the nitrogen recovers underneath it. Below that tier they
+      scatter whatever seed they have. A village should be seen to get better at farming
+      rather than being born knowing how, and `RotateCropsFromTier` is where to argue with
+      the gate.
+      *Still to come:* watering.
 - [x] **B10 · Herder:** troughs from stored grain, cull to cap, eggs and wool.
       *Done:* what goes in a trough comes from **the trough's own content list** rather
       than a guess, since each one declares what it takes and how much makes a fill level.
@@ -352,6 +377,10 @@ Rules that apply to every step, because retrofitting any of them is painful.
       or a renewable bootstrap gives one harvest and then nothing forever.
       What is worth picking is decided by asking the resource table, not by a second list
       of mushroom names kept in sync by hand, so the forager walks past the deathcaps.
+      **Deliberately one job, not two.** The entry above asked for a forager and a deadfall
+      gatherer; a separate gatherer would have been the same loop with a different list of
+      block codes, and sticks are already on the forager's list. Merged on purpose rather
+      than forgotten.
 
 - [x] **B12 · Digger, which is C5 arriving early:** the builder cuts a Terrace plot level
       and keeps the spoil.
@@ -748,3 +777,60 @@ and are reachable from a mod:
 **None of them can be allowed to kill the mod.** Pathfinding falls back to the engine's own,
 site selection to flat-ground-only placement, fast-forward to loaded-villages-only, and
 terrain smoothing can simply not exist. Each has a defined retreat.
+
+---
+
+## Bug hunt, 0.7.0
+
+Three reviewers over the whole mod rather than only the new code, then a fourth over the
+fixes themselves. Twenty three real defects. Recorded here because most of them are the
+same handful of mistakes wearing different hats, and the patterns are worth keeping.
+
+**The tether, finally explained.** Not a guess this time. The AI manager starts tasks in
+the order the entity file lists them and re-reads the slot on each one, so a task listed
+after another can take the slot on the same tick the first one started. Every producing
+job is listed after the tether and outranks it, so the tether started, ordered a walk, and
+was preempted before its own retry logic had run once. It restarted and lost again,
+forever. Priority could not settle it, because a job genuinely should outrank going home
+during working hours. What settles it is that **a villager outside their own claim has no
+business working**: whatever they are standing next to is not the village's to take. The
+jobs stand aside and the tether gets its slot.
+
+Three things fell out of that one:
+
+- Ending a task does not hand the slot to anything else. The engine offers a freed slot
+  again on the very next tick, and a task whose `ShouldRun` is still true simply retakes
+  it. Sleep, the builder and the tether all did this after giving up, so "give up" meant a
+  fresh pathfind every few seconds forever. They stand down for a while now.
+- `FFTaskBase` measured its think interval by counting calls, and the engine only asks a
+  task whether it wants to run when it could actually win the slot. So a low priority task
+  froze while something else held the slot and then had to wait its full interval again
+  from the moment the slot freed, by which point a shorter-interval task had taken it. Real
+  elapsed time now.
+- The tether stopped the instant a villager crossed the line, leaving them standing on it,
+  one step from being dragged back and in exactly the band where the fight happened. It
+  walks them properly inside now.
+
+**Free resources, three ways.** Every harvest was doubled, because a block was broken with
+its drops still enabled after they had already been put in the villager's hands. Cooking
+printed food, because a serving was worth two and a carrot was worth one. Culling gave an
+animal's loot twice, once into the herder's hands and once onto the ground. And anything
+that spent from the ledger without telling the storehouse left the shelves showing the old
+figure, so emptying a row handed over a full row of goods for a partial debit. Every spend
+now goes through one method that keeps the crate honest.
+
+**Silent no-ops.** Two would each have sunk Phase C on their own: schematic block ids are
+keys into the file's own table rather than ids in this world, and an asset loader flag left
+every schematic reading as an empty string. Neither produced an error. The lesson has been
+learned enough times now to be a rule: **anything read from a file gets checked against the
+running game at load, and says so in the log when it does not resolve.**
+
+**Integer division.** `-10 / 32` is 0, not -1, so every village west or north of the origin
+asked about the wrong chunk when deciding whether it had been running, and got a granite
+cairn whatever its bedrock was. Shifts and masks now.
+
+**And the one that was my own fix.** Widening the ledger's filed history so a new pool did
+not read as untrusted turned "no data" into a measured zero, which was worse: fast-forward
+would then blend toward nothing and the starvation check could never fire for that pool.
+Short rows stay short and confidence is counted per pool instead. Fixing a confident lie
+by making it a different confident lie is a mistake worth naming.

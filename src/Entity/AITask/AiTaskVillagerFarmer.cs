@@ -20,6 +20,10 @@ namespace FoundriesFrontiers
     /// Every block code this touches is looked up through the world catalogue rather than
     /// written here, because farmland variants and crop names are exactly the sort of
     /// thing that changes under you between game versions.
+    ///
+    /// From tier 2 the farmer rotates against the game's own N, P and K rather than
+    /// sowing at random. That is deliberately a rung on the ladder: a village should be
+    /// seen to get better at farming, not be born knowing how.
     /// </summary>
     public class AiTaskVillagerFarmer : AiTaskVillagerWork
     {
@@ -106,7 +110,7 @@ namespace FoundriesFrontiers
             Block soil = Catalogue?.SoilFor(village.Tier);
             if (better == null || soil == null || better.BlockId == old.BlockId) return false;
 
-            if (!village.Ledger.Withdraw(EnumVillageResource.Earth, RelayCost)) return false;
+            if (!Registry.Spend(village, EnumVillageResource.Earth, RelayCost)) return false;
 
             // Carry the old plot's state across rather than starting it from nothing.
             //
@@ -209,12 +213,28 @@ namespace FoundriesFrontiers
             if (village == null) return false;
 
             if (entity.World.BlockAccessor.GetBlockEntity(pos) is not BlockEntityFarmland farm) return false;
-            if (!Catalogue.PickSeed(entity.World.Rand, out Item seed, out Block crop)) return false;
+
+            // Rotation is a tier gate, not a switch. A hamlet scatters whatever seed it
+            // has; a settlement that has been farming for a while sows against the
+            // ground's own nitrogen, phosphorus and potassium, so a field that has been
+            // growing cabbage until its nitrogen is gone gets something that eats
+            // phosphorus next and the nitrogen recovers underneath it.
+            //
+            // Gating it on tier means the village visibly gets better at farming rather
+            // than being born knowing how, which is the same shape as every other rung on
+            // the ladder.
+            bool rotates = village.Tier >= FFConfig.Current.Work.RotateCropsFromTier;
+
+            bool picked = rotates
+                ? Catalogue.PickSeedFor(farm.Nutrients, entity.World.Rand, out Item seed, out Block crop)
+                : Catalogue.PickSeed(entity.World.Rand, out seed, out crop);
+
+            if (!picked) return false;
 
             // Seed comes out of the village's own food, which is what makes sowing a real
             // decision rather than free growth. A village down to its last meal cannot
             // plant its way out, and that is the pressure the design wants.
-            if (!village.Ledger.Withdraw(EnumVillageResource.Food, SeedCost)) return false;
+            if (!Registry.Spend(village, EnumVillageResource.Food, SeedCost)) return false;
 
             var slot = new DummySlot(new ItemStack(seed));
             var selection = new BlockSelection
@@ -242,7 +262,7 @@ namespace FoundriesFrontiers
                 // until the food pool is inexplicably empty. A refund, not a deposit:
                 // nobody carried this home, and the measured flow must never be told
                 // otherwise.
-                village.Ledger.Refund(EnumVillageResource.Food, SeedCost);
+                Registry.Unspend(village, EnumVillageResource.Food, SeedCost);
                 return false;
             }
 

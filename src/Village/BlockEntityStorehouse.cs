@@ -82,8 +82,15 @@ namespace FoundriesFrontiers
 
         public override void Initialize(ICoreAPI api)
         {
-            var table = api.ModLoader.GetModSystem<ResourceTable>();
-            inventory = new StorehouseInventory(InventoryClassName, "ffstorehouse-" + Pos, api, table);
+            // Teach the existing inventory about the world rather than replacing it.
+            //
+            // The engine calls FromTreeAttributes before Initialize, so by the time we get
+            // here the constructor's inventory already holds everything that was saved.
+            // Swapping in a fresh one threw all of it away, which nobody noticed while a
+            // village was alive because the shelves are rebuilt from the ledger anyway.
+            // It showed up on the one path where they are not: a ruined crate came back
+            // empty after a chunk reload and its loot was gone for good.
+            inventory.Adopt(api, api.ModLoader.GetModSystem<ResourceTable>());
 
             base.Initialize(api);
             inventory.LateInitialize(InventoryClassName + "-" + Pos, api);
@@ -243,21 +250,69 @@ namespace FoundriesFrontiers
             if (delta > 0)
             {
                 v.Ledger.Deposit(pool, delta, newestCode);
+                CreditContainers(v, pool, first, table);
                 Api.Logger.Notification("[F&F] {0} was given {1:0.#} {2}.", v.Name, delta, pool);
             }
             else
             {
-                v.Ledger.WithdrawUpTo(pool, -delta);
-                // No reputation system yet, so this is only recorded. G4 turns it into
-                // a standing hit, and the ledger already knows the stock went down
-                // without anybody depositing it, which is the signal it will read.
-                Api.Logger.Notification("[F&F] {0} lost {1:0.#} {2} from its storehouse.", v.Name, -delta, pool);
+                // Take exactly what left the shelf, or nothing.
+                //
+                // This used to clamp at whatever the pool had left, which quietly handed
+                // out free goods: anything that spends from the ledger without the crate
+                // knowing leaves the shelves showing the old figure, and emptying the row
+                // then gave a full row of items for a partial debit. Refusing instead
+                // means the worst case is a rebuild that puts the goods back, which is
+                // visible and costs nobody anything.
+                if (!v.Ledger.Withdraw(pool, -delta))
+                {
+                    // The goods are already in the player's hands by the time this runs,
+                    // so refusing outright would hand them over for free and leave the
+                    // stock untouched. Take everything that is there instead, and say so:
+                    // with every spend now refreshing the crate, a shortfall here means
+                    // something is genuinely out of step and is worth seeing in the log.
+                    float taken = v.Ledger.WithdrawUpTo(pool, -delta);
+                    Api.Logger.Warning(
+                        "[F&F] {0} was short on {1}: {2:0.#} left the shelf but only {3:0.#} was there.",
+                        v.Name, pool, -delta, taken);
+                }
+                else
+                {
+                    // No reputation system yet, so this is only recorded. G4 turns it into
+                    // a standing hit, and the ledger already knows the stock went down
+                    // without anybody depositing it, which is the signal it will read.
+                    Api.Logger.Notification("[F&F] {0} lost {1:0.#} {2} from its storehouse.", v.Name, -delta, pool);
+                }
             }
 
             // Put the shelves back to what the village now holds. This is what lets you
             // keep taking stack after stack until the pool is actually empty, and it is
             // what absorbs a deposit larger than a slot could ever show.
             RebuildFromLedger();
+        }
+
+        /// <summary>
+        /// Pays for the crocks and bowls a donated meal came in.
+        ///
+        /// The row is about to be rebuilt from the ledger, which nulls every slot, so
+        /// anything that arrived as a container disappears. Without this a player handing
+        /// a village a cooking pot of stew loses the pot.
+        /// </summary>
+        private void CreditContainers(Village v, EnumVillageResource pool, int first, ResourceTable table)
+        {
+            if (table == null) return;
+
+            for (int c = 0; c < StorehouseInventory.Columns; c++)
+            {
+                ItemStack stack = inventory[first + c].Itemstack;
+                if (stack == null) continue;
+                if (!table.ContainerOf(stack, out EnumVillageResource cpool, out float cvalue)) continue;
+                if (cpool == pool) continue;   // already counted in this row's delta
+
+                v.Ledger.Deposit(cpool, cvalue, null);
+                Api.Logger.Notification(
+                    "[F&F] {0} kept the {1} the meal came in (+{2:0.#} {3}).",
+                    v.Name, stack.GetName(), cvalue, cpool);
+            }
         }
 
         // --- opening it -------------------------------------------------------------

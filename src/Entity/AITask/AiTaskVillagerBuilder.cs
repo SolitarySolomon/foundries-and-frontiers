@@ -61,6 +61,12 @@ namespace FoundriesFrontiers
             Village village = Home;
             if (village == null) return false;
 
+            // Same rule as the producing jobs: a villager outside their own claim goes
+            // home before they do anything else. Without it this task preempts the tether
+            // every couple of seconds and the villager never leaves the field they are
+            // stuck in.
+            if (!AiTaskVillagerReturnHome.WithinTether(village, entity.Pos.AsBlockPos)) return false;
+
             return Registry.OpenSiteFor(village, entity.EntityId) != null;
         }
 
@@ -106,6 +112,7 @@ namespace FoundriesFrontiers
                         "[F&F] {0} could not get to the build site at {1}.", Who(), site.Origin);
                     Villager.CancelGoto();
                     site.BuilderEntityId = 0;
+                    standDownUntil = Now + CannotPayStandDownSec;
                     return false;
                 }
 
@@ -116,6 +123,7 @@ namespace FoundriesFrontiers
                     {
                         Villager.CancelGoto();
                         site.BuilderEntityId = 0;
+                        standDownUntil = Now + CannotPayStandDownSec;
                         return false;
                     }
                     Villager.OrderGoto(spot, MoveSpeeds.Walk);

@@ -41,9 +41,23 @@ namespace FoundriesFrontiers
 
         private EnumDayPhase Phase => VillageSchedule.PhaseFor(entity.Api, entity.Pos.AsBlockPos);
 
+        /// <summary>
+        /// Wait this long before trying for a bed again after failing to reach one.
+        ///
+        /// Ending the task is not enough on its own. This task outranks both the tether
+        /// and every job, and the engine re-offers a slot the instant it frees, so a
+        /// villager whose bed was unreachable simply retook the slot on the next tick and
+        /// started the whole chase again. Standing down is what actually lets the tether
+        /// walk them somewhere they can sleep from.
+        /// </summary>
+        private const double GaveUpStandDownSec = 45;
+
+        private double standDownUntil;
+
         protected override bool ShouldRun()
         {
             if (Villager == null || Villager.VillageId == 0) return false;
+            if (entity.World.ElapsedMilliseconds / 1000.0 < standDownUntil) return false;
 
             EnumDayPhase phase = Phase;
             return phase == EnumDayPhase.Sleep || phase == EnumDayPhase.Shelter;
@@ -64,13 +78,24 @@ namespace FoundriesFrontiers
             EnumDayPhase phase = Phase;
             if (phase != EnumDayPhase.Sleep && phase != EnumDayPhase.Shelter) return false;
 
+            // Still actually in it?
+            //
+            // Beds throw people out. A temporal storm unmounts a sleeper within a fifth
+            // of a second unless the server allows storm sleeping, and this task used to
+            // set a flag and believe it for the rest of the night, holding the slot while
+            // the villager stood beside the bed in the open.
+            if (mounted && entity.MountedOn == null) mounted = false;
+
             if (mounted) return true;
+
+            double now2 = entity.World.ElapsedMilliseconds / 1000.0;
 
             if (bedPos == null)
             {
-                // No bed to go to. Stand down where they are rather than working through
-                // the night, so an overcrowded village looks overcrowded.
-                return true;
+                // No bed to go to, or could not get to the one they had. End and wait a
+                // while before asking again, so the tether gets a turn.
+                standDownUntil = now2 + GaveUpStandDownSec;
+                return false;
             }
 
             double distSq = entity.Pos.XYZ.SquareDistanceTo(bedPos.ToVec3d().Add(0.5, 0, 0.5));
@@ -91,7 +116,8 @@ namespace FoundriesFrontiers
                 Villager.CancelGoto();
                 bedPos = null;
                 DevStats.Bump(DevStats.PathsFailed);
-                return true;
+                standDownUntil = now + GaveUpStandDownSec;
+                return false;
             }
 
             // The walk ended without arriving, so ask for it again rather than standing

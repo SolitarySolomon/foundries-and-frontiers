@@ -175,7 +175,8 @@
       "stonecoffin",
       "knappingsurface",
       "stonecrucible",
-      "touchstone"
+      "touchstone",
+      "muddygravel"
     ],
     "defaultWeight": 1,
     "weights": {
@@ -226,7 +227,8 @@
       "crock",
       "vessel",
       "planter",
-      "flowerpot"
+      "flowerpot",
+      "peatbrick"
     ],
     "exclude": [
       "clayworkitem",
@@ -426,8 +428,6 @@
     "exclude": [
       "sandstone",
       "sandwavy",
-      "metalnailsandstrips",
-      "grindstone",
       "devastatedsoil",
       "bonysoil",
       "peatbrick",

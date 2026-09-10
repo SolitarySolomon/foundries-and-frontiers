@@ -69,7 +69,11 @@ namespace FoundriesFrontiers
             if (villager == null || entity.World.Side != EnumAppSide.Server) return;
             if (!entity.Alive) return;
 
-            double now = entity.World.Calendar.ElapsedSeconds;
+            // Real seconds, not calendar seconds. The game clock runs about thirty times
+            // faster than the wall, so cooldowns written as ninety seconds were behaving
+            // as three and a four line conversation finished inside half a second, with
+            // every line effectively at once.
+            double now = entity.World.ElapsedMilliseconds / 1000.0;
 
             // An exchange already in progress takes precedence over starting anything new.
             if (exchangesLeft > 0)

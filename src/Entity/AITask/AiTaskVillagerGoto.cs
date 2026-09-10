@@ -37,6 +37,17 @@ namespace FoundriesFrontiers
         private int nodeIndex;
         private float moveSpeed = MoveSpeeds.Walk;
 
+        /// <summary>
+        /// The order this journey was planned for.
+        ///
+        /// Needed because this task cannot be preempted: it is alone in its slot and its
+        /// cancel priority equals its priority, so once running it must finish. Without
+        /// comparing, a villager who was told to flee mid-walk carried on strolling to
+        /// the tree they were originally sent to and then reported that they had arrived
+        /// somewhere they had never been.
+        /// </summary>
+        private BlockPos plannedFor;
+
         private float stuckAccum;
         private Vec3d lastPos;
         private int stuckStrikes;
@@ -60,6 +71,7 @@ namespace FoundriesFrontiers
             BlockPos target = Villager?.GotoTarget;
             if (target == null) return;
 
+            plannedFor = target.Copy();
             moveSpeed = Villager.GotoSpeed;
 
             var system = entity.Api.ModLoader.GetModSystem<PathfindingSystem>();
@@ -89,7 +101,18 @@ namespace FoundriesFrontiers
 
         protected override bool OnTick(float dt)
         {
-            if (Villager?.GotoTarget == null) return false;
+            BlockPos want = Villager?.GotoTarget;
+            if (want == null) return false;
+
+            // Somebody changed their mind while this was walking. Replan rather than
+            // finish the old journey and claim to have arrived at the new one.
+            if (plannedFor == null || !want.Equals(plannedFor))
+            {
+                entity.AnimManager?.StopAnimation(MoveSpeeds.AnimationFor(moveSpeed));
+                OnStart();
+                return waypoints != null && waypoints.Count > 0;
+            }
+
             if (waypoints == null || nodeIndex >= waypoints.Count) return false;
 
             Vec3d node = waypoints[nodeIndex];
@@ -157,6 +180,7 @@ namespace FoundriesFrontiers
         private void Stop()
         {
             waypoints = null;
+            plannedFor = null;
             nodeIndex = 0;
             entity.Controls.Forward = false;
             entity.ServerControls.Forward = false;

@@ -118,12 +118,12 @@ namespace FoundriesFrontiers
 
                 stack.StackSize = config.QuantityPerFillLevel;
 
-                if (!village.Ledger.Withdraw(EnumVillageResource.Food, FeedCost)) return false;
+                if (!Registry.Spend(village, EnumVillageResource.Food, FeedCost)) return false;
 
                 ItemSlot slot = trough.Inventory?[0];
                 if (slot == null)
                 {
-                    village.Ledger.Refund(EnumVillageResource.Food, FeedCost);
+                    Registry.Unspend(village, EnumVillageResource.Food, FeedCost);
                     return false;
                 }
 
@@ -137,7 +137,7 @@ namespace FoundriesFrontiers
                 }
                 else
                 {
-                    village.Ledger.Refund(EnumVillageResource.Food, FeedCost);
+                    Registry.Unspend(village, EnumVillageResource.Food, FeedCost);
                     continue;
                 }
 

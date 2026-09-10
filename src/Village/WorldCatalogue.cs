@@ -44,6 +44,16 @@ namespace FoundriesFrontiers
         private readonly Dictionary<string, Block> soilByFertility =
             new Dictionary<string, Block>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Saplings by tree type, so a felled oak can be replaced with an oak.
+        ///
+        /// Derived by looking rather than by writing codes down, same as everything else
+        /// here: the tree types a world offers depend on which mods are installed, and a
+        /// hardcoded list would quietly stop covering half of them.
+        /// </summary>
+        private readonly Dictionary<string, Block> saplingByTree =
+            new Dictionary<string, Block>(StringComparer.OrdinalIgnoreCase);
+
         public override bool ShouldLoad(EnumAppSide side) => side == EnumAppSide.Server;
 
         /// <summary>After the resource table, before anything asks a question of it.</summary>
@@ -67,6 +77,18 @@ namespace FoundriesFrontiers
                     if (parts.Length >= 3 && parts[1] == "dry" && !farmlandByFertility.ContainsKey(parts[2]))
                     {
                         farmlandByFertility[parts[2]] = block;
+                    }
+                    continue;
+                }
+
+                if (block is BlockSapling)
+                {
+                    // sapling-oak-free, sapling-birch-planted, and so on. The tree type
+                    // is the second part whatever the state on the end is.
+                    string[] parts = path.Split('-');
+                    if (parts.Length >= 2 && !saplingByTree.ContainsKey(parts[1]))
+                    {
+                        saplingByTree[parts[1]] = block;
                     }
                     continue;
                 }
@@ -103,8 +125,9 @@ namespace FoundriesFrontiers
 
             api.Logger.Notification(
                 "[F&F] World catalogue: {0} farmland grade(s), {1} soil grade(s), {2} seed(s), "
-                + "{3} of them matched to a crop.",
-                farmlandByFertility.Count, soilByFertility.Count, seeds.Count, cropForSeed.Count);
+                + "{3} of them matched to a crop, {4} sapling type(s).",
+                farmlandByFertility.Count, soilByFertility.Count, seeds.Count,
+                cropForSeed.Count, saplingByTree.Count);
 
             if (farmlandByFertility.Count == 0)
             {
@@ -183,6 +206,35 @@ namespace FoundriesFrontiers
         public static int GradeForTier(int tier)
             => tier >= 5 ? 4 : tier >= 3 ? 3 : Math.Min(tier, 2);
 
+        // --- trees ------------------------------------------------------------------
+
+        public bool HasSaplings => saplingByTree.Count > 0;
+
+        /// <summary>
+        /// The sapling for the kind of tree this log came from.
+        ///
+        /// Log codes look like log-grown-oak-ud, so the tree type is the third part. If
+        /// that does not match anything known, any sapling is better than none: a village
+        /// that cannot replant is a village that runs out of wood.
+        /// </summary>
+        public Block SaplingForLog(Block log, Random rand)
+        {
+            if (saplingByTree.Count == 0) return null;
+
+            string path = log?.Code?.Path;
+            if (path != null)
+            {
+                string[] parts = path.Split('-');
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    if (saplingByTree.TryGetValue(parts[i], out Block match)) return match;
+                }
+            }
+
+            var any = new List<Block>(saplingByTree.Values);
+            return any[rand.Next(any.Count)];
+        }
+
         // --- crops ------------------------------------------------------------------
 
         public bool CanSow => cropForSeed.Count > 0;
@@ -204,11 +256,56 @@ namespace FoundriesFrontiers
             string pick = codes[rand.Next(codes.Count)];
 
             crop = cropForSeed[pick];
+            return Resolve(pick, ref seed) && crop != null;
+        }
+
+        /// <summary>
+        /// The crop this ground most wants: the one that feeds on whatever nutrient the
+        /// soil still has most of.
+        ///
+        /// This is the game's own N, P and K, read off the farmland rather than modelled
+        /// separately. Every crop declares which nutrient it eats, so a field that has
+        /// been growing cabbage until its nitrogen is gone will be sown with something
+        /// that wants phosphorus instead, and the nitrogen recovers while that grows.
+        ///
+        /// It is the difference between a village that farms and a village that plants
+        /// things, and it is deliberately gated on tier: a hamlet scatters seed, a proper
+        /// settlement rotates.
+        /// </summary>
+        public bool PickSeedFor(float[] nutrients, Random rand, out Item seed, out Block crop)
+        {
+            seed = null;
+            crop = null;
+            if (cropForSeed.Count == 0) return false;
+            if (nutrients == null || nutrients.Length < 3) return PickSeed(rand, out seed, out crop);
+
+            // Whichever of N, P and K is least depleted.
+            int best = 0;
+            for (int i = 1; i < 3; i++) if (nutrients[i] > nutrients[best]) best = i;
+            var want = (EnumSoilNutrient)best;
+
+            var matching = new List<string>();
+            foreach (var kv in cropForSeed)
+            {
+                if (kv.Value?.CropProps?.RequiredNutrient == want) matching.Add(kv.Key);
+            }
+
+            // Nothing eats what this ground has spare, so plant anything and let the
+            // fertility system do the rest.
+            if (matching.Count == 0) return PickSeed(rand, out seed, out crop);
+
+            string pick = matching[rand.Next(matching.Count)];
+            crop = cropForSeed[pick];
+            return Resolve(pick, ref seed) && crop != null;
+        }
+
+        private bool Resolve(string seedCode, ref Item seed)
+        {
             foreach (Item item in seeds)
             {
-                if (item.Code?.Path == pick) { seed = item; break; }
+                if (item.Code?.Path == seedCode) { seed = item; return true; }
             }
-            return seed != null && crop != null;
+            return false;
         }
 
         /// <summary>Whether this block is a crop that is ready to take.</summary>

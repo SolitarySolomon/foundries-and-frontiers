@@ -13,7 +13,7 @@ namespace FoundriesFrontiers
     public class ItemSlotPool : ItemSlotSurvival
     {
         public readonly EnumVillageResource Pool;
-        private readonly ResourceTable table;
+        private ResourceTable table;
 
         public ItemSlotPool(InventoryBase inventory, EnumVillageResource pool, ResourceTable table)
             : base(inventory)
@@ -28,6 +28,15 @@ namespace FoundriesFrontiers
             if (table == null) return false;
             return table.Classify(stack) == Pool;
         }
+
+        /// <summary>
+        /// Hands this slot the table it needs to judge what it will accept.
+        ///
+        /// Slots are built in the block entity's constructor, before the world is
+        /// available, so they start out refusing everything. This is how they are told
+        /// what they are for once there is an api to ask.
+        /// </summary>
+        public void UseTable(ResourceTable resourceTable) => table = resourceTable;
 
         public override bool CanHold(ItemSlot sourceSlot)
             => Accepts(sourceSlot?.Itemstack) && base.CanHold(sourceSlot);
@@ -55,6 +64,21 @@ namespace FoundriesFrontiers
             : base(SlotCount, className, instanceId, api,
                    (id, inv) => new ItemSlotPool(inv, PoolForSlot(id), table))
         {
+        }
+
+        /// <summary>
+        /// Teaches an already built inventory about the world.
+        ///
+        /// Used instead of replacing the inventory in Initialize, because the engine
+        /// loads saved contents into it before Initialize runs and a replacement threw
+        /// all of that away.
+        /// </summary>
+        public void Adopt(ICoreAPI api, ResourceTable table)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (this[i] is ItemSlotPool slot) slot.UseTable(table);
+            }
         }
 
         /// <summary>Slots run left to right, one pool per row.</summary>

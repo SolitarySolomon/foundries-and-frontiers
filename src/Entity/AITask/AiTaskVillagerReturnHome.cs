@@ -1,3 +1,4 @@
+using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Datastructures;
@@ -43,9 +44,24 @@ namespace FoundriesFrontiers
         /// </summary>
         protected override float ObservedRangeBlocks => -1;
 
+        /// <summary>
+        /// How long to leave a stranded villager alone after giving up on walking them
+        /// home.
+        ///
+        /// The give-up used to end the task and nothing else, and the engine offers a
+        /// freed slot again on the next tick, so it restarted at once: a full pathfind
+        /// every four seconds and a warning in the log every ninety, forever, for a
+        /// villager with no route home. Waiting is not a fix for being stranded, but it
+        /// is honest about it and it stops one lost villager costing the server real work.
+        /// </summary>
+        private const double GaveUpStandDownSec = 120;
+
+        private double standDownUntil;
+
         protected override bool ShouldRun()
         {
             if (Villager == null || Villager.VillageId == 0) return false;
+            if (entity.World.ElapsedMilliseconds / 1000.0 < standDownUntil) return false;
 
             // Somebody already told them where to be. That counts as a reason.
             if (Villager.GotoTarget != null) return false;
@@ -66,7 +82,11 @@ namespace FoundriesFrontiers
             target = village.Centre;
             startedAt = entity.World.ElapsedMilliseconds / 1000.0;
             retryAt = 0;
-            failures = 0;
+
+            // failures deliberately survives a restart now. Staged journeys only begin
+            // after a couple of refusals, and zeroing the count every time the task
+            // started again made that recovery unreachable for exactly the villager who
+            // needed it: the one too far out to path home in one hop.
 
             Villager.OrderGoto(target, MoveSpeeds.Walk);
 
@@ -82,9 +102,16 @@ namespace FoundriesFrontiers
             Village village = Home;
             if (village == null) return false;
 
-            if (WithinTether(village, entity.Pos.AsBlockPos))
+            // Home means home, not the boundary.
+            //
+            // Ending the moment they cross the line left them standing on it, one step
+            // from being dragged back, which kept them in exactly the region where the
+            // job tasks and this one fight over the slot. Carry on to somewhere properly
+            // inside instead.
+            if (WellInside(village, entity.Pos.AsBlockPos))
             {
                 Villager.CancelGoto();
+                failures = 0;
                 return false;
             }
 
@@ -98,6 +125,8 @@ namespace FoundriesFrontiers
                     "[F&F] Gave up walking {0} home after {1} tries. Still {2} blocks out.",
                     Villager.GivenName == "" ? "#" + entity.EntityId : Villager.GivenName,
                     failures, (int)village.HorizontalDistanceTo(entity.Pos.XYZ));
+
+                standDownUntil = now + GaveUpStandDownSec;
                 return false;
             }
 
@@ -110,6 +139,12 @@ namespace FoundriesFrontiers
 
                 failures++;
                 retryAt = now + RetryDelaySeconds;
+
+                // Capped, because it survives a restart on purpose and an uncapped
+                // counter turns the give-up message into nonsense ("after 66 tries") and
+                // means every later trip skips straight to a staged journey whether or
+                // not the direct one would have worked.
+                if (failures > 6) failures = 3;
 
                 // A long way from home is a long way for a pathfinder. After a couple of
                 // refusals, aim at a point part of the way back instead and make the
@@ -160,11 +195,24 @@ namespace FoundriesFrontiers
         /// Inside the claim, plus a little slack so rounding a corner or stepping over a
         /// fence does not yank them back mid-stride.
         /// </summary>
-        private static bool WithinTether(Village village, BlockPos pos)
+        public static bool WithinTether(Village village, BlockPos pos)
         {
             int slack = FFConfig.Current.Village.TetherSlackBlocks;
-            int r = village.ClaimRadius + slack;
+            return InBox(village, pos, village.ClaimRadius + slack);
+        }
 
+        /// <summary>
+        /// Properly back, rather than just over the line. The tether stops here, which is
+        /// far enough in that a stroll does not immediately trip it again.
+        /// </summary>
+        private static bool WellInside(Village village, BlockPos pos)
+        {
+            int slack = FFConfig.Current.Village.TetherSlackBlocks;
+            return InBox(village, pos, Math.Max(4, village.ClaimRadius + slack / 2));
+        }
+
+        private static bool InBox(Village village, BlockPos pos, int r)
+        {
             return pos.X >= village.CentreX - r && pos.X <= village.CentreX + r
                 && pos.Z >= village.CentreZ - r && pos.Z <= village.CentreZ + r;
         }

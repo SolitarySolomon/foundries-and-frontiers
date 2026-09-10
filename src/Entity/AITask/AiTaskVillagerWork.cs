@@ -84,6 +84,15 @@ namespace FoundriesFrontiers
         protected virtual void AfterWork(BlockPos pos) { }
 
         /// <summary>
+        /// Whether this job has unfinished business at a position whose block no longer
+        /// looks like a target.
+        ///
+        /// Almost every job says no: the block is gone, so the work is done. The
+        /// exception is work that takes down more than the block it started on.
+        /// </summary>
+        protected virtual bool StillBusyAt(BlockPos pos) => false;
+
+        /// <summary>
         /// How far out from the plot's recorded ground level to look. Most jobs work at
         /// the surface; a quarry cuts down into it.
         /// </summary>
@@ -171,6 +180,21 @@ namespace FoundriesFrontiers
             Village village = Home;
             if (village == null) return false;
 
+            // Not while they are lost.
+            //
+            // This is the fix for the tether never working. The AI manager starts tasks in
+            // the order the entity file lists them and re-reads the slot each time, so a
+            // job listed after the tether preempts it on the same tick it starts, before
+            // its retry logic has run once. It restarts, gets preempted again, and the
+            // villager stands in a field forever with the log filling up.
+            //
+            // Priority alone cannot settle it, because a job genuinely should outrank
+            // going home during working hours. What settles it is that a villager outside
+            // their own claim has no business working: whatever they are standing next to
+            // is not the village's to take. So the jobs stand aside and the tether gets
+            // its slot.
+            if (!AiTaskVillagerReturnHome.WithinTether(village, entity.Pos.AsBlockPos)) return false;
+
             // Carrying a full load is itself a reason to run: the job is not finished
             // until it is in the storehouse.
             if (Villager.CarriedCount >= HaulThreshold) return true;
@@ -224,6 +248,14 @@ namespace FoundriesFrontiers
             // The walk belongs to ffgoto. Cancelling it here would tear up a journey that
             // the next tick of this same job is going to want, which is exactly the bug
             // that kept villagers from ever reaching their beds.
+            //
+            // The step does get reset, though. It is what ShouldRun reads to decide
+            // whether somebody else is already moving this villager, and leaving it on
+            // whatever the last run happened to end with meant that guard was answering a
+            // question about a run that finished minutes ago.
+            Step = Villager != null && Villager.CarriedCount >= HaulThreshold
+                ? EnumWorkStep.Hauling
+                : EnumWorkStep.Choosing;
         }
 
         // --- the steps ---------------------------------------------------------------
@@ -330,8 +362,12 @@ namespace FoundriesFrontiers
             if (Target == null) { Step = EnumWorkStep.Choosing; return true; }
 
             // The world moved: somebody else took it, or it burned down.
+            //
+            // Unless the job says it is still busy here. A lumberjack cuts the base of a
+            // trunk first and the rest of the tree comes down after it, so the block that
+            // was the target is gone while the work very much is not.
             Block block = entity.World.BlockAccessor.GetBlock(Target);
-            if (!IsTarget(block, Target))
+            if (!IsTarget(block, Target) && !StillBusyAt(Target))
             {
                 Target = null;
                 Step = EnumWorkStep.Choosing;
@@ -375,9 +411,22 @@ namespace FoundriesFrontiers
                 Skip(done, SkipUnworkableSec);
             }
 
-            Target = null;
             nextActionAt = Now + FFConfig.Current.Work.BetweenBlocksSec;
 
+            // Unfinished business here means stay here.
+            //
+            // Clearing the target unconditionally was how a lumberjack halfway through a
+            // large tree wandered off to the next one and carried on felling the first
+            // one from across the woodlot, dropping its logs at the old stump and
+            // planting the sapling there too. StillBusyAt is what the guard at the top of
+            // this method reads, and it never got the chance to read it.
+            if (did && StillBusyAt(done))
+            {
+                Target = done;
+                return true;
+            }
+
+            Target = null;
             Step = Villager.CarriedCount >= HaulThreshold ? EnumWorkStep.Hauling : EnumWorkStep.Choosing;
             if (Step == EnumWorkStep.Hauling) stepStartedAt = Now;
             return true;
@@ -390,8 +439,6 @@ namespace FoundriesFrontiers
             BlockPos drop = StorehousePos(village);
             if (drop == null)
             {
-                // Nowhere to put it. Keep carrying rather than dropping it on the ground:
-                // a village with no storehouse should look like one, not leak items.
                 Note("has nowhere to put " + Villager.CarriedCount + " items");
                 return false;
             }
@@ -706,11 +753,28 @@ namespace FoundriesFrontiers
             return taken;
         }
 
-        /// <summary>Where the village's stores are, or null if there is nowhere to deliver.</summary>
+        /// <summary>
+        /// Where to take a load home to.
+        ///
+        /// The crate when there is one, and the village centre when there is not.
+        ///
+        /// The fallback matters more than it looks. The stores live in the ledger, not in
+        /// the box, so the box is the player's window onto them rather than a requirement
+        /// for them. Without this a village whose storehouse got broken could not deliver,
+        /// could not earn, and so could never afford to rebuild the storehouse: one swing
+        /// of an axe would kill a settlement permanently. Villagers carry on regardless
+        /// and the crate goes back up when the village can pay for it.
+        /// </summary>
         protected BlockPos StorehousePos(Village village)
         {
-            if (village == null || !village.HasStorehouse) return null;
-            return new BlockPos(village.StorehouseX, village.StorehouseY, village.StorehouseZ, 0);
+            if (village == null) return null;
+
+            if (village.HasStorehouse)
+            {
+                return new BlockPos(village.StorehouseX, village.StorehouseY, village.StorehouseZ, 0);
+            }
+
+            return village.Centre;
         }
 
         protected bool WithinReach(BlockPos pos, double reach = -1)

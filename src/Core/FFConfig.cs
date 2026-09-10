@@ -166,7 +166,14 @@ namespace FoundriesFrontiers
             /// times however many helpings are left in it, which is why a nearly empty
             /// pot and a full one are not worth the same to a village.
             /// </summary>
-            [JsonProperty] public float MealServingValue = 2f;
+            /// <summary>
+            /// Food value of one serving of a cooked meal.
+            ///
+            /// Kept at or below what the ingredients were worth on purpose. At two, a
+            /// single carrot worth one became a one serving meal worth two, and a village
+            /// with a cook could print food by passing it through the crate.
+            /// </summary>
+            [JsonProperty] public float MealServingValue = 1f;
 
             /// <summary>How far above the village centre a facility scan looks.</summary>
             [JsonProperty] public int FacilityScanUp = 20;
@@ -179,6 +186,18 @@ namespace FoundriesFrontiers
             /// walks home. A little slack so they can round a corner without being yanked.
             /// </summary>
             [JsonProperty] public int TetherSlackBlocks = 20;
+
+            /// <summary>
+            /// Stone the village spends putting its cairn back up.
+            ///
+            /// Repairs used to be free, which meant a player could break a village's
+            /// storehouse every morning and it would appear again by lunchtime out of
+            /// nothing. A village that cannot pay stays broken.
+            /// </summary>
+            [JsonProperty] public float MarkerRepairStone = 8f;
+
+            /// <summary>Wood the village spends rebuilding its storehouse.</summary>
+            [JsonProperty] public float StorehouseRepairWood = 16f;
         }
 
         public class ScheduleConfig
@@ -306,6 +325,26 @@ namespace FoundriesFrontiers
 
             /// <summary>Replant this fraction of what gets felled, when the village has seed.</summary>
             [JsonProperty] public float ReplantChance = 1f;
+
+            /// <summary>
+            /// Saplings a lumberjack keeps from each tree they fell, regardless of what
+            /// the leaves happened to drop.
+            ///
+            /// Vanilla sapling drops are rare enough that a woodlot living off them thins
+            /// out and never recovers, which makes the plot pointless. Two per tree means
+            /// a woodlot slowly thickens, which is what a managed one should do. Set it to
+            /// zero for vanilla drop rates only.
+            /// </summary>
+            [JsonProperty] public int SaplingsPerTree = 2;
+
+            /// <summary>
+            /// The tier at which farmers start rotating crops against the ground's real
+            /// nitrogen, phosphorus and potassium instead of sowing at random.
+            ///
+            /// Set it to 0 to have every village rotate from the day it is founded, or to
+            /// something above 5 to turn rotation off entirely.
+            /// </summary>
+            [JsonProperty] public int RotateCropsFromTier = 2;
 
             /// <summary>Pause between finishing one block and starting the next, in seconds.</summary>
             [JsonProperty] public float BetweenBlocksSec = 0.6f;

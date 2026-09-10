@@ -21,10 +21,15 @@ namespace FoundriesFrontiers
     /// air for a minute, which looks broken, and the game's own leaf decay is slow enough
     /// that the woodlot would be full of floating hedges.
     ///
-    /// Replanting uses whatever sapling the tree itself dropped rather than a sapling
-    /// code written down here. If a tree drops nothing plantable, nothing gets planted,
-    /// which is honest: the wood runs out and the village has to widen its woodlot or
-    /// find a forester.
+    /// Replanting does not rely on vanilla luck. A player breaking leaves gets a sapling
+    /// rarely enough that a woodlot left to the base drop rate empties out and never
+    /// recovers, which makes the whole plot pointless. So a felled tree yields a set
+    /// number of saplings for the tree it was, on top of anything the leaves happened to
+    /// drop. That is a balance decision rather than a simulation one, and the number is
+    /// config so it can be argued with.
+    ///
+    /// Which sapling comes from the world catalogue, matched to the log that was felled,
+    /// so an oak woodlot stays an oak woodlot.
     /// </summary>
     public class AiTaskVillagerLumberjack : AiTaskVillagerWork
     {
@@ -64,7 +69,7 @@ namespace FoundriesFrontiers
         /// <summary>Saplings kept back from the last tree, waiting on a stump to go into.</summary>
         private readonly List<ItemStack> saplings = new List<ItemStack>();
 
-        /// <summary>What is left of the tree currently being felled, topmost first.</summary>
+        /// <summary>What is left of the tree currently being felled, lowest first.</summary>
         private readonly List<BlockPos> felling = new List<BlockPos>();
 
         private BlockPos lastStump;
@@ -97,12 +102,16 @@ namespace FoundriesFrontiers
                 List<BlockPos> tree = CollectTree(pos);
                 if (tree.Count == 0) return false;
 
-                // Top down, so the canopy comes off before the trunk it is sitting on.
-                tree.Sort((a, b) => b.Y.CompareTo(a.Y));
+                // Bottom up. The cut goes into the base of the trunk and the rest of the
+                // tree comes down after it, which is both what a lumberjack does and what
+                // it should look like from a distance.
+                tree.Sort((a, b) => a.Y.CompareTo(b.Y));
 
                 felling.AddRange(tree);
                 lastStump = pos.Copy();
                 saplings.Clear();
+
+                StockSaplingsFor(pos);
 
                 entity.Api.Logger.VerboseDebug(
                     "[F&F] Felling a tree of {0} blocks at {1}", tree.Count, pos);
@@ -135,10 +144,39 @@ namespace FoundriesFrontiers
                 }
             }
 
-            // Still standing means come back next tick. The work loop keeps the target
-            // while this returns true and the block is still a target, and the stump is
-            // the last thing to go, so the target stays valid until the tree is down.
+            // Still standing means come back next tick. The base has already gone by
+            // now, so the work loop would normally drop the target: StillBusyAt is what
+            // keeps the villager here until the rest of the tree is down.
             return logs > 0 || cut > 0;
+        }
+
+        /// <summary>
+        /// The stump is the first thing to go, so the target stops looking like a target
+        /// almost immediately. This is what stops the work loop wandering off to another
+        /// tree with half of this one still hanging in the air.
+        /// </summary>
+        protected override bool StillBusyAt(BlockPos pos) => felling.Count > 0;
+
+        /// <summary>
+        /// Takes the saplings a felled tree is worth, before any of it comes down.
+        ///
+        /// Read off the log itself rather than off the leaves, because leaf drops are
+        /// rare enough in this game that a woodlot relying on them thins out and dies.
+        /// A lumberjack who fells a tree knows how to keep seed from it.
+        /// </summary>
+        private void StockSaplingsFor(BlockPos stump)
+        {
+            int want = FFConfig.Current.Work.SaplingsPerTree;
+            if (want <= 0) return;
+
+            var catalogue = entity.Api.ModLoader.GetModSystem<WorldCatalogue>();
+            if (catalogue?.HasSaplings != true) return;
+
+            Block log = entity.World.BlockAccessor.GetBlock(stump);
+            Block sapling = catalogue.SaplingForLog(log, entity.World.Rand);
+            if (sapling == null) return;
+
+            for (int i = 0; i < want; i++) saplings.Add(new ItemStack(sapling));
         }
 
         /// <summary>Puts a sapling back on the stump, if the tree gave us one.</summary>
@@ -262,7 +300,8 @@ namespace FoundriesFrontiers
         /// </summary>
         private void KeepAnySapling(Block block, BlockPos pos)
         {
-            if (saplings.Count >= 4) return;
+            int cap = FFConfig.Current.Work.SaplingsPerTree + 2;
+            if (saplings.Count >= cap) return;
 
             ItemStack[] drops = block.GetDrops(entity.World, pos, null);
             if (drops == null) return;
@@ -271,7 +310,7 @@ namespace FoundriesFrontiers
             {
                 if (drop?.Block is not BlockSapling) continue;
                 saplings.Add(drop.Clone());
-                if (saplings.Count >= 4) return;
+                if (saplings.Count >= cap) return;
             }
         }
 

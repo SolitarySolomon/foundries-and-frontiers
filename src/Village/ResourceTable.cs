@@ -234,6 +234,51 @@ namespace FoundriesFrontiers
             return UnitValue(stack, r.Value) * stack.StackSize;
         }
 
+        /// <summary>
+        /// What the empty container a meal arrived in is worth, and to which pool.
+        ///
+        /// A cooked meal is valued as food and then the shelves are rebuilt from the
+        /// ledger, which throws the pot away. Crediting the container separately means a
+        /// village that is handed a crock of stew keeps the clay as well as the stew,
+        /// rather than a player losing a pot every time they donate dinner.
+        /// </summary>
+        public bool ContainerOf(ItemStack stack, out EnumVillageResource pool, out float value)
+        {
+            pool = default;
+            value = 0;
+
+            if (stack?.Collectible is not IBlockMealContainer) return false;
+            if (ServingsIn(stack) <= 0) return false;
+            if (stack.Collectible is not Block block) return false;
+
+            // Ask what an empty one of these would be worth, which is the clay question
+            // the fragment rules already answer correctly.
+            var empty = new ItemStack(block);
+            EnumVillageResource? asContainer = ClassifyByCode(empty);
+            if (asContainer == null) return false;
+
+            pool = asContainer.Value;
+            value = UnitValue(empty, pool) * stack.StackSize;
+            return value > 0;
+        }
+
+        /// <summary>
+        /// Classification by the fragment rules alone, skipping the meal check.
+        /// This is what an empty bowl reads as, which is pottery.
+        /// </summary>
+        private EnumVillageResource? ClassifyByCode(ItemStack stack)
+        {
+            if (stack?.Collectible?.Code == null) return null;
+            string code = stack.Collectible.Code.ToShortString().ToLowerInvariant();
+
+            foreach (EnumVillageResource r in VillageResources.All)
+            {
+                if (!rules.TryGetValue(r, out ResourceRule rule)) continue;
+                if (Matches(rule, code)) return r;
+            }
+            return null;
+        }
+
         /// <summary>Food value of one serving of a cooked meal.</summary>
         public float MealServingValue => FFConfig.Current.Village.MealServingValue;
 

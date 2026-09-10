@@ -146,27 +146,63 @@ namespace FoundriesFrontiers
 
             // Away from the threat, and toward home if there is one, because a villager
             // who runs into the wilderness has swapped one death for another.
-            Vec3d away = entity.Pos.XYZ.Clone().Add(
-                (entity.Pos.X - threat.Pos.X),
-                0,
-                (entity.Pos.Z - threat.Pos.Z));
+            //
+            // Direction first, then a fixed distance along it. Adding the offset and then
+            // averaging with the village centre used to collapse to a point a block or two
+            // away whenever the villager was already near the middle of their own village,
+            // and a one block journey is no journey at all: the pathfinder refuses it, the
+            // walk instantly "arrives", and the villager twitches on the spot being killed.
+            double dx = entity.Pos.X - threat.Pos.X;
+            double dz = entity.Pos.Z - threat.Pos.Z;
+
+            double len = Math.Sqrt(dx * dx + dz * dz);
+            if (len < 0.01) { dx = 1; dz = 0; len = 1; }
+            dx /= len;
+            dz /= len;
 
             Village village = Home;
             if (village != null)
             {
-                away.X = (away.X + village.CentreX) / 2;
-                away.Z = (away.Z + village.CentreZ) / 2;
+                // Bias the run toward home without letting it point back at the threat.
+                double hx = village.CentreX - entity.Pos.X;
+                double hz = village.CentreZ - entity.Pos.Z;
+                double hlen = Math.Sqrt(hx * hx + hz * hz);
+                if (hlen > 1)
+                {
+                    dx += hx / hlen * 0.6;
+                    dz += hz / hlen * 0.6;
+
+                    double mix = Math.Sqrt(dx * dx + dz * dz);
+                    if (mix > 0.01) { dx /= mix; dz /= mix; }
+                }
             }
 
-            var probe = new BlockPos((int)away.X, 0, (int)away.Z, 0);
-            int y = entity.World.BlockAccessor.GetTerrainMapheightAt(probe);
-            if (y <= 0) return;
+            int runTo = FleeDistanceBlocks;
+            int tx = (int)(entity.Pos.X + dx * runTo);
+            int tz = (int)(entity.Pos.Z + dz * runTo);
 
-            fleeTarget = new BlockPos((int)away.X, y + 1, (int)away.Z, 0);
+            var probe = new BlockPos(tx, 0, tz, 0);
+            int y = entity.World.BlockAccessor.GetTerrainMapheightAt(probe);
+            if (y <= 0)
+            {
+                // Nowhere to run that way. Head for the village centre instead, which is
+                // at least somewhere, rather than ordering no journey at all and standing
+                // still until the threat memory runs out.
+                if (village == null) return;
+                fleeTarget = village.Centre;
+            }
+            else
+            {
+                fleeTarget = new BlockPos(tx, y + 1, tz, 0);
+            }
+
             Villager.OrderGoto(fleeTarget, MoveSpeeds.Run);
         }
 
         // --- deciding ---------------------------------------------------------------
+
+        /// <summary>How far a frightened villager runs before reconsidering.</summary>
+        private static int FleeDistanceBlocks => 14;
 
         private bool ShouldFight() => Villager.Courage == EnumCourage.Bold;
 
