@@ -258,7 +258,7 @@ namespace FoundriesFrontiers
 
                 .BeginSubCommand("trades")
                     .WithDescription("List every trade the mod knows about")
-                    .HandleWith(args => OnTrades())
+                    .HandleWith(args => OnTrades(sapi))
                 .EndSubCommand();
         }
 
@@ -1520,12 +1520,42 @@ namespace FoundriesFrontiers
                                                    ?? new BlockPos(0, 0, 0, 0))) + ".");
         }
 
-        private static TextCommandResult OnTrades()
+        /// <summary>
+        /// Every trade, what it carries, and whether it has a job to do yet.
+        ///
+        /// The tool column matters more than it looks: tools carry real behaviour in this
+        /// game rather than a speed bonus, so a trade with the wrong thing in its hands
+        /// cannot do its work at all. This is where to check that config/tools.json says
+        /// what you think it says.
+        /// </summary>
+        private static TextCommandResult OnTrades(ICoreServerAPI sapi)
         {
-            var names = Enum.GetNames<EnumTrade>();
-            return TextCommandResult.Success(
-                names.Length + " trades defined:\n" + string.Join(", ", names) +
-                "\n\nSpawnable so far: forager, builder, lumberjack, farmer, herder.");
+            var catalogue = sapi.ModLoader.GetModSystem<WorldCatalogue>();
+
+            // The trades that actually have an AI task behind them today.
+            var working = new HashSet<EnumTrade>
+            {
+                EnumTrade.Lumberjack, EnumTrade.Farmer, EnumTrade.Herder,
+                EnumTrade.Forager, EnumTrade.Builder
+            };
+
+            var sb = new System.Text.StringBuilder();
+            var all = Enum.GetValues<EnumTrade>();
+            sb.AppendLine(all.Length + " trades defined. Tool comes from config/tools.json.");
+            sb.AppendLine();
+
+            foreach (EnumTrade trade in all)
+            {
+                string tool = catalogue?.ToolNameFor(trade) ?? "?";
+                sb.AppendLine("  " + trade.ToString().ToLowerInvariant().PadRight(15)
+                              + tool.Replace("game:", "").PadRight(22)
+                              + (working.Contains(trade) ? "has a job" : "no job yet"));
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("/ff spawn <trade> to make one. A villager is handed their tool at spawn");
+            sb.AppendLine("unless GiveTradeToolsOnSpawn is off, and /ff give <itemcode> replaces it.");
+            return TextCommandResult.Success(sb.ToString().TrimEnd());
         }
     }
 }

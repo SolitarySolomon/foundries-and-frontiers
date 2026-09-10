@@ -1,0 +1,51 @@
+{
+  // What each trade works with.
+  //
+  // Tools are not a speed bonus in this game. They carry real behaviour: an axe fells a
+  // whole tree where bare hands take one log off it, a hoe turns soil into farmland, a
+  // scythe reaps a whole crop. A villager with the wrong thing in their hands cannot do
+  // their job at all, so this table is what makes each trade possible rather than just
+  // faster.
+  //
+  // Values are the game's own tool types. The mod picks the lowest tier example of that
+  // type the game offers, so it works with modded tools and gives a starting villager
+  // something crude rather than something good.
+  //
+  // Valid types: Knife Pickaxe Axe Sword Shovel Hammer Spear Bow Shears Sickle Hoe Saw
+  // Chisel Scythe Sling Wrench Probe Meter Drill Firearm Crossbow Javelin Pike Shield
+  // Club Mace Warhammer Poleaxe Halberd Polearm Staff Tongs Crowbar
+  //
+  // A trade with no entry carries nothing, which is right for the ones whose work is not
+  // done with a tool in the hand.
+
+  // Gathering and land work
+  "Lumberjack":     "Axe",
+  "Forester":       "Axe",
+  "CharcoalBurner": "Axe",
+  "Farmer":         "Hoe",
+  "Herder":         "Shears",
+  "Forager":        "Knife",
+  "Builder":        "Shovel",
+
+  // Stone and metal
+  "Miner":          "Pickaxe",
+  "Quarrier":       "Pickaxe",
+  "Mason":          "Chisel",
+  "Smith":          "Hammer",
+
+  // Craft
+  "Weaver":         "Shears",
+  "Clothier":       "Shears",
+  "Tanner":         "Knife",
+  "Cook":           "Knife",
+  "Preserver":      "Knife",
+  "Angler":         "Spear",
+
+  // Guards
+  "Spearman":       "Spear",
+  "Swordsman":      "Sword",
+  "Archer":         "Bow"
+
+  // No entry, and none wanted: Headman, FireTender, Potter, Miller, Baker, Healer,
+  // Trader. Their work is a workstation or a conversation rather than something held.
+}

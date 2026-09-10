@@ -160,6 +160,8 @@ namespace FoundriesFrontiers
             {
                 api.Logger.Warning("[F&F] No seed matched a crop block. Farmers will not be able to sow.");
             }
+
+            LoadToolTable(api);
         }
 
         // --- farmland ---------------------------------------------------------------
@@ -235,24 +237,83 @@ namespace FoundriesFrontiers
         public Item BasicTool(EnumTool kind)
             => basicToolByType.TryGetValue(kind, out Item item) ? item : null;
 
+        /// <summary>Which tool type each trade works with, loaded from config/tools.json.</summary>
+        private readonly Dictionary<EnumTrade, EnumTool> toolByTrade =
+            new Dictionary<EnumTrade, EnumTool>();
+
         /// <summary>
-        /// What a villager of this trade works with.
+        /// What a villager of this trade works with, or null if their work is not done
+        /// with something in the hand.
         ///
-        /// Returns null for trades that need nothing in particular, which is most of them
-        /// for now. The ones listed here need a tool for a real reason rather than for a
-        /// speed bonus: an axe is what makes a tree fall rather than a log come off it.
+        /// A table rather than a switch because it is a balance decision, not a rule:
+        /// whether a herder carries shears or a knife is exactly the sort of thing worth
+        /// arguing with without a rebuild.
         /// </summary>
         public Item ToolFor(EnumTrade trade)
+            => toolByTrade.TryGetValue(trade, out EnumTool kind) ? BasicTool(kind) : null;
+
+        /// <summary>What each trade carries, for the trades listing.</summary>
+        public string ToolNameFor(EnumTrade trade)
         {
-            switch (trade)
+            Item item = ToolFor(trade);
+            if (item != null) return item.Code.ToShortString();
+
+            return toolByTrade.TryGetValue(trade, out EnumTool kind)
+                ? "wants a " + kind.ToString().ToLowerInvariant() + ", none in this world"
+                : "nothing";
+        }
+
+        private void LoadToolTable(ICoreAPI api)
+        {
+            IAsset asset = api.Assets.TryGet(
+                new AssetLocation(FoundriesFrontiersMod.ModId, "config/tools.json"));
+
+            if (asset == null)
             {
-                case EnumTrade.Lumberjack: return BasicTool(EnumTool.Axe);
-                case EnumTrade.Farmer: return BasicTool(EnumTool.Hoe);
-                case EnumTrade.Builder: return BasicTool(EnumTool.Shovel);
-                case EnumTrade.Quarrier:
-                case EnumTrade.Miner: return BasicTool(EnumTool.Pickaxe);
-                default: return null;
+                api.Logger.Warning("[F&F] config/tools.json missing. Villagers will work bare handed.");
+                return;
             }
+
+            Dictionary<string, string> table;
+            try
+            {
+                table = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(asset.ToText());
+            }
+            catch (Exception e)
+            {
+                api.Logger.Error("[F&F] config/tools.json would not parse: {0}", e.Message);
+                return;
+            }
+
+            if (table == null) return;
+
+            foreach (var kv in table)
+            {
+                if (kv.Key.StartsWith("//")) continue;
+
+                if (!Enum.TryParse(kv.Key, true, out EnumTrade trade))
+                {
+                    api.Logger.Warning("[F&F] tools.json names an unknown trade '{0}'.", kv.Key);
+                    continue;
+                }
+                if (!Enum.TryParse(kv.Value, true, out EnumTool kind))
+                {
+                    api.Logger.Warning(
+                        "[F&F] tools.json gives {0} an unknown tool type '{1}'.", kv.Key, kv.Value);
+                    continue;
+                }
+
+                toolByTrade[trade] = kind;
+
+                if (BasicTool(kind) == null)
+                {
+                    api.Logger.Warning(
+                        "[F&F] Nothing in this world is a {0}, so a {1} will work bare handed.",
+                        kind, trade);
+                }
+            }
+
+            api.Logger.Notification("[F&F] Tool table: {0} trade(s) carry something.", toolByTrade.Count);
         }
 
         // --- trees ------------------------------------------------------------------
