@@ -9,7 +9,19 @@
 	eyeHeight: 1.7,
 	variantgroups: [
 		{ code: "gender", states: ["male", "female"] },
-		{ code: "trade", states: ["forager", "builder", "lumberjack", "farmer", "herder"] }
+		// Every trade in EnumTrade, because the entity code is the ONLY place a
+		// villager's trade comes from: FFVillager reads it off the end of its own code
+		// on first spawn. A trade missing from this list cannot be spawned, and any AI
+		// task written for it is dead the moment it is registered. That is exactly how
+		// the miner and the quarrier shipped unable to exist.
+		{ code: "trade", states: [
+			"headman", "builder", "forager", "firetender", "farmer",
+			"herder", "lumberjack", "angler", "cook", "preserver",
+			"forester", "weaver", "clothier", "tanner", "charcoalburner",
+			"spearman", "quarrier", "potter", "smith", "miner",
+			"trader", "archer", "mason", "miller", "baker",
+			"healer", "swordsman"
+		] }
 	],
 	attributes: {
 		pathfinder: {
@@ -393,6 +405,18 @@
 					},
 					{
 						code: "ffdigger",
+						priority: 1.7,
+						priorityForCancel: 1.7
+					},
+					{
+						code: "ffquarry",
+						priority: 1.7,
+						priorityForCancel: 1.7
+					},
+					{
+						// The mine. Same priority as every other job: what makes a miner a
+						// miner is their trade, not a higher number here.
+						code: "ffminer",
 						priority: 1.7,
 						priorityForCancel: 1.7
 					},

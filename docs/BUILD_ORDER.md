@@ -441,6 +441,67 @@ Rules that apply to every step, because retrofitting any of them is painful.
       day with a shovel, and cutting one through granite is a quarry, which is a different
       plot and a different worker.
 
+- [x] **B13 · Quarrier and miner, the other half of the stone economy.**
+      Added late because a question exposed the hole: nothing in the mod put stone into a
+      village. Wood came from a woodlot, food from a field, earth from a terrace, and
+      stone arrived only as gravel a digger happened to cut through on the way to
+      something else. The cairn went unrepaired, stone tools could not be made and every
+      stone building was out of reach, in a village that looked like it was working.
+      **The quarry is the plain answer:** exposed rock, a pickaxe, a pit. It differs from
+      the digger in the one way that matters. A digger cuts *down to* a floor and stops,
+      because the point is a level building site; a quarry cuts *below* its floor to a
+      fixed depth, because the point is the material. At the floor the plot is worked out
+      and goes Exhausted, which is what that state was put there for.
+      It finds its own working face rather than using the shared scan. The shared one
+      hangs its search window off `GetTerrainMapheightAt`, and that is a **world generation**
+      height map: breaking blocks never changes it. A job that moves the ground on purpose
+      cannot navigate by a map of where the hill used to be, and the symptom would have
+      been a quarry reporting itself empty with most of its stone still in it.
+      **The mine is where the ore comes from, and there is no dice roll in it.** Nothing in
+      the miner decides by chance whether a swing produces copper. What is in the ground is
+      what Vintage Story's own world generation put there: the miner finds real ore blocks,
+      tunnels to them and breaks them, and the ratio of ore to stone is whatever the rock
+      under that particular village actually is. Inventing ore would be the same trick as a
+      tool appearing in somebody's hand, which this mod has already refused once.
+      So the levers are **depth**, gated by village tier, and **drift reach**, how far a
+      miner will tunnel toward something spotted. `/ff stats` counts what actually came up,
+      which is the honest version of a percentage.
+      **The shaft is a drawn shape, not an emergent one.** A villager cannot walk down a
+      vertical hole or path through solid rock, so a mine that grows by picking whatever
+      block looks promising buries somebody within a minute. It is a square spiral around
+      the inside of the plot, one block down and one along per step. Drifts run off it at
+      square corners: two blocks touching only at an edge are not a corridor a 0.6 wide
+      villager can pass, and the pathfinder refuses the corner even with the blocks gone.
+      Everything is cut **three blocks tall**. Two is the obvious answer and it is wrong. A
+      villager is 1.85 high, so a two block passage descending one block per step always
+      leaves the next step's ceiling in the way of their head, and the pathfinder cannot
+      see it because it tests the destination cell rather than the move. The route is
+      approved, cannot be walked, and the miner burns two minutes failing at it.
+      **Both jobs check the mining tier.** Breaking a block through the block accessor walks
+      straight past the gate the game puts on rock and ore, so a bare handed quarrier would
+      cut granite for free and make the whole tool rack decoration. Both also wear the tool
+      down per swing, which is what makes the rack turn over at all.
+      *The bug this shipped with, caught in review before it left:* neither trade could
+      exist. A villager's trade comes from the end of its own entity code, and the entity
+      JSON only declared five trades, so `villager-male-miner` did not resolve and both
+      tasks refused on their first line forever. Every trade in `EnumTrade` now has a
+      variant. Worth remembering as a class of bug: **an AI task is dead if nothing can
+      carry the trade it asks for**, and it fails silently rather than loudly.
+
+- [x] **B14 · What the ground gives, made complete.**
+      Two gaps found by asking a plain question about stones and cattails.
+      Loose stone lying on the surface was worth stone to the storehouse and nothing went
+      near it. Foragers now pick up loose stones, boulders, rubble and surface ore, which
+      is where a village's first stone comes from before it has claimed a quarry.
+      Cattails and papyrus were **targeted and then refused**. The forager looked at them,
+      asked the storehouse whether it wanted what they drop, and was told no, because
+      `cattailtops`, `cattailroot`, `papyrustops`, `papyrusroot` and `thatch` were not in
+      the resource table at all. Of the four tall plants only brownsedge worked, and only
+      because it happens to drop dry grass. Roots are food, tops are the game's own basket
+      and rope fibre, thatch sits with dry grass in earth.
+      Thatch's hand written entry in `buildcosts.json` came out at the same time: with the
+      table pricing it, the fallback list is down to eight numbers.
+
 ---
 
 ## Phase C: Construction  *(M1)*

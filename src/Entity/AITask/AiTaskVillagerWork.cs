@@ -610,7 +610,54 @@ namespace FoundriesFrontiers
             skipUntil[pos.Copy()] = Now + seconds;
         }
 
-        private bool IsSkipped(BlockPos pos)
+        /// <summary>
+        /// Puts a swing's worth of wear on whatever the villager is holding.
+        ///
+        /// Jobs that break blocks through the block accessor rather than through the
+        /// game's own tool code have to do this by hand, or the tool never wears out and
+        /// the whole tool economy is decoration: the rack fills up, nobody ever needs
+        /// anything off it, and a village that cannot afford pickaxes never finds out.
+        ///
+        /// The lumberjack does not call this. Its swing goes through the axe itself,
+        /// which damages the slot on the way past.
+        /// </summary>
+        protected void WearTool(int amount = 1)
+        {
+            ItemSlot slot = entity.RightHandItemSlot;
+            if (slot?.Itemstack?.Collectible == null) return;
+            if (slot.Itemstack.Collectible.GetDamagedBy(slot) is not EnumItemDamageSource[] by) return;
+            if (Array.IndexOf(by, EnumItemDamageSource.BlockBreaking) < 0) return;
+
+            slot.Itemstack.Collectible.DamageItem(entity.World, entity, slot, amount);
+            Villager?.RefreshHands();
+        }
+
+        /// <summary>
+        /// Whether the villager is carrying enough tool to break this block at all.
+        ///
+        /// Vintage Story gates rock and ore behind a mining tier, and breaking a block
+        /// straight through the block accessor walks past that gate without asking. A
+        /// bare handed quarrier cutting granite is free stone, which is exactly the kind
+        /// of quiet economy hole this mod keeps having to close.
+        /// </summary>
+        protected bool ToolIsGoodEnough(Block block, BlockPos pos)
+        {
+            if (block == null) return false;
+
+            int needed = block.GetRequiredMiningTier(entity.World, pos);
+            if (needed <= 0) return true;
+
+            return (Villager?.ToolTier ?? 0) >= needed;
+        }
+
+        /// <summary>
+        /// Whether this block has been given up on recently.
+        ///
+        /// Protected because a job that finds its own targets has to ask: the base scan
+        /// consults this itself, but a task with its own FindWork would otherwise keep
+        /// handing back the same unreachable block forever.
+        /// </summary>
+        protected bool IsSkipped(BlockPos pos)
         {
             if (!skipUntil.TryGetValue(pos, out double until)) return false;
             if (Now < until) return true;

@@ -25,7 +25,10 @@
       "insect-",
       "cassava",
       "mushroom-",
-      "jam"
+      "jam",
+      "cattailroot",
+      "papyrusroot",
+      "tuleroot"
     ],
     "exclude": [
       "fishbait",
@@ -77,7 +80,10 @@
       "insect-": 0.25,
       "mushroom-": 0.5,
       "bambooshoot": 0.5,
-      "cassava": 1
+      "cassava": 1,
+      "cattailroot": 1,
+      "papyrusroot": 1,
+      "tuleroot": 1
     },
     "forms": [
       {
@@ -371,7 +377,9 @@
       "leather",
       "rope",
       "canvas",
-      "sail"
+      "sail",
+      "cattailtops",
+      "papyrustops"
     ],
     "exclude": [
       "clothesrack"
@@ -391,7 +399,9 @@
       "canvas": 2,
       "sail": 3,
       "flaxfibers": 0.5,
-      "flaxtwine": 0.5
+      "flaxtwine": 0.5,
+      "cattailtops": 0.5,
+      "papyrustops": 0.5
     },
     "forms": [
       {
@@ -420,6 +430,7 @@
       "soil",
       "sand",
       "drygrass",
+      "thatch",
       "peat",
       "compost",
       "termitemound",
@@ -443,6 +454,7 @@
     "defaultWeight": 0.5,
     "weights": {
       "drygrass": 0.5,
+      "thatch": 1,
       "sand": 0.5,
       "peat": 1,
       "peatpile": 0.25,

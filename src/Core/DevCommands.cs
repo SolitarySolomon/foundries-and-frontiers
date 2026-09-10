@@ -1624,7 +1624,8 @@ namespace FoundriesFrontiers
             var working = new HashSet<EnumTrade>
             {
                 EnumTrade.Lumberjack, EnumTrade.Farmer, EnumTrade.Herder,
-                EnumTrade.Forager, EnumTrade.Builder
+                EnumTrade.Forager, EnumTrade.Builder,
+                EnumTrade.Quarrier, EnumTrade.Miner
             };
 
             var sb = new System.Text.StringBuilder();

@@ -306,7 +306,11 @@ namespace FoundriesFrontiers
             /// them: woodlot, field, pasture, quarry, clay pit, mine head, terrace.
             /// A half size of 6 makes a 13x13 plot.
             /// </summary>
-            [JsonProperty] public int[] HalfSizeByKind = { 8, 6, 7, 5, 4, 2, 6 };
+            /// The mine head is 3 rather than 2 on purpose: the shaft is a spiral stair
+            /// cut inside the plot, and a half size of 2 leaves a 3x3 ring, which is the
+            /// tightest turn a villager can physically walk. 3 gives a 5x5 ring, sixteen
+            /// steps to the turn, and room to stand.
+            [JsonProperty] public int[] HalfSizeByKind = { 8, 6, 7, 5, 4, 3, 6 };
 
             /// <summary>How many people each kind of plot has room for.</summary>
             [JsonProperty] public int[] WorkerCapByKind = { 2, 2, 1, 2, 1, 2, 3 };
@@ -406,6 +410,53 @@ namespace FoundriesFrontiers
 
             /// <summary>Pause between finishing one block and starting the next, in seconds.</summary>
             [JsonProperty] public float BetweenBlocksSec = 0.6f;
+
+            /// <summary>
+            /// How far below its sited ground level a quarry may be cut, in blocks.
+            ///
+            /// A quarry is a pit, not a hole to the centre of the earth. This is what
+            /// makes one finite: when the floor is reached the plot has nothing left to
+            /// give, goes Exhausted, and the village sites the next one somewhere else.
+            /// A depth of 6 across a 11x11 quarry is a few hundred stone, which is
+            /// several buildings' worth.
+            /// </summary>
+            [JsonProperty] public int QuarryDepthBlocks = 6;
+
+            /// <summary>
+            /// How deep a mine may go, by village tier.
+            ///
+            /// Depth is the whole point of a mine. Vintage Story puts copper and tin near
+            /// the surface and iron a long way down, so what a village can reach is what
+            /// it can build with, and a hamlet that could sink a shaft to bedrock on its
+            /// first day would have nothing left to grow into.
+            /// </summary>
+            [JsonProperty] public int[] MineDepthByVillageTier = { 12, 20, 32, 48, 64, 80 };
+
+            /// <summary>
+            /// How far a mine may drift sideways from its plot, in blocks.
+            ///
+            /// A mine head is a small plot because the mouth of a shaft is small. What is
+            /// underneath it is not: a drift follows the rock wherever it goes, and a
+            /// miner restricted to a 5x5 column would spend a week hitting nothing but
+            /// granite.
+            /// </summary>
+            [JsonProperty] public int MineDriftBlocks = 10;
+
+            /// <summary>
+            /// The lowest a mine will ever cut, whatever the tier says.
+            ///
+            /// Below this is lava, and a miner who breaks into a lava chamber floods the
+            /// shaft and kills everyone in it. Kept well clear of it on purpose.
+            /// </summary>
+            [JsonProperty] public int MineFloorY = 24;
+
+            /// <summary>
+            /// Refuse to break any block touching water or lava.
+            ///
+            /// Worth leaving on. The alternative is a village that drowns its own mine
+            /// and then keeps sending people down it.
+            /// </summary>
+            [JsonProperty] public bool MineAvoidsLiquid = true;
         }
 
         public class BuildConfig

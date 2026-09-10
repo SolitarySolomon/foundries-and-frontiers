@@ -7,7 +7,7 @@ using Vintagestory.GameContent;
 namespace FoundriesFrontiers
 {
     /// <summary>
-    /// Picks whatever the claim will give: berries, mushrooms, reeds, fallen sticks.
+    /// Picks whatever the claim will give: berries, mushrooms, reeds, loose stone.
     ///
     /// This is the job that stops a badly sited village being dead on arrival. Everything
     /// else in the mod needs something the ground has to already have. A settlement
@@ -60,12 +60,31 @@ namespace FoundriesFrontiers
             // is not a judgement made here: the resource table already knows which
             // mushrooms a village will eat, so asking it keeps the forager away from the
             // deathcaps without a second list to maintain.
-            bool candidate = path.StartsWith("mushroom-")
+            // Stone lying loose on the ground. This is where a village's first stone
+            // comes from, and until the quarry and the mine exist it is where nearly all
+            // of it comes from. Boulders and rubble give five to seven each, which is
+            // enough to keep the cairn standing and put a few stone tools on the rack.
+            //
+            // Only what is loose. A forager must never take a bite out of the bedrock:
+            // that is the quarrier's job, on ground the village has actually claimed.
+            bool loose = path.StartsWith("loosestones")
+                      || path.StartsWith("looseboulders")
+                      || path.StartsWith("looserubble")
+                      || path.StartsWith("looseores");
+
+            bool candidate = loose
+                          || path.StartsWith("mushroom-")
                           || path.StartsWith("tallgrass")
                           || path.StartsWith("smallberrybush")
                           || ((block is BlockPlant || block is BlockSeaweed)
-                              && (path.Contains("flax") || path.Contains("reed") || path.Contains("cattail")));
+                              && (path.Contains("flax") || path.Contains("reed")
+                                  || path.Contains("cattail") || path.Contains("papyrus")
+                                  || path.Contains("tule") || path.Contains("sedge")));
 
+            // Everything still has to pass the storehouse. Loose ore is on the list above
+            // because it lies about in the same places as loose stone, and whether a
+            // nugget is worth bending down for is a question the resource table answers
+            // rather than one settled here.
             return candidate && WorthTaking(block, pos);
         }
 

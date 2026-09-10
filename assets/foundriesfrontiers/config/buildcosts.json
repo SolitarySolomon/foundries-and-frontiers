@@ -13,10 +13,6 @@
   // than another line here.
 
   "byCode": {
-    // Placed as a block by hand rather than crafted, so no grid recipe exists. The
-    // number is what the game's own recipe for the loose material costs.
-    "thatch":   { "pool": "earth", "value": 1 },
-
     // Worked at a station rather than crafted in a grid: knapping, clay forming, or
     // building in place. Priced at roughly what the station consumes.
     "anvil":    { "pool": "metal", "value": 20 },
