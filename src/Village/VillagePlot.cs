@@ -121,6 +121,20 @@ namespace FoundriesFrontiers
         [JsonProperty] public string SeamOre;
 
         /// <summary>
+        /// How much of a quarry's own pit turned out to be soil and gravel rather than
+        /// rock, as a share. Negative means nobody has looked yet.
+        ///
+        /// The same idea as the mine's seam and for the same reason: what a working gives
+        /// should come from what is actually in it. A quarry cut into a bare rock face is
+        /// nearly all stone; one cut through a metre of topsoil gives earth alongside it,
+        /// which is worth having, because earth is what cob is made of.
+        /// </summary>
+        [JsonProperty] public float EarthShare = -1f;
+
+        /// <summary>The block code of whatever the overburden mostly is, if any.</summary>
+        [JsonProperty] public string OverburdenBlock;
+
+        /// <summary>
         /// The village tier the survey was done at. A village that has learned to dig
         /// deeper gets to look again, and may find better ground under the same plot.
         /// </summary>
@@ -192,7 +206,8 @@ namespace FoundriesFrontiers
              + " " + Width + "x" + Length + " at " + Centre
              + ", t" + Tier + ", " + State.ToString().ToLowerInvariant()
              + ", " + WorkerIds.Count + "/" + WorkerCap + " working"
-             + (SeamRichness >= 0 ? ", " + SeamGrade + " seam" : "");
+             + (SeamRichness >= 0 ? ", " + SeamGrade + " seam" : "")
+             + (EarthShare >= 0 ? ", " + (EarthShare * 100f).ToString("0") + "% earth" : "");
 
         /// <summary>The survey in one word, which is what anybody actually wants to know.</summary>
         [JsonIgnore] public string SeamGrade

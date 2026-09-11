@@ -517,6 +517,16 @@ Rules that apply to every step, because retrofitting any of them is painful.
       Thatch's hand written entry in `buildcosts.json` came out at the same time: with the
       table pricing it, the fallback list is down to eight numbers.
 
+      The quarry also learned what it is cut through. Once the pit is open the quarrier
+      surveys the plot's own undisturbed ground over the pit's depth and writes down how
+      much of it was soil and gravel rather than rock, and the face then gives earth at
+      that share. A quarry in a bare rock face is nearly all stone; one cut through a
+      metre of topsoil gives earth alongside it, which is worth having because earth is
+      what cob is made of. Same principle as the seam: the working gives what is in it.
+      *The trap, for the record:* the first version sampled the cut columns, which are air
+      down to the floor and undisturbed bed below that. That measures what the pit is
+      standing on rather than what came off it, and called every quarry pure rock.
+
       Also fixed here, found in the same review: **plot siting was reading the wrong layer.**
       `GetTerrainMapheightAt` returns the topmost solid block, not the first air block
       above it, and the scoring read one block lower still. It was asking whether the block
@@ -536,6 +546,24 @@ Nothing in Phase D can place a building until this exists.
       write as shape JSON by hand and have it look like anything. It is a schematic, so
       it waits for this phase and goes on the list of things to ask builders for.
       Until then the single-block monument stands in.
+
+- [x] **C3.5 · Facing, and the question of roads.**
+      Every building was placed unrotated, so a village was a street of houses all staring
+      north whatever they stood next to. A build site now carries a rotation and the
+      schematic is turned to match, so a house north of the square looks south at it and
+      one to the east looks west. The turn goes through the game's own transform, which
+      rewrites the door and every other orientable block's variant rather than only moving
+      it, so a rotated house has its door in the right wall pointing the right way.
+      Schematics are still authored facing north. That has not changed and should not: one
+      convention, one export, four placements.
+      **Roads are deliberately not schematics.** A road is a path of one block type of
+      arbitrary length that has to meet whatever is at both ends, and a fixed-size
+      schematic is the wrong shape for that: a village would need a straight, a corner, a
+      tee, a crossroads and a slope of each, they would never line up with terrain, and
+      every junction would be a special case. A road is a route, so it wants a route
+      finder, not a file. That is Phase D work, and it is what turns this rule from
+      "face the square" into "face the street", which is a one line change in `FacingFrom`
+      once there is a street to face.
 
 - [ ] **C1 · Placeholder schematics:** *Hand-built in game.* Around eight crude
       structures (hovel, log house, farmhouse, storehouse, shed, forge, well, wall segment)

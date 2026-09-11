@@ -64,6 +64,18 @@ namespace FoundriesFrontiers
         /// </summary>
         [JsonProperty] public int LayoutCount;
 
+        /// <summary>
+        /// Which way this building faces, in degrees clockwise from the schematic's own
+        /// orientation: 0, 90, 180 or 270.
+        ///
+        /// Schematics are all built and exported facing north, and for a long time that
+        /// was also how they were placed, which gave every village a street of houses all
+        /// staring the same way regardless of what they stood next to. The rotation is
+        /// chosen when the site is sited, from where the building sits relative to the
+        /// square, and stored here so a half built house does not turn round on reload.
+        /// </summary>
+        [JsonProperty] public int Rotation;
+
         /// <summary>Whether the materials have been taken out of the ledger yet.</summary>
         [JsonProperty] public bool Paid;
 
@@ -88,8 +100,29 @@ namespace FoundriesFrontiers
 
         public override string ToString()
             => "#" + Id + " " + PlanCode + " at " + Origin
+             + ", facing " + Facing
              + ", " + State.ToString().ToLowerInvariant()
              + ", " + Placed + "/" + Total
              + (Holdup == "" ? "" : " (" + Holdup + ")");
+
+        /// <summary>
+        /// Which way the front of this building points, in words.
+        ///
+        /// Schematics are exported facing north, so an unrotated one faces north and each
+        /// quarter turn clockwise carries the front round with it.
+        /// </summary>
+        [JsonIgnore] public string Facing
+        {
+            get
+            {
+                switch (((Rotation / 90 % 4) + 4) % 4)
+                {
+                    case 1: return "east";
+                    case 2: return "south";
+                    case 3: return "west";
+                    default: return "north";
+                }
+            }
+        }
     }
 }

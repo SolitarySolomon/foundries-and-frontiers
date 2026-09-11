@@ -248,6 +248,15 @@ namespace FoundriesFrontiers
             // Standing at the face of a finished working. This is the produce step.
             if (face != null && faceReady && pos.Equals(face))
             {
+                // The tool gate again, and it has to be here as well as on the cut.
+                //
+                // A pit through deep topsoil can be dug by hand all the way to the rock,
+                // so a worker with nothing good enough for the rock can reach an open face
+                // legitimately. Without this they stand in a finished pit taking stone out
+                // of the bed with their fingers, which is free stone and makes the tool
+                // rack decoration.
+                if (!ToolIsGoodEnough(FaceMaterial(face), face)) return false;
+
                 ItemStack got = YieldAtFace(village, Plot);
                 if (got == null) return false;
 
@@ -375,6 +384,30 @@ namespace FoundriesFrontiers
                 || path.StartsWith("polishedrock") || path.StartsWith("drystone")) return false;
 
             return ToolIsGoodEnough(block, pos);
+        }
+
+        /// <summary>
+        /// What the face is cut into: the bed under the worker's feet, or failing that
+        /// the wall beside them. This is the block a working is actually taking material
+        /// out of, so it is the block whose mining tier decides whether they may.
+        /// </summary>
+        protected Block FaceMaterial(BlockPos face)
+        {
+            if (face == null) return null;
+
+            IBlockAccessor ba = entity.World.BlockAccessor;
+
+            Block below = ba.GetBlock(face.DownCopy());
+            if (below != null && below.Id != 0 && !below.IsLiquid()) return below;
+
+            for (int i = 0; i < BlockFacing.HORIZONTALS.Length; i++)
+            {
+                Vec3i n = BlockFacing.HORIZONTALS[i].Normali;
+                Block side = ba.GetBlock(new BlockPos(face.X + n.X, face.Y, face.Z + n.Z, 0));
+                if (side != null && side.Id != 0 && !side.IsLiquid()) return side;
+            }
+
+            return null;
         }
 
         /// <summary>

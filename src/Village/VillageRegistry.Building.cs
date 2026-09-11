@@ -62,13 +62,27 @@ namespace FoundriesFrontiers
             error = null;
             if (village == null || plan == null) { error = "Nothing to build."; return null; }
 
-            BlockPos where = FindBuildSite(village, plan);
+            BlockPos where = FindBuildSite(village, plan, out int rotation);
             if (where == null)
             {
                 error = "Found nowhere in the claim flat and clear enough for a "
                       + plan.Name + " (" + plan.SizeX + "x" + plan.SizeZ + ").";
                 return null;
             }
+
+            // Record the facing the building will actually have. Turning a schematic can
+            // fail, and when it does it is placed facing north, so storing the angle that
+            // was wanted would have every command telling a player a door is in a wall it
+            // is not in.
+            if (!plan.CanFace(sapi.World, rotation))
+            {
+                sapi.Logger.Notification(
+                    "[F&F] {0} could not be turned to face {1} degrees and will face north.",
+                    plan.Name, rotation);
+                rotation = 0;
+            }
+
+            var layout = plan.LayoutFor(sapi.World, rotation);
 
             var site = new VillageBuildSite
             {
@@ -78,8 +92,9 @@ namespace FoundriesFrontiers
                 X = where.X,
                 Y = where.Y,
                 Z = where.Z,
-                Total = Math.Max(1, plan.Layout.Count),
-                LayoutCount = plan.Layout.Count,
+                Rotation = rotation,
+                Total = Math.Max(1, layout.Count),
+                LayoutCount = layout.Count,
                 StartedTotalDays = sapi.World.Calendar.TotalDays,
                 Holdup = "waiting on materials"
             };
@@ -254,30 +269,33 @@ namespace FoundriesFrontiers
                 return 0;
             }
 
+
             // The layout is rebuilt from the world's block registry every startup, so its
             // length can change under a saved site: install a mod, or re-export the
             // schematic, and the cursor now points somewhere else entirely. Left alone
             // that silently marks a third built house finished. Starting over is cheap,
             // because placing a block that is already there costs nothing.
-            if (site.LayoutCount != plan.Layout.Count)
+            var layout = plan.LayoutFor(sapi.World, site.Rotation);
+
+            if (site.LayoutCount != layout.Count)
             {
                 sapi.Logger.Notification(
                     "[F&F] {0} at {1} was built against a {2} block layout and this world has {3}. "
                     + "Starting it again from the beginning.",
-                    plan.Name, site.Origin, site.LayoutCount, plan.Layout.Count);
+                    plan.Name, site.Origin, site.LayoutCount, layout.Count);
 
                 site.Placed = 0;
-                site.LayoutCount = plan.Layout.Count;
-                site.Total = Math.Max(1, plan.Layout.Count);
+                site.LayoutCount = layout.Count;
+                site.Total = Math.Max(1, layout.Count);
             }
 
             IBlockAccessor ba = sapi.World.BlockAccessor;
             BlockPos origin = site.Origin;
             int placed = 0;
 
-            while (site.Placed < plan.Layout.Count && placed < blocks)
+            while (site.Placed < layout.Count && placed < blocks)
             {
-                (BlockPos offset, Block block) = plan.Layout[site.Placed++];
+                (BlockPos offset, Block block) = layout[site.Placed++];
                 if (block == null || block.Id == 0) continue;
 
                 var at = new BlockPos(origin.X + offset.X, origin.Y + offset.Y, origin.Z + offset.Z, 0);
@@ -290,7 +308,7 @@ namespace FoundriesFrontiers
                 placed++;
             }
 
-            if (site.Placed >= plan.Layout.Count)
+            if (site.Placed >= layout.Count)
             {
                 Finish(village, site, plan);
             }
@@ -309,10 +327,12 @@ namespace FoundriesFrontiers
             // time, so a finished building gets its furniture when it is finished.
             try
             {
-                plan.Schematic.PlaceDecors(sapi.World.BlockAccessor, site.Origin);
-                plan.Schematic.PlaceEntitiesAndBlockEntities(
+                BlockSchematic turned = plan.SchematicFor(sapi.World, site.Rotation);
+
+                turned.PlaceDecors(sapi.World.BlockAccessor, site.Origin);
+                turned.PlaceEntitiesAndBlockEntities(
                     sapi.World.BlockAccessor, sapi.World, site.Origin,
-                    plan.Schematic.BlockCodes, plan.Schematic.ItemCodes,
+                    turned.BlockCodes, turned.ItemCodes,
                     false, null, 0, null, true);
             }
             catch (Exception e)
@@ -371,13 +391,17 @@ namespace FoundriesFrontiers
         /// a field can be a bit lumpy and a house cannot. It also stays off the plots, so
         /// a village does not put a cottage in the middle of its own wheat.
         /// </summary>
-        private BlockPos FindBuildSite(Village village, BuildingPlan plan)
+        private BlockPos FindBuildSite(Village village, BuildingPlan plan, out int rotation)
         {
             var cfg = FFConfig.Current.Build;
-            int w = Math.Max(1, plan.SizeX);
-            int d = Math.Max(1, plan.SizeZ);
+            rotation = 0;
 
-            int reach = village.ClaimRadius - FFConfig.Current.Plots.ClaimEdgeMarginBlocks - Math.Max(w, d);
+            int span = Math.Max(
+                Math.Max(plan.SizeXFor(sapi.World, 0), plan.SizeZFor(sapi.World, 0)),
+                Math.Max(plan.SizeXFor(sapi.World, 90), plan.SizeZFor(sapi.World, 90)));
+            span = Math.Max(1, span);
+
+            int reach = village.ClaimRadius - FFConfig.Current.Plots.ClaimEdgeMarginBlocks - span;
             if (reach < 2) return null;
 
             BlockPos best = null;
@@ -387,6 +411,24 @@ namespace FoundriesFrontiers
             {
                 int x = village.CentreX + sapi.World.Rand.Next(-reach, reach + 1);
                 int z = village.CentreZ + sapi.World.Rand.Next(-reach, reach + 1);
+
+                // Which way it faces depends on where it is, so it has to be settled
+                // before the footprint is known: turning a building a quarter turn swaps
+                // its width and its depth, and checking the overlap against the wrong one
+                // is how two houses end up sharing a wall.
+                // Twice, because the two answers depend on each other: which way it
+                // faces comes from where its middle is, and where its middle is depends
+                // on which way it faces, since a quarter turn swaps width and depth. The
+                // first pass gets a footprint to find the middle with, the second gets
+                // the facing that middle deserves. Anchoring on the corner instead put
+                // the door a quarter turn wrong for anything sited near a centre line.
+                int turn = FacingFrom(village, x, z);
+                int w = Math.Max(1, plan.SizeXFor(sapi.World, turn));
+                int d = Math.Max(1, plan.SizeZFor(sapi.World, turn));
+
+                turn = FacingFrom(village, x + w / 2, z + d / 2);
+                w = Math.Max(1, plan.SizeXFor(sapi.World, turn));
+                d = Math.Max(1, plan.SizeZFor(sapi.World, turn));
 
                 if (Overlapping(village, x, z, x + w - 1, z + d - 1) != null) continue;
                 if (OverlapsASite(village, x, z, w, d)) continue;
@@ -426,10 +468,36 @@ namespace FoundriesFrontiers
                 {
                     bestScore = score;
                     best = new BlockPos(x, minY, z, 0);
+                    rotation = turn;
                 }
             }
 
             return best;
+        }
+
+        /// <summary>
+        /// Which way a building at (x, z) should face.
+        ///
+        /// Toward the square. Schematics are all exported facing north, meaning the front
+        /// looks down negative Z, and turning one clockwise moves that front round: 90
+        /// faces east, 180 south, 270 west. So a house north of the centre is turned to
+        /// look south at it, and a village reads as a place gathered round something
+        /// rather than a row of huts all staring the same way.
+        ///
+        /// The dominant axis wins, because a door has to face one way and a building
+        /// that is mostly north and slightly east of the square is a building to the
+        /// north. When roads exist this is the line that changes: the thing worth facing
+        /// is whatever you step out onto, and until there are roads that is the square.
+        /// </summary>
+        private static int FacingFrom(Village village, int x, int z)
+        {
+            int dx = village.CentreX - x;
+            int dz = village.CentreZ - z;
+
+            if (dx == 0 && dz == 0) return 0;
+
+            if (Math.Abs(dz) >= Math.Abs(dx)) return dz < 0 ? 0 : 180;
+            return dx > 0 ? 90 : 270;
         }
 
         private static IEnumerable<(int, int)> Corners(int x, int z, int w, int d)
@@ -448,8 +516,8 @@ namespace FoundriesFrontiers
                 if (s.State == EnumBuildState.Abandoned) continue;
 
                 BuildingPlan other = Buildings?.Get(s.PlanCode);
-                int ow = Math.Max(1, other?.SizeX ?? 1);
-                int od = Math.Max(1, other?.SizeZ ?? 1);
+                int ow = Math.Max(1, other == null ? 1 : other.SizeXFor(sapi.World, s.Rotation));
+                int od = Math.Max(1, other == null ? 1 : other.SizeZFor(sapi.World, s.Rotation));
 
                 int margin = FFConfig.Current.Build.SeparationBlocks;
                 bool clear = x + w - 1 + margin < s.X

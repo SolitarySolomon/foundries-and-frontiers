@@ -133,6 +133,151 @@ namespace FoundriesFrontiers
         public int SizeY => Schematic?.SizeY ?? 0;
         public int SizeZ => Schematic?.SizeZ ?? 0;
 
+        // --- facing ------------------------------------------------------------------
+
+        /// <summary>
+        /// The same building, turned. Index 0 to 3 for 0, 90, 180 and 270 degrees.
+        ///
+        /// Built the first time somebody asks for that angle and kept, because rotating a
+        /// schematic unpacks and repacks every block in it and a village will place the
+        /// same four houses over and over.
+        ///
+        /// Slot 0 is the original and is never a copy. The other three are clones, so
+        /// nothing here can corrupt the file that was loaded off disk.
+        /// </summary>
+        private readonly BlockSchematic[] turned = new BlockSchematic[4];
+
+        private readonly List<(BlockPos Offset, Block Block)>[] turnedLayouts
+            = new List<(BlockPos, Block)>[4];
+
+        private readonly int[] turnedSizeX = new int[4];
+        private readonly int[] turnedSizeZ = new int[4];
+
+        /// <summary>
+        /// Degrees to slot. Truncates, so only right angles should ever be passed, which
+        /// is all a build site ever stores.
+        /// </summary>
+        public static int Slot(int angle)
+            => ((angle / 90 % 4) + 4) % 4;
+
+        /// <summary>
+        /// Whether this building really can be turned to that angle.
+        ///
+        /// False when the rotation was attempted and failed, in which case the building
+        /// is placed facing north and anything that tells a player which way it faces has
+        /// to say north. Reporting the angle that was wanted rather than the one that
+        /// happened is how a village ends up with a house whose door is in a different
+        /// wall from the one the command claims.
+        /// </summary>
+        public bool CanFace(IWorldAccessor world, int angle)
+        {
+            int slot = Slot(angle);
+            if (slot == 0) return true;
+
+            Build(world, slot);
+            return turned[slot] != null;
+        }
+
+        public BlockSchematic SchematicFor(IWorldAccessor world, int angle)
+        {
+            Build(world, Slot(angle));
+            return turned[Slot(angle)] ?? Schematic;
+        }
+
+        public List<(BlockPos Offset, Block Block)> LayoutFor(IWorldAccessor world, int angle)
+        {
+            int slot = Slot(angle);
+            Build(world, slot);
+            return turnedLayouts[slot] ?? Layout;
+        }
+
+        public int SizeXFor(IWorldAccessor world, int angle)
+        {
+            int slot = Slot(angle);
+            Build(world, slot);
+            return turnedSizeX[slot] > 0 ? turnedSizeX[slot] : SizeX;
+        }
+
+        public int SizeZFor(IWorldAccessor world, int angle)
+        {
+            int slot = Slot(angle);
+            Build(world, slot);
+            return turnedSizeZ[slot] > 0 ? turnedSizeZ[slot] : SizeZ;
+        }
+
+        private void Build(IWorldAccessor world, int slot)
+        {
+            if (slot == 0 || turnedLayouts[slot] != null || Schematic == null || world == null) return;
+
+            BlockSchematic copy;
+            try
+            {
+                copy = Schematic.ClonePacked();
+                copy.Init(world.BlockAccessor);
+                copy.TransformWhilePacked(world, EnumOrigin.MiddleCenter, slot * 90);
+            }
+            catch (Exception e)
+            {
+                world.Logger.Warning(
+                    "[F&F] Could not turn {0} by {1} degrees: {2}. It will be built facing north.",
+                    Code, slot * 90, e.Message);
+                turnedLayouts[slot] = Layout;
+                turnedSizeX[slot] = SizeX;
+                turnedSizeZ[slot] = SizeZ;
+                return;
+            }
+
+            var built = new List<(BlockPos, Block)>();
+            List<int> ids = copy.BlockIds;
+
+            // Offsets are already relative to the turned schematic's own corner: the
+            // transform ends by repacking against the minimum over every block it holds.
+            //
+            // Do NOT shift them again here. The obvious looking "pull the corner back to
+            // zero" pass is a bug, because the minimum this loop can see is over the
+            // FILTERED blocks, with air, meta markers and filler dropped. A schematic
+            // with a filler course under it would have its walls moved down a block while
+            // the fittings, which come off the same schematic untouched at Finish time,
+            // stayed where they were. Every chest and bed in the house would then miss
+            // its block and quietly place nothing.
+            BlockPos[] offsets = copy.GetJustPositions(new BlockPos(0, 0, 0, 0));
+            var codes = copy.BlockCodes;
+
+            int n = Math.Min(ids?.Count ?? 0, offsets?.Length ?? 0);
+
+            for (int i = 0; i < n; i++)
+            {
+                int key = ids[i];
+                if (key == 0) continue;
+                if (codes == null || !codes.TryGetValue(key, out AssetLocation code) || code == null) continue;
+
+                Block block = world.GetBlock(code);
+                if (block == null || block.Id == 0) continue;
+                if (code.Path.StartsWith("meta-")) continue;
+                if (copy.IsFillerOrPath(block)) continue;
+
+                built.Add((offsets[i], block));
+            }
+
+            if (built.Count == 0)
+            {
+                turnedLayouts[slot] = Layout;
+                turnedSizeX[slot] = SizeX;
+                turnedSizeZ[slot] = SizeZ;
+                return;
+            }
+
+            turned[slot] = copy;
+            turnedLayouts[slot] = built;
+
+            // The schematic's own extent, the same measure slot 0 reports. Measuring the
+            // filtered blocks instead would give a tighter box for a turned building than
+            // for an unturned one, and two neighbours sited at different angles would be
+            // checked for overlap against boxes of different kinds.
+            turnedSizeX[slot] = copy.SizeX;
+            turnedSizeZ[slot] = copy.SizeZ;
+        }
+
         public string Name => string.IsNullOrEmpty(Manifest?.Name) ? Code : Manifest.Name;
 
         /// <summary>Whether a culture of this name builds it.</summary>
