@@ -363,8 +363,13 @@ namespace FoundriesFrontiers
                     if (y > maxY) maxY = y;
                     counted++;
 
-                    Block ground = ba.GetBlock(new BlockPos(x, y - 1, z, 0));
-                    Block above = ba.GetBlock(new BlockPos(x, y, z, 0));
+                    // y is the topmost SOLID block, not the first air block above it, so
+                    // the ground is at y and whatever stands on it is at y+1. Reading
+                    // y-1 and y was off by one the whole time: it asked whether the block
+                    // under the soil was soil, and looked for a tree trunk in the dirt.
+                    // Woodlots and pastures were being scored on the wrong layer.
+                    Block ground = ba.GetBlock(new BlockPos(x, y, z, 0));
+                    Block above = ba.GetBlock(new BlockPos(x, y + 1, z, 0));
 
                     if (ground?.IsLiquid() == true || above?.IsLiquid() == true) wet++;
                     if (WantsThisGround(kind, ground, above)) wanted++;

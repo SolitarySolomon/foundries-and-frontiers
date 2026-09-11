@@ -306,10 +306,10 @@ namespace FoundriesFrontiers
             /// them: woodlot, field, pasture, quarry, clay pit, mine head, terrace.
             /// A half size of 6 makes a 13x13 plot.
             /// </summary>
-            /// The mine head is 3 rather than 2 on purpose: the shaft is a spiral stair
-            /// cut inside the plot, and a half size of 2 leaves a 3x3 ring, which is the
-            /// tightest turn a villager can physically walk. 3 gives a 5x5 ring, sixteen
-            /// steps to the turn, and room to stand.
+            /// The mine head is 3 rather than 2 because the mouth is a stepped pit and
+            /// a pit needs one ring of plot per block of depth to terrace back up to
+            /// ground level. A half size of 3 is a 7x7 plot, which is exactly enough room
+            /// for the default mouth depth of 4.
             [JsonProperty] public int[] HalfSizeByKind = { 8, 6, 7, 5, 4, 3, 6 };
 
             /// <summary>How many people each kind of plot has room for.</summary>
@@ -412,51 +412,62 @@ namespace FoundriesFrontiers
             [JsonProperty] public float BetweenBlocksSec = 0.6f;
 
             /// <summary>
-            /// How far below its sited ground level a quarry may be cut, in blocks.
+            /// How deep the middle of a quarry pit is cut, in blocks.
             ///
-            /// A quarry is a pit, not a hole to the centre of the earth. This is what
-            /// makes one finite: when the floor is reached the plot has nothing left to
-            /// give, goes Exhausted, and the village sites the next one somewhere else.
-            /// A depth of 6 across a 11x11 quarry is a few hundred stone, which is
-            /// several buildings' worth.
+            /// This is the only ground a quarry ever disturbs. The pit is stepped, one
+            /// block shallower per ring outward, so a depth of 3 is a tidy 5x5 pit that
+            /// terraces up to ground level and can be walked in and out of. A depth of N
+            /// needs N rings of plot to step back up in, and a plot too narrow for the
+            /// depth asked for quietly gets a shallower pit rather than a sheer wall.
+            /// After it is
+            /// cut the quarrier works the face and digs no further: a quarry is a place a
+            /// village goes for stone, not a hole that keeps growing.
             /// </summary>
-            [JsonProperty] public int QuarryDepthBlocks = 6;
+            [JsonProperty] public int QuarryDepthBlocks = 3;
+
+            /// <summary>How much stone one turn at a quarry face gives, as a multiplier on the rock's own drop.</summary>
+            [JsonProperty] public int QuarryStonePerTurn = 2;
 
             /// <summary>
-            /// How deep a mine may go, by village tier.
+            /// How deep a mine mouth is cut. Same stepped shape as a quarry, smaller.
             ///
-            /// Depth is the whole point of a mine. Vintage Story puts copper and tin near
-            /// the surface and iron a long way down, so what a village can reach is what
-            /// it can build with, and a hamlet that could sink a shaft to bedrock on its
-            /// first day would have nothing left to grow into.
+            /// Everything below it is surveyed rather than dug, so this number is about
+            /// what a mine looks like from the surface and nothing else.
+            /// </summary>
+            [JsonProperty] public int MineMouthDepth = 4;
+
+            /// <summary>
+            /// How far down a village can survey, by tier.
+            ///
+            /// Depth is what a mine is worth. Vintage Story puts copper and tin near the
+            /// surface and iron a long way below, so how far a village can see is what it
+            /// can hope to find, and a hamlet that could survey to bedrock on its founding
+            /// day would have nothing left to grow into. Tiering up is a reason to look at
+            /// the same ground again.
             /// </summary>
             [JsonProperty] public int[] MineDepthByVillageTier = { 12, 20, 32, 48, 64, 80 };
 
-            /// <summary>
-            /// How far a mine may drift sideways from its plot, in blocks.
-            ///
-            /// A mine head is a small plot because the mouth of a shaft is small. What is
-            /// underneath it is not: a drift follows the rock wherever it goes, and a
-            /// miner restricted to a 5x5 column would spend a week hitting nothing but
-            /// granite.
-            /// </summary>
-            [JsonProperty] public int MineDriftBlocks = 10;
+            /// <summary>The deepest a survey ever reads, whatever the tier says.</summary>
+            [JsonProperty] public int MineFloorY = 16;
 
             /// <summary>
-            /// The lowest a mine will ever cut, whatever the tier says.
+            /// How hard the survey's raw finding is scaled into an ore chance.
             ///
-            /// Below this is lava, and a miner who breaks into a lava chamber floods the
-            /// shaft and kills everyone in it. Kept well clear of it on purpose.
+            /// Ore is sparse in real ground: one block in a hundred is a good seam by the
+            /// game's standards, and a mine that produced ore one shift in a hundred would
+            /// not be worth staffing. This turns the true share into a working rate while
+            /// keeping rich ground and poor ground properly different from each other.
             /// </summary>
-            [JsonProperty] public int MineFloorY = 24;
+            [JsonProperty] public float SeamRichnessScale = 20f;
 
             /// <summary>
-            /// Refuse to break any block touching water or lava.
+            /// The most ore any seam will ever give, as a share of shifts.
             ///
-            /// Worth leaving on. The alternative is a village that drowns its own mine
-            /// and then keeps sending people down it.
+            /// A ceiling rather than a target. Without it a village that happens to sit on
+            /// an enormous deposit turns into a metal tap, and every other trade stops
+            /// mattering.
             /// </summary>
-            [JsonProperty] public bool MineAvoidsLiquid = true;
+            [JsonProperty] public float MineOreChanceCap = 0.35f;
         }
 
         public class BuildConfig

@@ -1055,6 +1055,21 @@ namespace FoundriesFrontiers
             {
                 sb.Append("  ").Append(p);
                 if (p.LifetimeYield > 0) sb.Append(", ").Append(p.LifetimeYield.ToString("0")).Append(" worked");
+
+                // What the survey actually buys the village, spelled out. The grade is a
+                // word and this is the number behind it.
+                if (p.Kind == EnumPlotKind.MineHead && p.SeamRichness >= 0)
+                {
+                    var w = FFConfig.Current.Work;
+                    float chance = p.SeamRichness <= 0
+                        ? 0f
+                        : Math.Min(w.MineOreChanceCap, p.SeamRichness * w.SeamRichnessScale);
+
+                    sb.Append(", ").Append((chance * 100f).ToString("0")).Append("% ore");
+                    if (p.SeamOre != null) sb.Append(" (").Append(p.SeamOre.Replace("game:", "")).Append(")");
+                    sb.Append(", surveyed at tier ").Append(p.SeamTier);
+                }
+
                 sb.AppendLine();
             }
             return TextCommandResult.Success(sb.ToString().TrimEnd());

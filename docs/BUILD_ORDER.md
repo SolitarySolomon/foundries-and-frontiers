@@ -447,46 +447,61 @@ Rules that apply to every step, because retrofitting any of them is painful.
       stone arrived only as gravel a digger happened to cut through on the way to
       something else. The cairn went unrepaired, stone tools could not be made and every
       stone building was out of reach, in a village that looked like it was working.
-      **The quarry is the plain answer:** exposed rock, a pickaxe, a pit. It differs from
-      the digger in the one way that matters. A digger cuts *down to* a floor and stops,
-      because the point is a level building site; a quarry cuts *below* its floor to a
-      fixed depth, because the point is the material. At the floor the plot is worked out
-      and goes Exhausted, which is what that state was put there for.
-      It finds its own working face rather than using the shared scan. The shared one
-      hangs its search window off `GetTerrainMapheightAt`, and that is a **world generation**
-      height map: breaking blocks never changes it. A job that moves the ground on purpose
-      cannot navigate by a map of where the hill used to be, and the symptom would have
-      been a quarry reporting itself empty with most of its stone still in it.
-      **The mine is where the ore comes from, and there is no dice roll in it.** Nothing in
-      the miner decides by chance whether a swing produces copper. What is in the ground is
-      what Vintage Story's own world generation put there: the miner finds real ore blocks,
-      tunnels to them and breaks them, and the ratio of ore to stone is whatever the rock
-      under that particular village actually is. Inventing ore would be the same trick as a
-      tool appearing in somebody's hand, which this mod has already refused once.
-      So the levers are **depth**, gated by village tier, and **drift reach**, how far a
-      miner will tunnel toward something spotted. `/ff stats` counts what actually came up,
-      which is the honest version of a percentage.
-      **The shaft is a drawn shape, not an emergent one.** A villager cannot walk down a
-      vertical hole or path through solid rock, so a mine that grows by picking whatever
-      block looks promising buries somebody within a minute. It is a square spiral around
-      the inside of the plot, one block down and one along per step. Drifts run off it at
-      square corners: two blocks touching only at an edge are not a corridor a 0.6 wide
-      villager can pass, and the pathfinder refuses the corner even with the blocks gone.
-      Everything is cut **three blocks tall**. Two is the obvious answer and it is wrong. A
-      villager is 1.85 high, so a two block passage descending one block per step always
-      leaves the next step's ceiling in the way of their head, and the pathfinder cannot
-      see it because it tests the destination cell rather than the move. The route is
-      approved, cannot be walked, and the miner burns two minutes failing at it.
-      **Both jobs check the mining tier.** Breaking a block through the block accessor walks
-      straight past the gate the game puts on rock and ore, so a bare handed quarrier would
-      cut granite for free and make the whole tool rack decoration. Both also wear the tool
-      down per swing, which is what makes the rack turn over at all.
-      *The bug this shipped with, caught in review before it left:* neither trade could
-      exist. A villager's trade comes from the end of its own entity code, and the entity
-      JSON only declared five trades, so `villager-male-miner` did not resolve and both
-      tasks refused on their first line forever. Every trade in `EnumTrade` now has a
-      variant. Worth remembering as a class of bug: **an AI task is dead if nothing can
-      carry the trade it asks for**, and it fails silently rather than loudly.
+
+      **Built twice, and the second version is the one that matters.** The first took the
+      literal route: the quarrier dug down until the plot was worked out, and the miner
+      sank a real spiral shaft, found real ore blocks and broke them. The argument was
+      that inventing ore would be the same dishonesty as a tool appearing in somebody's
+      hand. That argument was applied to the wrong thing. What it actually produced was a
+      village slowly eating the landscape and stripping the seams a player might want to
+      work themselves, in a world the two of them share.
+
+      **The rule that came out of it, and it is a general one: a village may shape its own
+      plot and nothing beyond it.** Ground outside a plot belongs to the player. Inside
+      one, abstraction is fine. Magic in a ledger is cheap; magic that deletes somebody
+      else's ore is not.
+
+      So both jobs now cut **one bounded stepped pit** inside their plot and then stop
+      digging. What the village gets after that comes off the face, and the face does not
+      run out. A quarry disfigures exactly its own plot, forever, which is what a quarry
+      is supposed to look like. The pit is deepest at the centre and one block shallower
+      per ring outward, which is both what a real quarry looks like and the only shape a
+      villager can walk in and out of. Depth is clamped to the plot's own width for the
+      same reason: a pit needs one ring of room per block of depth to terrace back up, and
+      a deeper one would leave a sheer wall nobody can climb.
+
+      **The mine surveys rather than digs.** The village reads the whole rock column under
+      its mine head, counts what is genuinely down there, and writes down how rich it is.
+      Every ore block it counted is still in the world afterwards. The roll that decides
+      whether a shift turns up ore is then made against **real ground**: a village on a
+      rich seam gets ore often, one on barren rock gets rubble, and the two differ because
+      the world under them differs. That is the part of the no-magic argument worth
+      keeping, and it survives intact.
+      The survey reaches as deep as the village has learned to dig, so tiering up is a
+      reason to look at the same ground again, and can turn a poor mine into a good one
+      without moving it. `/ff village plot list` prints the grade and the resulting
+      percentage.
+
+      **Both jobs require a pickaxe and wear it down.** Breaking blocks through the block
+      accessor walks past the mining tier gate the game puts on rock, so without it a bare
+      handed quarrier cut granite for free and the tool rack was decoration.
+
+      *Three bugs caught in review before any of this left, all worth remembering as
+      classes rather than incidents:*
+      **An AI task is dead if nothing can carry the trade it asks for.** A villager's trade
+      comes from the end of its own entity code, and the entity JSON declared five trades,
+      so `villager-male-miner` never resolved and both tasks refused on their first line
+      forever. It compiles, it registers, it never runs. Every trade in `EnumTrade` now has
+      a variant.
+      **"Nothing left I am willing to cut" is not "the pit is finished".** The face-ready
+      flag was set from an empty scan result, and a worker whose pickaxe is too crude for
+      the rock finds nothing it may cut, which looks identical. It stood on top of
+      untouched ground producing stone out of the rock beneath its feet, no block broken,
+      no tool worn. The flag now means the face is an actual hole a person is standing in.
+      **A job that never moves never pays for its work.** The base charges the working time
+      on arrival at a target and only a breath between blocks after each swing, which is
+      right for a job that walks to the next tree. A face is the same spot every time, so
+      the quarry was producing every 0.6 seconds instead of every 2.2.
 
 - [x] **B14 · What the ground gives, made complete.**
       Two gaps found by asking a plain question about stones and cattails.
@@ -501,6 +516,12 @@ Rules that apply to every step, because retrofitting any of them is painful.
       and rope fibre, thatch sits with dry grass in earth.
       Thatch's hand written entry in `buildcosts.json` came out at the same time: with the
       table pricing it, the fallback list is down to eight numbers.
+
+      Also fixed here, found in the same review: **plot siting was reading the wrong layer.**
+      `GetTerrainMapheightAt` returns the topmost solid block, not the first air block
+      above it, and the scoring read one block lower still. It was asking whether the block
+      under the soil was soil, and looking for tree trunks in the dirt. Woodlots and
+      pastures in particular were being scored on ground nobody could see.
 
 ---
 

@@ -6,195 +6,103 @@ using Vintagestory.API.MathTools;
 namespace FoundriesFrontiers
 {
     /// <summary>
-    /// Works a quarry: cuts rock at the surface and carries the stone home.
+    /// Works a quarry: cuts one stepped pit, then keeps cutting stone out of its face for
+    /// as long as the village wants stone.
     ///
-    /// Until this existed the stone pool had almost no inflow. A village could earn wood
+    /// Until this job existed the stone pool had almost no inflow. A village earned wood
     /// from a woodlot, food from a field and earth from a terrace, but stone arrived only
-    /// as gravel a digger happened to cut through, which meant the cairn went unrepaired,
-    /// stone tools could not be made, and every stone building was out of reach. The
-    /// quarry is the plainest possible fix: exposed rock, a pickaxe, and a pile of stone.
+    /// as gravel a digger happened to cut through on the way to something else, which
+    /// meant the cairn went unrepaired, stone tools could not be made and every stone
+    /// building was out of reach, in a village that looked like it was working.
     ///
-    /// It differs from the digger in the one way that matters. A digger cuts <em>down to</em>
-    /// a floor and stops, because the point is a level building site. A quarry cuts
-    /// <em>below</em> its floor, to a fixed depth, because the point is the material. When
-    /// the pit reaches that depth the plot has nothing left and goes quiet, which is what
-    /// the Exhausted state was put there for: a village that keeps siting quarries on
-    /// ground it has already emptied is a village with no memory.
+    /// **It does not eat the countryside.** The first version cut down and kept going
+    /// until the plot was worked out, which made a village a slow-moving hole. This one
+    /// cuts a single stepped pit inside the plot and then stops digging. What the village
+    /// gets after that comes off the face, and the face does not run out: a quarry is a
+    /// place a village goes for stone, not a resource counter that empties.
     ///
-    /// A quarrier needs a pickaxe, and this enforces it. Bare handed they will still
-    /// shift loose stone, gravel and the soil on top, because those come up by hand, but
-    /// solid rock will not give: the game gates it behind a mining tier and a village
-    /// that ignored that gate would be getting its stone for free.
+    /// So a quarry disfigures exactly its own plot and nothing else, forever, which is
+    /// what a quarry is supposed to look like.
+    ///
+    /// A pickaxe is required and gets worn down. Bare handed a quarrier will still shift
+    /// the soil and gravel on top, because that comes up by hand, but the rock will not
+    /// give: the game gates it behind a mining tier and a village that walked past that
+    /// gate would be getting its stone for free.
     /// </summary>
-    public class AiTaskVillagerQuarrier : AiTaskVillagerWork
+    public class AiTaskVillagerQuarrier : AiTaskVillagerWorkings
     {
         protected override EnumTrade Trade => EnumTrade.Quarrier;
 
         protected override EnumPlotKind PlotKind => EnumPlotKind.Quarry;
 
-        /// <summary>How far above the sited ground level a quarry still looks for rock.</summary>
-        protected override int VerticalSearch => 8;
+        protected override int WantedDepth => FFConfig.Current.Work.QuarryDepthBlocks;
 
         public AiTaskVillagerQuarrier(EntityAgent entity, JsonObject taskConfig, JsonObject aiConfig)
             : base(entity, taskConfig, aiConfig) { }
 
-        /// <summary>The lowest the pit may be cut. Below this the plot is worked out.</summary>
-        private int FloorY
-            => (Plot?.Y ?? 0) - System.Math.Max(1, FFConfig.Current.Work.QuarryDepthBlocks);
-
-        protected override bool IsTarget(Block block, BlockPos pos)
+        /// <summary>
+        /// A turn at the face gives whatever the rock behind it gives.
+        ///
+        /// Read off the block rather than named, so a granite quarry gives granite, a
+        /// chalk one gives chalk, and a rock type from another mod gives whatever that
+        /// mod says it gives. The block itself is not broken: the face stays a face.
+        /// </summary>
+        protected override ItemStack YieldAtFace(Village village, VillagePlot plot)
         {
-            // A plot sited without a real height reading has no floor, and "everything
-            // below you is stone" is not an instruction anyone wants carried out.
-            if (Plot == null || Plot.Y <= 1) return false;
-            if (pos.Y <= FloorY) return false;
+            BlockPos face = FacePos(plot);
+            if (face == null) return null;
 
+            // The wall of the pit, at the height a person swings at.
+            Block rock = FaceRock(face);
+            if (rock == null) return null;
+
+            ItemStack sample = SampleDropOf(rock, face);
+            if (sample == null) return null;
+
+            int per = System.Math.Max(1, FFConfig.Current.Work.QuarryStonePerTurn);
+            sample.StackSize = System.Math.Max(1, sample.StackSize) * per;
+            return sample;
+        }
+
+        /// <summary>
+        /// What the face is actually made of. The block under the worker's feet first,
+        /// since that is the pit floor and therefore the seam being worked, and the four
+        /// walls after it in case the floor turned out to be gravel.
+        /// </summary>
+        private Block FaceRock(BlockPos face)
+        {
+            IBlockAccessor ba = entity.World.BlockAccessor;
+
+            Block below = ba.GetBlock(face.DownCopy());
+            if (IsRock(below)) return below;
+
+            for (int i = 0; i < BlockFacing.HORIZONTALS.Length; i++)
+            {
+                Vec3i n = BlockFacing.HORIZONTALS[i].Normali;
+                Block side = ba.GetBlock(new BlockPos(face.X + n.X, face.Y + n.Y, face.Z + n.Z, 0));
+                if (IsRock(side)) return side;
+            }
+
+            // No rock in the pit at all. A quarry sited on a sandbank is a village's own
+            // mistake to notice, and it should give nothing rather than give soil.
+            return below != null && below.BlockMaterial == EnumBlockMaterial.Gravel ? below : null;
+        }
+
+        private static bool IsRock(Block block)
+        {
             if (block == null || block.Id == 0) return false;
-            if (block.IsLiquid()) return false;
+            if (block.BlockMaterial != EnumBlockMaterial.Stone) return false;
 
-            // Never touch anything with a block entity. That is how a quarry sited a
-            // little too close to a storehouse eats it.
-            if (block.EntityClass != null) return false;
-
-            string path = block.Code?.Path;
-            if (path == null) return false;
-
-            // Natural rock and what lies on top of it. Soil and gravel count because a
-            // quarry face is usually under an overburden, and refusing to move it would
-            // leave the quarrier standing on a metre of dirt insisting there is no stone
-            // here.
-            //
-            // Worked stone is deliberately absent. Cobblestone, stone brick and slabs are
-            // things somebody placed, and a quarry sited a little too close to a wall
-            // should not eat the wall.
-            bool worth = path.StartsWith("rock")
-                      || path.StartsWith("crackedrock")
-                      || path.StartsWith("ore-")
-                      || path.StartsWith("loose")
-                      || path.StartsWith("gravel")
-                      || path.StartsWith("sand")
-                      || path.StartsWith("soil")
-                      || path.StartsWith("forestfloor");
-
-            if (!worth) return false;
-
-            // The mining tier gate. Without it a quarrier with no pickaxe cuts granite,
-            // which is free stone and makes the whole tool rack pointless.
-            if (!ToolIsGoodEnough(block, pos)) return false;
-
-            // Ore in a quarry face is a windfall, not a reason to refuse the block, so
-            // this asks whether the village gets anything at all rather than whether it
-            // gets stone specifically.
-            return WorthTaking(block, pos);
-        }
-
-        protected override bool Work(BlockPos pos)
-        {
-            // Top down, always. A quarrier who takes the block under an overhang gets a
-            // column of gravel on their head and, worse, ends up standing in their own
-            // pit with the face above them out of reach.
-            BlockPos top = HighestTargetAbove(pos) ?? pos;
-
-            int before = entity.World.BlockAccessor.GetBlock(top)?.Id ?? 0;
-            BreakAndCarry(top);
-            int after = entity.World.BlockAccessor.GetBlock(top)?.Id ?? 0;
-
-            if (after != before) WearTool();
-
-            // Judged on whether the rock came away, not on whether anything reached the
-            // villager's hands. Clearing overburden is real work even though soil is not
-            // what the village came here for.
-            return after != before;
-        }
-
-        private BlockPos HighestTargetAbove(BlockPos pos)
-        {
-            IBlockAccessor ba = entity.World.BlockAccessor;
-            BlockPos best = pos;
-
-            for (int y = pos.Y + 1; y <= pos.Y + VerticalSearch; y++)
-            {
-                var at = new BlockPos(pos.X, y, pos.Z, 0);
-                Block block = ba.GetBlock(at);
-
-                // An air gap ends the column. Carrying on past one is how a quarrier
-                // standing at the bottom of a finished pit reaches up through six blocks
-                // of nothing and takes a block off the rim, out of arm's reach, with the
-                // drops arriving in their hands anyway.
-                if (block == null || block.Id == 0) break;
-                if (!IsTarget(block, at)) break;
-                best = at;
-            }
-
-            return best;
+            // Worked stone is not a quarry face, it is somebody's wall.
+            string path = block.Code?.Path ?? "";
+            return !path.StartsWith("stonebrick") && !path.StartsWith("cobblestone")
+                && !path.StartsWith("polishedrock") && !path.StartsWith("drystone");
         }
 
         /// <summary>
-        /// Finds the working face itself rather than asking the base scan.
-        ///
-        /// The base scan hangs its search window off GetTerrainMapheightAt, and that is a
-        /// world generation height map: breaking a block does not change it. For a
-        /// lumberjack or a farmer that is fine, because nobody moves the ground. A quarry
-        /// moves the ground on purpose, and the deeper the pit got the further its floor
-        /// fell outside a window still anchored to where the hill used to be. The quarry
-        /// would report itself worked out with most of its stone still in it.
-        ///
-        /// So the window here is the plot's own recorded ground level down to its floor,
-        /// which are both numbers the village wrote down and neither of which drifts.
-        /// </summary>
-        protected override BlockPos FindWork(Village village, VillagePlot plot)
-        {
-            if (plot == null || plot.Y <= 1) return null;
-
-            IBlockAccessor ba = entity.World.BlockAccessor;
-            int floor = FloorY;
-            int ceiling = plot.Y + VerticalSearch;
-
-            BlockPos best = null;
-            double bestDist = double.MaxValue;
-            int looked = 0;
-
-            for (int x = plot.MinX; x <= plot.MaxX; x++)
-            {
-                for (int z = plot.MinZ; z <= plot.MaxZ; z++)
-                {
-                    // Cheap reject before touching the world: a column that cannot beat
-                    // the best so far even at its nearest point is not worth reading.
-                    double dx = x + 0.5 - entity.Pos.X;
-                    double dz = z + 0.5 - entity.Pos.Z;
-                    if (dx * dx + dz * dz >= bestDist) continue;
-
-                    for (int y = ceiling; y > floor; y--)
-                    {
-                        if (++looked > MaxLookupsPerScan) return best;
-
-                        var at = new BlockPos(x, y, z, 0);
-                        if (IsSkipped(at)) continue;
-
-                        Block block = ba.GetBlock(at);
-                        if (block == null || block.Id == 0) continue;
-                        if (!IsTarget(block, at)) continue;
-
-                        double d = entity.Pos.SquareDistanceTo(at.ToVec3d().Add(0.5, 0, 0.5));
-                        if (d < bestDist) { bestDist = d; best = at; }
-                        break;   // highest block in this column, and only this column
-                    }
-                }
-            }
-
-            return best;
-        }
-
-        /// <summary>
-        /// A cap on one scan. An 11x11 quarry six deep is a bit over 1700 columns' worth
-        /// of lookups, which is one think, not a stall.
-        /// </summary>
-        private const int MaxLookupsPerScan = 2400;
-
-        /// <summary>
-        /// A quarry cut to its floor is finished, and saying so lets the day clock retire
-        /// the plot and free the village to site the next one on ground that still has
-        /// something in it.
+        /// A quarry does not report itself finished, because it is not the kind of thing
+        /// that finishes. Only a quarry with no rock in it at all goes quiet, and that is
+        /// a siting mistake worth hearing about.
         /// </summary>
         protected override void OnNothingToDo(Village village, VillagePlot plot)
         {
@@ -203,8 +111,8 @@ namespace FoundriesFrontiers
             if (plot != null && plot.State == EnumPlotState.Active)
             {
                 entity.Api.Logger.VerboseDebug(
-                    "[F&F] Quarry #{0} is cut out down to y{1} and has given {2:0} stone.",
-                    plot.Id, FloorY, plot.LifetimeYield);
+                    "[F&F] Quarry #{0} has no face worth working. Sited on the wrong ground?",
+                    plot.Id);
             }
         }
     }

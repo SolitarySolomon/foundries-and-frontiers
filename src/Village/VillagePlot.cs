@@ -106,6 +106,26 @@ namespace FoundriesFrontiers
         /// </summary>
         [JsonProperty] public int WorkerCap = 1;
 
+        /// <summary>
+        /// What the ground under a mine head was found to hold, as a share of the rock
+        /// around it. Negative means nobody has looked yet.
+        ///
+        /// This is a survey, not a store. Nothing is taken out of the seam when it is
+        /// read and the ore blocks stay in the world for whoever wants to mine them. What
+        /// the village gets out of it is the knowledge, and the knowledge is what sets
+        /// how often a shift at the face turns up ore rather than rubble.
+        /// </summary>
+        [JsonProperty] public float SeamRichness = -1f;
+
+        /// <summary>The block code of whatever ore the seam mostly holds, if any.</summary>
+        [JsonProperty] public string SeamOre;
+
+        /// <summary>
+        /// The village tier the survey was done at. A village that has learned to dig
+        /// deeper gets to look again, and may find better ground under the same plot.
+        /// </summary>
+        [JsonProperty] public int SeamTier = -1;
+
         [JsonProperty] public double CreatedTotalDays;
 
         /// <summary>Last day anyone actually did anything here. Drives the exhausted check.</summary>
@@ -124,7 +144,10 @@ namespace FoundriesFrontiers
         [JsonIgnore] public int Length => MaxZ - MinZ + 1;
         [JsonIgnore] public int Area => Width * Length;
 
-        [JsonIgnore] public BlockPos Centre => new BlockPos((MinX + MaxX) / 2, Y, (MinZ + MaxZ) / 2, 0);
+        [JsonIgnore] public int CentreX => (MinX + MaxX) / 2;
+        [JsonIgnore] public int CentreZ => (MinZ + MaxZ) / 2;
+
+        [JsonIgnore] public BlockPos Centre => new BlockPos(CentreX, Y, CentreZ, 0);
 
         [JsonIgnore] public bool IsWorkable => State == EnumPlotState.Planned || State == EnumPlotState.Active;
 
@@ -168,6 +191,21 @@ namespace FoundriesFrontiers
             => "#" + Id + " " + Kind.ToString().ToLowerInvariant()
              + " " + Width + "x" + Length + " at " + Centre
              + ", t" + Tier + ", " + State.ToString().ToLowerInvariant()
-             + ", " + WorkerIds.Count + "/" + WorkerCap + " working";
+             + ", " + WorkerIds.Count + "/" + WorkerCap + " working"
+             + (SeamRichness >= 0 ? ", " + SeamGrade + " seam" : "");
+
+        /// <summary>The survey in one word, which is what anybody actually wants to know.</summary>
+        [JsonIgnore] public string SeamGrade
+        {
+            get
+            {
+                if (SeamRichness < 0) return "unsurveyed";
+                if (SeamRichness <= 0) return "barren";
+                if (SeamRichness < 0.004f) return "poor";
+                if (SeamRichness < 0.010f) return "fair";
+                if (SeamRichness < 0.020f) return "good";
+                return "rich";
+            }
+        }
     }
 }

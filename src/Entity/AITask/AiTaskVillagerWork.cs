@@ -396,12 +396,25 @@ namespace FoundriesFrontiers
             if (Now < nextActionAt) { SwingAnimation(); return true; }
 
             BlockPos done = Target;
+            DeferForFullHands = false;
             bool did = Work(done);
             if (did)
             {
                 workedThisVisit++;
                 AfterWork(done);
                 Registry.NotePlotWorked(village, Plot, 1f);
+            }
+            else if (DeferForFullHands && Villager.IsCarrying)
+            {
+                // Nothing happened, and it is not this block's fault. A job whose output
+                // is decided when the swing lands cannot be asked in advance whether it
+                // will fit, so this is how it says "take what I have home first". Skipping
+                // here instead would blacklist the one spot the job has to work, and a
+                // quarry face nobody may stand at is a quarry that quietly stops.
+                DeferForFullHands = false;
+                Step = EnumWorkStep.Hauling;
+                stepStartedAt = Now;
+                return true;
             }
             else
             {
@@ -411,7 +424,7 @@ namespace FoundriesFrontiers
                 Skip(done, SkipUnworkableSec);
             }
 
-            nextActionAt = Now + FFConfig.Current.Work.BetweenBlocksSec;
+            nextActionAt = Now + PauseAfter(done);
 
             // Unfinished business here means stay here.
             //
@@ -609,6 +622,23 @@ namespace FoundriesFrontiers
 
             skipUntil[pos.Copy()] = Now + seconds;
         }
+
+        /// <summary>
+        /// How long to wait after finishing with one target before starting the next.
+        ///
+        /// A breath between blocks, normally, because the real cost of a block was paid
+        /// on arrival. A job that never moves between swings has to charge the full
+        /// working time here instead, or it works at four times the rate every other job
+        /// does and nobody notices until the storehouse is full of stone.
+        /// </summary>
+        protected virtual float PauseAfter(BlockPos done)
+            => FFConfig.Current.Work.BetweenBlocksSec;
+
+        /// <summary>
+        /// Set by Work() when it produced nothing because the villager's hands are full
+        /// or hold something else. Read once, immediately, by the step that called Work.
+        /// </summary>
+        protected bool DeferForFullHands;
 
         /// <summary>
         /// Puts a swing's worth of wear on whatever the villager is holding.
@@ -866,7 +896,7 @@ namespace FoundriesFrontiers
             entity.AnimManager?.StartAnimation("hit");
         }
 
-        private string Label()
+        protected string Label()
             => (Villager.GivenName == "" ? "#" + entity.EntityId : Villager.GivenName)
              + " the " + Trade.ToString().ToLowerInvariant();
 
