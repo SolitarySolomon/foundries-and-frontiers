@@ -46,14 +46,27 @@ namespace FoundriesFrontiers
                 return null;
             }
 
-            BuildingPlan plan = catalogue.ChooseFor(village, p => CountBuilt(village, p));
-            if (plan == null)
+            // Ranked rather than picked, and tried in order. Choosing one building and
+            // giving up when it would not fit meant a village that wanted a workshop its
+            // claim had no flat ground for asked for the same workshop every day forever,
+            // and never built the cottage it could have put up instead.
+            List<BuildingPlan> ranked = catalogue.RankFor(village, p => CountBuilt(village, p));
+            if (ranked.Count == 0)
             {
                 error = village.Name + " wants nothing it knows how to build at tier " + village.Tier + ".";
                 return null;
             }
 
-            return StartBuild(village, plan, out error);
+            string firstError = null;
+            foreach (BuildingPlan plan in ranked)
+            {
+                VillageBuildSite site = StartBuild(village, plan, out error);
+                if (site != null) return site;
+                if (firstError == null) firstError = error;
+            }
+
+            error = firstError;
+            return null;
         }
 
         /// <summary>Sites a specific building, for the test command and for the brain later.</summary>
@@ -263,19 +276,21 @@ namespace FoundriesFrontiers
                 return 0;
             }
 
-            if (plan.Layout.Count == 0)
-            {
-                Abandon(village, site, "its schematic has no blocks in it");
-                return 0;
-            }
-
-
             // The layout is rebuilt from the world's block registry every startup, so its
             // length can change under a saved site: install a mod, or re-export the
             // schematic, and the cursor now points somewhere else entirely. Left alone
             // that silently marks a third built house finished. Starting over is cheap,
             // because placing a block that is already there costs nothing.
             var layout = plan.LayoutFor(sapi.World, site.Rotation);
+
+            // Asked of the layout this site is actually built from, not of the unturned
+            // one. They are the same length in every case that works, and checking the
+            // wrong one is the kind of thing that stays harmless until it is not.
+            if (layout.Count == 0)
+            {
+                Abandon(village, site, "its schematic has no blocks in it");
+                return 0;
+            }
 
             if (site.LayoutCount != layout.Count)
             {
@@ -292,6 +307,17 @@ namespace FoundriesFrontiers
             IBlockAccessor ba = sapi.World.BlockAccessor;
             BlockPos origin = site.Origin;
             int placed = 0;
+
+            // Cut back whatever is standing in the way before the first block goes down.
+            //
+            // A site that already has blocks on the ground is one that predates this pass,
+            // and sweeping it would take the half built house apart: its own walls are the
+            // thing standing in the footprint. Treat it as cleared and leave it alone.
+            if (!site.Cleared)
+            {
+                if (site.Placed > 0) site.Cleared = true;
+                else ClearFootprint(plan, site);
+            }
 
             while (site.Placed < layout.Count && placed < blocks)
             {
@@ -314,6 +340,108 @@ namespace FoundriesFrontiers
             }
 
             return placed;
+        }
+
+        /// <summary>
+        /// Cuts back the growth standing inside a building's footprint, once, before the
+        /// first block of it is placed.
+        ///
+        /// Air is filtered out of a layout on purpose: it is not material, nobody pays
+        /// for it and a builder does not place it. The cost of that was that building
+        /// only ever *added* blocks, so a house sited on a meadow was built through the
+        /// tall grass and a house with a sapling in it was built round the tree. Siting
+        /// never caught it either, since it samples five columns for height and water and
+        /// has no opinion about what is standing on them.
+        ///
+        /// **Only growth is cut, never ground.** Grass, flowers, bushes, saplings, leaves
+        /// and trunks go; soil, sand, gravel and rock are left exactly where they are.
+        /// That line matters twice over. It keeps a schematic with no floor course in it
+        /// from excavating a pit under its own walls, and it keeps this from quietly
+        /// becoming the terracing job, which is C5 and belongs to the digger.
+        ///
+        /// Nothing drops. A village that got a tree's worth of logs every time it cleared
+        /// a site would have found the cheapest forestry in the game, and felling trees is
+        /// the lumberjack's work and is paid for in axe wear.
+        /// </summary>
+        private void ClearFootprint(BuildingPlan plan, VillageBuildSite site)
+        {
+            site.Cleared = true;
+
+            IBlockAccessor ba = sapi.World.BlockAccessor;
+            BlockPos origin = site.Origin;
+
+            int w = Math.Max(1, plan.SizeXFor(sapi.World, site.Rotation));
+            int d = Math.Max(1, plan.SizeZFor(sapi.World, site.Rotation));
+            int h = Math.Max(1, plan.SizeY);
+
+            var pos = new BlockPos(0, 0, 0, 0);
+            int cut = 0;
+
+            for (int dx = 0; dx < w; dx++)
+            {
+                for (int dz = 0; dz < d; dz++)
+                {
+                    for (int dy = 0; dy < h; dy++)
+                    {
+                        pos.Set(origin.X + dx, origin.Y + dy, origin.Z + dz);
+                        if (!ba.IsValidPos(pos)) continue;
+
+                        Block b = ba.GetBlock(pos);
+                        if (!IsGrowth(pos, b)) continue;
+
+                        ba.SetBlock(0, pos);
+                        cut++;
+                    }
+                }
+            }
+
+            if (cut > 0)
+            {
+                sapi.Logger.VerboseDebug(
+                    "[F&F] Cleared {0} block(s) of growth from the {1} site at {2}.",
+                    cut, plan.Name, origin);
+            }
+        }
+
+        /// <summary>
+        /// Whether a block is something growing rather than something the ground is made
+        /// of, or something somebody put there. Deliberately narrow: everything it does
+        /// not recognise is left alone.
+        ///
+        /// **`EnumBlockMaterial.Wood` is not the test for a tree.** It also covers chests,
+        /// crates, barrels, doors, ladders, beds, fences, signs and toolracks, and the
+        /// village's own storehouse. Taking the material at its word meant a site that
+        /// happened to be queued over a player's cabin swept the cabin, which is the
+        /// opposite of the rule this whole mod is built round. Only trunks qualify, and
+        /// they are named as trunks.
+        /// </summary>
+        private bool IsGrowth(BlockPos pos, Block b)
+        {
+            if (b == null || b.Id == 0) return false;
+            if (b.IsLiquid()) return false;
+
+            // Anything with a block entity is holding state somebody cares about: stored
+            // items, a village's ledger crate, a bed somebody sleeps in. Never.
+            if (sapi.World.BlockAccessor.GetBlockEntity(pos) != null) return false;
+
+            string path = b.Code?.Path;
+
+            switch (b.BlockMaterial)
+            {
+                case EnumBlockMaterial.Plant:
+                case EnumBlockMaterial.Leaves:
+                    return true;
+
+                case EnumBlockMaterial.Wood:
+                    // A trunk, and nothing else made of wood.
+                    return path != null
+                        && (path.StartsWith("log", StringComparison.OrdinalIgnoreCase)
+                         || path.StartsWith("bamboo", StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Snow layers and the loose cover the engine already calls replaceable. Soil,
+            // sand, gravel and stone all sit well below this line and are never touched.
+            return b.Replaceable >= 6000;
         }
 
         private void Finish(Village village, VillageBuildSite site, BuildingPlan plan)
@@ -444,13 +572,22 @@ namespace FoundriesFrontiers
                 // so there is no point sampling it like a field.
                 foreach ((int sx, int sz) in Corners(x, z, w, d))
                 {
-                    int y = GroundAt(sx, sz);
-                    if (y <= 1) { usable = false; break; }
+                    // GroundAt answers with the ground block itself. A building stands on
+                    // top of that, so the origin, which is where the schematic's bottom
+                    // course goes, is one higher.
+                    int ground = GroundAt(sx, sz);
+                    if (ground <= 1) { usable = false; break; }
 
-                    Block ground = sapi.World.BlockAccessor.GetBlock(new BlockPos(sx, y - 1, sz, 0));
-                    Block at = sapi.World.BlockAccessor.GetBlock(new BlockPos(sx, y, sz, 0));
-                    if (ground?.IsLiquid() == true || at?.IsLiquid() == true) { usable = false; break; }
+                    Block sits = sapi.World.BlockAccessor.GetBlock(new BlockPos(sx, ground, sz, 0));
+                    Block above = sapi.World.BlockAccessor.GetBlock(new BlockPos(sx, ground + 1, sz, 0));
 
+                    // Looking at the ground block and the one *below* it, which is what
+                    // this did, cannot find water: over a lake the height map answers with
+                    // the lakebed and both of those are solid rock. The water is the block
+                    // on top. A village could site a house in the middle of a pond.
+                    if (sits?.IsLiquid() == true || above?.IsLiquid() == true) { usable = false; break; }
+
+                    int y = ground + 1;
                     if (y < minY) minY = y;
                     if (y > maxY) maxY = y;
                 }
@@ -513,7 +650,11 @@ namespace FoundriesFrontiers
         {
             foreach (VillageBuildSite s in village.BuildSites)
             {
-                if (s.State == EnumBuildState.Abandoned) continue;
+                // An abandoned site with nothing placed is just a cancelled idea and the
+                // ground is free. One with blocks on it is a ruin, and the village has
+                // already been refunded for it, so putting a new house through it would
+                // cost the player a salvage they were entitled to.
+                if (s.State == EnumBuildState.Abandoned && s.Placed <= 0) continue;
 
                 BuildingPlan other = Buildings?.Get(s.PlanCode);
                 int ow = Math.Max(1, other == null ? 1 : other.SizeXFor(sapi.World, s.Rotation));

@@ -318,6 +318,11 @@ namespace FoundriesFrontiers
                 if (Overlapping(village, x - half, z - half, x + half, z + half) != null) continue;
                 if (CoversAFixture(village, x - half, z - half, x + half, z + half)) continue;
 
+                // Buildings check they are clear of plots and this never checked it was
+                // clear of buildings, so a field could be laid over a site that was only
+                // waiting on materials, and then be built through when the wood arrived.
+                if (OverlapsASite(village, x - half, z - half, half * 2 + 1, half * 2 + 1)) continue;
+
                 float score = ScoreSite(kind, x, z, half, out bool usable);
                 if (!usable) continue;
 
@@ -438,8 +443,74 @@ namespace FoundriesFrontiers
             return false;
         }
 
+        /// <summary>
+        /// The topmost solid ground block in this column. **Not** the free space above it:
+        /// every call site here reads it as the ground itself and has done since Phase B.
+        ///
+        /// **The worldgen height map is a hint, not an answer.** The engine's own
+        /// documentation is explicit that GetTerrainMapheightAt reports the surface "as it
+        /// was during world generation" and "is not updated after placing/removing
+        /// blocks", so on ground a digger has already cut it still describes the hillside
+        /// that used to be there. Siting read it straight, so a building queued on a
+        /// terrace was placed at the old surface and left hanging in the air over the cut.
+        ///
+        /// So the hint is where the search starts and the world is what answers it: walk
+        /// down from the worldgen surface to the first block that is really ground. On a
+        /// column nothing has touched the very first test passes and this returns the hint
+        /// unchanged, which is what makes the change a no-op everywhere it was already
+        /// right. On a column a digger has cut it returns where the ground actually is.
+        ///
+        /// **The value is the ground block's own Y, not the space above it.** The engine's
+        /// two accessors differ by exactly one here and picking the wrong one moves every
+        /// plot and every building up a block: `GetTerrainMapheightAt` hands back the
+        /// height map raw, while `GetTerrainGenSurfacePosY` returns the same number plus
+        /// one to get somewhere to stand. Checked by decompiling both, after a review
+        /// caught this returning the standable position and quietly shifting the world.
+        ///
+        /// Starting at the hint rather than above it is deliberate: trees, snow and
+        /// anything a village has built all stand above the worldgen surface, and a
+        /// downward search from overhead would happily call the top of a spruce "ground".
+        /// </summary>
         private int GroundAt(int x, int z)
-            => sapi.World.BlockAccessor.GetTerrainMapheightAt(new BlockPos(x, 0, z, 0));
+        {
+            IBlockAccessor ba = sapi.World.BlockAccessor;
+
+            int hint = ba.GetTerrainMapheightAt(new BlockPos(x, 0, z, 0));
+            if (hint <= 0) return 0;
+
+            var pos = new BlockPos(x, Math.Min(hint, ba.MapSizeY - 2), z, 0);
+            for (int y = pos.Y; y > 0; y--)
+            {
+                pos.Y = y;
+                if (IsStandableGround(ba.GetBlock(pos))) return y;
+            }
+
+            // Nothing found. In an unloaded chunk every read comes back as air, so this is
+            // "cannot see the ground from here" rather than "there is no ground", and
+            // answering 0 would quietly shrink a claim that straddles the loaded edge.
+            // Fall back to the height map, which is exactly what this used to return.
+            return hint;
+        }
+
+        /// <summary>
+        /// Whether a block counts as the ground rather than what is lying on top of it.
+        ///
+        /// Tall grass, flowers, snow layers and saplings are cover: a house on a meadow
+        /// should stand on the soil, not a block above it on the grass.
+        /// </summary>
+        private static bool IsStandableGround(Block b)
+        {
+            if (b == null || b.Id == 0) return false;
+            if (b.IsLiquid()) return false;
+
+            // Anything a player could place a block straight through is cover, and the
+            // engine already keeps that judgement on the block itself.
+            if (b.Replaceable >= 6000) return false;
+
+            return b.BlockMaterial != EnumBlockMaterial.Plant
+                && b.BlockMaterial != EnumBlockMaterial.Leaves
+                && b.BlockMaterial != EnumBlockMaterial.Snow;
+        }
 
         // --- outlines ---------------------------------------------------------------
 

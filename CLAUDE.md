@@ -80,9 +80,21 @@ Check for these before shipping anything. Every one has been shipped at least on
 7. **An AI task is dead if nothing can carry the trade it asks for.** A villager's trade
    comes from the end of its entity code. A trade missing from `villager.json`'s variant
    group cannot be spawned, and the task refuses on its first line forever, silently.
-8. **Reading the wrong layer.** `GetTerrainMapheightAt` returns the topmost **solid** block
-   and is a **worldgen** height map: breaking blocks never changes it. Any job that moves
-   the ground must find its own targets.
+8. **Reading the wrong layer.** `GetTerrainMapheightAt` is a **worldgen** height map: the
+   engine's own docs say it is "not updated after placing/removing blocks". Any job that
+   moves the ground must find its own targets. `GroundAt` now treats it as a starting hint
+   and walks down from it to the first real ground block, which gives the identical answer
+   on untouched ground and the correct one where a digger has cut.
+   **It answers with the ground block's own Y, not the space above it**, and the engine's
+   two accessors differ by exactly that one: `GetTerrainMapheightAt` returns
+   `WorldGenTerrainHeightMap[i]` raw and `GetTerrainGenSurfacePosY` returns the same plus
+   one. Getting that backwards moves every plot and every building up a block and nothing
+   reports it. Both decompiled; do not reason about this one from the method names.
+10. **Trusting `EnumBlockMaterial` to mean the obvious thing.** `Wood` is chests, crates,
+   barrels, doors, ladders, beds, fences, signs, toolracks and the village's own storehouse,
+   as well as trunks. `Plant` is crops as well as weeds. Any code that destroys blocks by
+   material will eventually destroy something a player built, so match on the block code
+   and refuse anything carrying a block entity.
 9. **Off-by-one on negative coordinates.** Use `>> 5` and `& 31` for chunk coords.
 
 ---
@@ -131,14 +143,29 @@ locks before and after each command. Use it for every git call; plain `git` will
 - `Assets.GetMany(path, domain, loadAsset: false)` leaves assets unhydrated and `ToText()`
   returns empty.
 - `BreakBlock(pos, null, 0f)` suppresses drops and already triggers the neighbour update.
-- WorldEdit export: `/we on`, `/we ms` at the low corner, `/we me` at the high corner,
-  `/we export <name>`. Not `/we mex`.
+- WorldEdit export, checked against the 1.22.7 assembly rather than remembered:
+  `/we on`, `/we start` in the low corner, `/we end` in the high corner,
+  `/we export <name>`. The marks are taken at the **caller's position**, not the block
+  they are looking at. `Save` appends `.json` if the name lacks it, and the file lands in
+  `GetOrCreateDataPath("WorldEdit")`, so `VintagestoryData/WorldEdit/<name>.json`.
+  **`ms`, `me` and `mex` are not commands on a normal world.** They are registered only
+  when `legacywecommands` is set in the world config, which is why every earlier
+  instruction using them was wrong. `/we export` writes to the server file system and
+  `/we export-client` to the client's.
 
 ---
 
 ## State of play
 
-Version **0.12.0**. Phases A and B are done. Phase C's machinery is done.
+Version **0.12.1**. Phases A and B are done. Phase C's machinery is done, and 0.12.1 is
+the audit that went looking for the parts of it that only looked done. Five defects, listed
+in `docs/BUILD_ORDER.md` under *Bug hunt, 0.12.1*. The one worth remembering: **building
+only ever added blocks and never removed any**, so a house sited on a meadow was built
+through the grass and a house with a sapling in it was built around the tree.
+
+**C5 terracing is genuinely not built**, and it is not a schematic problem. The digger cuts
+Terrace *plots*, which is Phase B work and a different thing from cutting the footprint of
+a queued building before it goes up.
 
 **Corey's outstanding jobs, not Claude's:**
 

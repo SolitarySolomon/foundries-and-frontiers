@@ -1267,9 +1267,13 @@ namespace FoundriesFrontiers
                     VillageBuildSite site = reg.SiteById(v, id);
                     if (site == null) return TextCommandResult.Error("No site #" + id + " in " + v.Name + ".");
 
-                    site.State = EnumBuildState.Abandoned;
-                    site.BuilderEntityId = 0;
-                    return TextCommandResult.Success("Abandoned site #" + id + ". What was placed stays where it is.");
+                    // Through Abandon, so the ledger gets its materials back. Setting the
+                    // state directly was quietly charging a village for a building it was
+                    // then told to forget about.
+                    reg.Abandon(v, site, "cancelled");
+                    return TextCommandResult.Success(
+                        "Abandoned site #" + id + ". What was placed stays where it is, and "
+                        + "anything paid for it is back in the stores.");
                 }
 
                 default:

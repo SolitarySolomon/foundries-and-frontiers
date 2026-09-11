@@ -636,11 +636,6 @@ Nothing in Phase D can place a building until this exists.
       day, which meant the one villager who might have closed the shortfall was the one
       prevented from working. They now go and do something else for two minutes and come
       back.
-- [ ] **C3 · Build site:** marker block, scaffold, progressive construction over in-game days.
-- [ ] **C4 · Builder draws materials:** spends the *ledger cost* and places the *bill of
-      blocks*, converting one into the other only for forms the tier has unlocked.
-      Consumes from the ledger and **stalls visibly** when
-      empty. *Test:* start a build with no wood; nothing happens until wood arrives.
 - [ ] **C5 · Terracing:** **the cut is where an early village gets its building material.**
       Cob and daub, which is what tiers 1 and 2 put up houses in, not the palisade or the
       curtain wall: those are wood and stone and have nothing to do with earth. The game's
@@ -656,6 +651,13 @@ Nothing in Phase D can place a building until this exists.
       the player's terrain used to be. Terracing works a site toward buildable, not flat.
       Then: cut uphill, fill downhill, retain in the tier's material, before
       raising anything. *Test:* a house on a slope that doesn't look pasted on.
+      **Not started, and not blocked on C1.** Audited at 0.12.1 and confirmed absent: the
+      digger cuts Terrace *plots*, which is a designated patch of ground from Phase B and
+      a different thing from cutting a queued building's footprint before it is raised.
+      What 0.12.1 did add is the much smaller neighbour of this step: the builder now cuts
+      back grass, bushes, saplings and trees inside the footprint. It deliberately does not
+      touch soil, sand, gravel or rock, because that is this step and it belongs to the
+      digger.
 
 ---
 
@@ -671,6 +673,11 @@ Nothing in Phase D can place a building until this exists.
 - [ ] **D4 · Site selection:** **RISK.** Interior cells for buildings, peripheral for plots,
       and off-grid for what must follow terrain, like a quarry against rock or a well at the water table.
 - [ ] **D5 · Build planner:** need → culture catalogue → affordable → sited → enqueued.
+      **Replaces `BuildingCatalogue.ChooseFor`, it does not extend it.** That method ranks
+      a fixed need order with no idea what the village is short of, which is the whole job
+      of D1 and this step. 0.12.1 stopped it wanting housing forever, which it did by
+      ranking need alone, so that a village with no workshop no longer builds a fifth
+      hovel instead. That is a floor under the behaviour, not a planner.
 - [ ] **D6 · Labour allocator:** target headcount per trade, the authored aptitude matrix,
       crisis tasking. *Test:* starve a village, watch the smith farm badly.
 - [ ] **D7 · Population:** immigration on surplus plus a free bed, and the founding kit
@@ -986,3 +993,111 @@ not read as untrusted turned "no data" into a measured zero, which was worse: fa
 would then blend toward nothing and the starvation check could never fire for that pool.
 Short rows stay short and confidence is counted per pool instead. Fixing a confident lie
 by making it a different confident lie is a mistake worth naming.
+
+---
+
+## Bug hunt, 0.12.1
+
+Phase C read as finished, so this pass went looking for the parts of it that only looked
+finished. Nothing here was found by running the game. It came out of reading the code
+against the bug-class list in `CLAUDE.md`, and out of decompiling the engine rather than
+trusting what an earlier session had written down.
+
+**1. The export instructions were wrong, and had been wrong in two different places.**
+`worldgen/schematics/README.txt` said `/we mex <name>`. `CLAUDE.md` said that was wrong and
+that the real sequence used `/we ms` and `/we me`. Decompiling `WorldEdit` from
+`VSCreativeMod.dll` settled it: **all three of `ms`, `me` and `mex` are registered only
+when a world sets `legacywecommands`**, so on a normal 1.22.7 world none of them exist. The
+commands are `/we start`, `/we end` and `/we export <name>`, the marks are taken at the
+caller's position rather than the block they are looking at, `Save` appends `.json`, and
+the file lands in `VintagestoryData/WorldEdit/`. Every schematic exported by following
+either set of instructions would have failed at step one.
+
+**2. Nothing said to build facing north.** The whole rotation design rests on schematics
+being authored facing north and the README never mentioned it. A building exported facing
+east loads, validates, costs and places without a single complaint, and is a quarter turn
+wrong in every village forever. Now the first thing in the file, with a way to check.
+
+**3. Building only ever added blocks.** Air is filtered out of a layout on purpose, since
+it is not material and nobody pays for it. The cost was that a house was built *through*
+whatever stood in its footprint: tall grass inside the walls, a tree growing out of the
+roof. Siting never caught it either, because it samples five columns for height and water
+and has no opinion about what is standing on them. There is now a clearing pass, run once
+per site under the builder's hand and persisted on the site so a reload does not sweep a
+half built house. **It cuts growth only.** Grass, bushes, saplings, leaves and trunks go;
+soil, sand, gravel and rock are untouched, which keeps a floorless schematic from
+excavating a pit under its own walls and keeps this from quietly becoming C5. Nothing
+drops, because a village that got a tree's worth of logs every time it cleared a site would
+have found the cheapest forestry in the game.
+
+**4. Siting read a map that never moves.** `GroundAt` returned `GetTerrainMapheightAt`,
+which the engine documents as the worldgen surface, "not updated after placing/removing
+blocks". So on ground a digger had already cut, a building was sited at the surface that
+used to be there and left hanging over the hole. This is bug class 8 and it was in the list
+already, which is the uncomfortable part. It now walks down from the map height to the first
+real ground block, and falls back to the map height when it can see nothing, so a claim
+straddling an unloaded chunk does not quietly shrink.
+
+**The first attempt at this shipped an off-by-one and the review caught it.** It returned
+the standable position above the ground rather than the ground block, on the assumption
+that the height map was already a free position. It is not: `GetTerrainMapheightAt` hands
+back the raw height map entry and `GetTerrainGenSurfacePosY` returns the same number plus
+one, both confirmed by decompiling. Every plot floor and every building origin in the world
+would have moved up a block, and `WantsThisGround` would have been reading air instead of
+soil, so every plot kind would have scored zero suitability and clay pits would have been
+sited on granite. The fix is one character. The lesson is the one already written at the top
+of this file: a thing that "should work" is a thing nobody has checked, and the reviewer
+checked it against the engine rather than against the comment.
+
+**5. A village would build housing until the end of time.** `ChooseFor` ranked need alone,
+and housing is the most urgent need, so unless a manifest set `MaxPerVillage` on a house
+nothing else was ever chosen. Each building already answering a need now pushes that need
+down a step, so a village works through one of each before doubling up. This is a floor
+under the behaviour and not a planner; D5 replaces it.
+
+**6. A village could site a building in a lake.** `FindBuildSite` tested the ground block
+and the one *below* it for water. Over a pond the height map answers with the lakebed and
+both of those are solid rock, so the check could never fire. The water is the block on top,
+which is now what is tested. Found by fixing 4 and then re-reading what the corrected
+semantics meant for everything that called it.
+
+**7. Clearing was far too willing.** The first cut matched `EnumBlockMaterial.Wood`, which
+is chests, crates, barrels, doors, ladders, beds, fences, signs, toolracks and the village's
+own storehouse as well as trunks. Worse, every guard that keeps a footprint off something
+valuable runs at *siting* time, and clearing runs when the materials arrive, which can be
+many days later. A site queued over a player's cabin would have swept the cabin. Now nothing
+carrying a block entity is ever touched, and of the wooden things only actual trunks are,
+matched on the block code.
+
+**8. A site loaded from an older save would have been swept.** `Cleared` defaults to false
+on deserialisation, so a half built house from before this version would have had its own
+walls cleared out from under it. A site with blocks already placed now counts as cleared.
+
+**9. A village could wedge itself on one building it could never site.** `ChooseFor`
+returned a single plan and `StartBuild` gave up if it would not fit, so a workshop too big
+for any flat ground in the claim was re-chosen every day forever while the cottage that
+would have fitted was never considered. The catalogue now ranks, and siting walks the
+ranking. Note this became reachable *because* of fix 5: before it, the standing pick was
+always housing, which is the smallest thing a village builds and the most likely to fit.
+
+**10. Two smaller ones on the same theme.** A plot could be sited on top of a build site
+that was only waiting on materials, because plots checked other plots and fixtures but never
+buildings. And a new site could be put through an abandoned one that had blocks on the
+ground, which the village had already been refunded for, so the player lost a salvageable
+ruin. Both now guarded.
+
+**11. `/ff village build cancel` never refunded.** It set the state to abandoned directly
+instead of calling `Abandon`, so cancelling a paid site charged the village and gave nothing
+back. Ledger rule: nothing moves without a reason someone can point at.
+
+Also: `PlaceSlice` guarded on the unturned layout and then built from the turned one, which
+is harmless in every case that works and is the shape of a bug. The schematic loader stripped
+`.json` ordinally while filtering for it case insensitively, so a `Cottage.JSON` kept its
+extension in its code and lost its manifest, and two schematics with the same file name in
+different folders overwrote each other silently. And the duplicate, unticked C3 and C4
+entries left over from an earlier edit are gone, so the document no longer claims two
+finished steps are unstarted.
+
+**Process note.** Six of these eleven came out of the adversarial review rather than the
+first pass, including the only one that would have broken something that currently works.
+The review is not a formality.

@@ -359,9 +359,27 @@ namespace FoundriesFrontiers
             // loadAsset defaults to true and must stay that way. Passing false leaves
             // every asset unhydrated, so ToText returns "" and each schematic fails to
             // parse with no error text at all. That looked exactly like an empty folder.
-            List<IAsset> assets = api.Assets.GetMany("worldgen/schematics", FoundriesFrontiersMod.ModId);
+            List<IAsset> all = api.Assets.GetMany("worldgen/schematics", FoundriesFrontiersMod.ModId);
 
-            if (assets == null || assets.Count == 0)
+            // GetMany returns everything under the path, not just schematics, and the
+            // folder has a README in it telling whoever builds these how to export one.
+            // Feeding that to the schematic parser produced a warning every startup and,
+            // worse, meant the "no schematics yet" branch below never fired: the log said
+            // "loaded 0" next to a parse failure, which is exactly the looks-broken state
+            // this loader was written to avoid.
+            var assets = new List<IAsset>();
+            if (all != null)
+            {
+                foreach (IAsset a in all)
+                {
+                    if (a?.Name != null && a.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        assets.Add(a);
+                    }
+                }
+            }
+
+            if (assets.Count == 0)
             {
                 api.Logger.Notification(
                     "[F&F] No building schematics found. Villages will not build anything until "
@@ -373,8 +391,24 @@ namespace FoundriesFrontiers
 
             foreach (IAsset asset in assets)
             {
+                // Case insensitively, to match the filter above. Stripping ordinally left
+                // a file exported as Cottage.JSON carrying its extension in its code, so it
+                // missed its manifest entry and complained that it had none.
                 string code = asset.Name;
-                if (code.EndsWith(".json")) code = code.Substring(0, code.Length - 5);
+                if (code.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    code = code.Substring(0, code.Length - 5);
+                }
+
+                // asset.Name is the bare file name, so two schematics with the same name in
+                // different subfolders would silently overwrite one another and a village
+                // would build whichever won.
+                if (plans.ContainsKey(code))
+                {
+                    complaints.Add("There is more than one schematic called " + code
+                        + ". Only the first is used; rename the others.");
+                    continue;
+                }
 
                 BuildingPlan plan = LoadOne(api, asset, code, manifests, table);
                 if (plan != null) plans[code] = plan;
@@ -564,13 +598,48 @@ namespace FoundriesFrontiers
         /// nowhere to sleep cannot grow into anything. Then workshops, then the rest.
         /// Affordability is checked last on purpose: a village that wants a house it
         /// cannot afford should be saving up for a house, not quietly building a shed.
+        ///
+        /// **This is a placeholder and Phase D's build planner replaces it rather than
+        /// extending it.** It ranks a standing need list with no notion of what the
+        /// village is actually short of, which is the entire job of D1 and D5.
+        ///
+        /// What it does do is stop wanting the same thing forever. Ranking need alone
+        /// meant housing outscored everything on every pass, so unless a manifest set
+        /// MaxPerVillage on a house the village built houses until the end of time and
+        /// never put up a single workshop. Each building already standing pushes its own
+        /// need down, so a village works through one of each before doubling up.
         /// </summary>
         public BuildingPlan ChooseFor(Village village, System.Func<BuildingPlan, int> countBuilt)
         {
-            if (village == null) return null;
+            List<BuildingPlan> ranked = RankFor(village, countBuilt);
+            return ranked.Count == 0 ? null : ranked[0];
+        }
 
-            BuildingPlan best = null;
-            int bestScore = int.MinValue;
+        /// <summary>
+        /// Every building this village would put up, best first.
+        ///
+        /// A list rather than a single answer because wanting something and being able to
+        /// put it anywhere are different questions, and the second one is answered by the
+        /// siting code long after this has made its choice. A village whose best idea will
+        /// not fit on its ground should build its second best idea, not stand still.
+        /// </summary>
+        public List<BuildingPlan> RankFor(Village village, System.Func<BuildingPlan, int> countBuilt)
+        {
+            var ranked = new List<BuildingPlan>();
+            if (village == null) return ranked;
+
+            // How many buildings answer each need already. Counted across the whole
+            // catalogue first, because two plans can answer the same need and a village
+            // with a hovel does not need a second one just because the log house it has
+            // never built is a different entry.
+            var servingNeed = new int[Enum.GetValues(typeof(EnumBuildingNeed)).Length];
+            foreach (BuildingPlan plan in plans.Values)
+            {
+                if (plan.Manifest == null) continue;
+                servingNeed[(int)plan.Manifest.Need] += countBuilt?.Invoke(plan) ?? 0;
+            }
+
+            var scored = new List<KeyValuePair<int, BuildingPlan>>();
 
             foreach (BuildingPlan plan in plans.Values)
             {
@@ -583,17 +652,20 @@ namespace FoundriesFrontiers
 
                 // Lower need value is more urgent, and a higher tier building of the same
                 // need beats a lower one, so a village stops putting up hovels once it
-                // knows how to build a house.
-                int score = (10 - (int)plan.Manifest.Need) * 100 + plan.Manifest.Tier * 10 - built;
+                // knows how to build a house. Then every building already answering this
+                // need takes the need down a step, which is what lets a lower ranked need
+                // with nothing serving it overtake a well served higher one.
+                int score = (10 - (int)plan.Manifest.Need) * 100
+                          + plan.Manifest.Tier * 10
+                          - servingNeed[(int)plan.Manifest.Need] * 40
+                          - built;
 
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    best = plan;
-                }
+                scored.Add(new KeyValuePair<int, BuildingPlan>(score, plan));
             }
 
-            return best;
+            scored.Sort((a, b) => b.Key.CompareTo(a.Key));
+            foreach (var kv in scored) ranked.Add(kv.Value);
+            return ranked;
         }
 
         /// <summary>Whether the village's stores cover a plan's ledger cost right now.</summary>

@@ -79,6 +79,15 @@ namespace FoundriesFrontiers
         /// <summary>Whether the materials have been taken out of the ledger yet.</summary>
         [JsonProperty] public bool Paid;
 
+        /// <summary>
+        /// Whether the standing growth inside the footprint has been cut back yet.
+        ///
+        /// Persisted rather than recomputed, because "is there anything in the way" stops
+        /// being true the moment the walls start going up, so a reload would otherwise
+        /// decide the site had never been cleared and sweep the half built house.
+        /// </summary>
+        [JsonProperty] public bool Cleared;
+
         [JsonProperty] public double StartedTotalDays;
 
         /// <summary>Who is working on it, or 0 for nobody.</summary>
