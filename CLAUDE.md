@@ -180,7 +180,11 @@ and site selection, the build planner, the labour allocator, population growth. 
 in `VillageRegistry.Building.cs` becomes "face the street" instead of "face the square" once
 D3 lays streets. Roads are a route finder, not schematics.
 
-**The field manual** is a published artifact holding the full test list with every command,
-the schematic build requirements with facings, and the WorldEdit export steps. Ask Corey for
-the link, or find it with the Artifact tool's `list` action; it is titled
-"Foundries & Frontiers Field Manual".
+**The Schematic Bench** is the live published artifact and the one to work from: the
+schematic build requirements with facing, the verified WorldEdit export steps, the per-need
+minimums, the manifest shape, and all 61 outstanding in-game checks with their commands.
+Find it with the Artifact tool's `list` action; it is titled "Schematic Bench".
+
+**"Foundries & Frontiers Field Manual" is the older artifact and its Part 2 is wrong.** It
+still gives `/we ms` and `/we me`, and still says schematics are placed unrotated. Do not
+send Corey to it and do not copy from it. Either fix it or retire it.
