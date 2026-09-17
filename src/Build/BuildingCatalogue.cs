@@ -414,6 +414,8 @@ namespace FoundriesFrontiers
                 if (plan != null) plans[code] = plan;
             }
 
+            CheckCultures(api);
+
             api.Logger.Notification("[F&F] Loaded {0} building schematic(s).", plans.Count);
             if (plans.Count > 0) api.Logger.Notification("[F&F] Block prices: {0}.", pricer.Report());
 
@@ -530,6 +532,37 @@ namespace FoundriesFrontiers
                 else
                 {
                     plan.Unpriced++;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Complains about a manifest naming a culture that does not exist.
+        ///
+        /// A typo here is the quietest possible failure. `BuiltBy` asks whether any listed
+        /// culture matches the village's, so "norsee" matches nothing, no village ever
+        /// builds that schematic, and there is no error anywhere: it loads, it costs out,
+        /// it shows up in the listing, and it is never chosen. Exactly the shape of bug
+        /// that costs an evening.
+        /// </summary>
+        private void CheckCultures(ICoreServerAPI api)
+        {
+            var cultures = api.ModLoader.GetModSystem<CultureSystem>();
+            if (cultures == null || cultures.Codes == null || cultures.Codes.Count == 0) return;
+
+            foreach (BuildingPlan plan in plans.Values)
+            {
+                string[] wanted = plan.Manifest?.Cultures;
+                if (wanted == null) continue;
+
+                foreach (string code in wanted)
+                {
+                    if (string.IsNullOrWhiteSpace(code)) continue;
+                    if (cultures.Get(code) != null) continue;
+
+                    complaints.Add(plan.Code + " is for a culture called '" + code
+                        + "', which does not exist. No village will ever build it. Known cultures: "
+                        + string.Join(", ", cultures.Codes) + ".");
                 }
             }
         }
@@ -658,7 +691,8 @@ namespace FoundriesFrontiers
                 int score = (10 - (int)plan.Manifest.Need) * 100
                           + plan.Manifest.Tier * 10
                           - servingNeed[(int)plan.Manifest.Need] * 40
-                          - built;
+                          - built
+                          + Taste(village, plan);
 
                 scored.Add(new KeyValuePair<int, BuildingPlan>(score, plan));
             }
@@ -666,6 +700,39 @@ namespace FoundriesFrontiers
             scored.Sort((a, b) => b.Key.CompareTo(a.Key));
             foreach (var kv in scored) ranked.Add(kv.Value);
             return ranked;
+        }
+
+        /// <summary>
+        /// This village's own preference between buildings that are otherwise equal.
+        ///
+        /// **Without it, variants are pointless.** Three hovels that answer the same need
+        /// at the same tier score identically, so every village works down the list in the
+        /// same order and three schematics produce three identical villages rather than
+        /// three different ones. Which is the whole reason for drawing three.
+        ///
+        /// Seeded by the village id and the plan code, so a village has a settled taste
+        /// rather than a mood: it picks the same favourite today, tomorrow, and after a
+        /// reload, and a site that stalled waiting for materials is still the same
+        /// building when the wood turns up.
+        ///
+        /// Deliberately smaller than the ten points a tier is worth, so taste decides
+        /// between equals and never talks a village into a worse building. And small
+        /// against the one point each copy already built takes off, so a village leans
+        /// toward its favourite for the first few and then spreads out, which reads as a
+        /// place with a local style rather than a place with one house repeated.
+        /// </summary>
+        private static int Taste(Village village, BuildingPlan plan)
+        {
+            if (village == null || plan?.Code == null) return 0;
+
+            unchecked
+            {
+                int h = 17;
+                h = h * 31 + (int)village.Id;
+                foreach (char c in plan.Code) h = h * 31 + c;
+                h ^= h >> 15;
+                return ((h % 9) + 9) % 9;
+            }
         }
 
         /// <summary>Whether the village's stores cover a plan's ledger cost right now.</summary>
