@@ -22,7 +22,7 @@ namespace FoundriesFrontiers
 
         [JsonProperty] public string Name = "";
 
-        /// <summary>Culture code, matching a key in config/cultures.json.</summary>
+        /// <summary>Culture code, matching a file name in config/cultures/.</summary>
         [JsonProperty] public string CultureCode = CultureSystem.DefaultCulture;
 
         /// <summary>0 to 6. Drives claim size, buildings and what jobs exist.</summary>

@@ -402,16 +402,47 @@ namespace FoundriesFrontiers
         /// at the stage that tier deserves, and anyone looking at the claim outline sees
         /// the new size. E1 calls this when a gate is met; for now the dev command does.
         /// </summary>
-        public bool SetTier(Village village, int tier)
+        public bool SetTier(Village village, int tier) => SetTier(village, tier, out _);
+
+        /// <summary>
+        /// Moves a village to a tier, and reports through <paramref name="landedOn"/> the
+        /// tier it actually reached.
+        ///
+        /// Those two can differ, because a culture may cap itself below the mod's ceiling.
+        /// Anything telling a player what happened has to read the second one: reporting
+        /// the tier that was asked for is how a Woodfolk village capped at three announced
+        /// that it had moved to five.
+        /// </summary>
+        public bool SetTier(Village village, int tier, out int landedOn)
         {
+            landedOn = village?.Tier ?? 0;
             if (village == null) return false;
 
             tier = GameMath.Clamp(tier, 0, MaxTier);
+
+            // A culture may choose a ceiling below the mod's. Enforced here rather than in
+            // the command, because this is the only place a tier ever changes and E1's
+            // automatic advance has to obey it too.
+            Culture culture = sapi.ModLoader.GetModSystem<CultureSystem>()?.Get(village.CultureCode);
+            if (culture != null) tier = culture.CapTier(tier);
+
+            // Only worth saying when something was actually going to happen. Logging
+            // before this return meant a line every time somebody asked a capped village
+            // to do what it was already doing, and it would have become a line a day the
+            // moment E1 wires up automatic advance.
             if (tier == village.Tier) return false;
+
+            if (culture != null && culture.MaxTier > 0 && tier == culture.MaxTier)
+            {
+                sapi.Logger.Notification(
+                    "[F&F] {0} is {1} and will climb no further than tier {2}.",
+                    village.Name, culture.DisplayName ?? village.CultureCode, culture.MaxTier);
+            }
 
             string wasStage = StageForTier(village.Tier);
             village.Tier = tier;
             village.DaysAtCurrentTier = 0;
+            landedOn = tier;
 
             // The marker only needs replacing when the stage actually changes, but the
             // claim grew either way, so anyone watching the outline gets a fresh one.

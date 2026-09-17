@@ -1,0 +1,236 @@
+{
+  "displayName": "Norse",
+  "maleNames": [
+    "Arni",
+    "Asgeir",
+    "Bjorn",
+    "Brandr",
+    "Egill",
+    "Eirik",
+    "Finnr",
+    "Gunnar",
+    "Hakon",
+    "Halfdan",
+    "Hallr",
+    "Ingvar",
+    "Ivarr",
+    "Ketill",
+    "Leifr",
+    "Njall",
+    "Olafr",
+    "Ormr",
+    "Ragnarr",
+    "Sigurdr",
+    "Skarde",
+    "Snorri",
+    "Steinarr",
+    "Sveinn",
+    "Thorbjorn",
+    "Thorfinn",
+    "Ulfr",
+    "Vigdis"
+  ],
+  "femaleNames": [
+    "Alfdis",
+    "Asa",
+    "Astrid",
+    "Bergljot",
+    "Dagny",
+    "Freydis",
+    "Groa",
+    "Gudrun",
+    "Halla",
+    "Helga",
+    "Hildr",
+    "Ingrid",
+    "Jorunn",
+    "Katla",
+    "Ragnhild",
+    "Sigrid",
+    "Signy",
+    "Solveig",
+    "Svanhild",
+    "Thora",
+    "Thorunn",
+    "Unnr",
+    "Yrsa"
+  ],
+  "familyNames": [
+    "Ashwood",
+    "the Quiet",
+    "Longstride",
+    "Coldhand",
+    "Storrsdottir",
+    "Nettlebeard",
+    "of the Grey Shore",
+    "Ironhewer",
+    "Farwalker",
+    "Saltbeard",
+    "the Younger",
+    "Crowfoot"
+  ],
+  "villageNames": [
+    "Bjornstad",
+    "Dalvik",
+    "Eldfjall",
+    "Fjellheim",
+    "Grimsby",
+    "Hafnarholt",
+    "Ingolfstad",
+    "Kaldbakur",
+    "Lundgard",
+    "Myrdal",
+    "Norheim",
+    "Ravnsborg",
+    "Selfoss",
+    "Skogarholt",
+    "Steinvik",
+    "Thorsholt",
+    "Ulfsnes",
+    "Vestfjord",
+    "Ylirhamn",
+    "Assvik"
+  ],
+  "lines": {
+    "greet": [
+      "You've come far.",
+      "Hm. You.",
+      "Keep your hands where I see them.",
+      "Aye.",
+      "Cold one, isn't it."
+    ],
+    "remark": [
+      "Wood's wet through.",
+      "Nets were light again.",
+      "It'll do.",
+      "Sooner it's built, sooner we're warm.",
+      "That wind's turning.",
+      "Not worth the walk."
+    ],
+    "laugh": [
+      "Hah!",
+      "You've a mouth on you.",
+      "That's worth a drink."
+    ],
+    "shrug": [
+      "Ask another.",
+      "Not for me to say.",
+      "Hm."
+    ],
+    "complain": [
+      "Stores are thin.",
+      "We'll not see spring at this rate.",
+      "Someone ought to do something."
+    ],
+    "rain": [
+      "Sky's leaking.",
+      "Good weather for fish, not for men.",
+      "Wet through."
+    ],
+    "snow": [
+      "Proper weather at last.",
+      "The cold keeps a man honest.",
+      "Snow's come."
+    ],
+    "hot": [
+      "Too warm by half.",
+      "This heat is unnatural.",
+      "Give me a north wind."
+    ],
+    "night": [
+      "Long dark ahead.",
+      "Fire's low.",
+      "Should be sleeping."
+    ],
+    "dawn": [
+      "Up with the light.",
+      "The day won't wait.",
+      "Cold morning."
+    ],
+    "storm": [
+      "Something's wrong with the sky.",
+      "Inside, all of you.",
+      "This is no ordinary storm."
+    ],
+    "hurt": [
+      "You'll pay for that!",
+      "Argh!",
+      "To me! To me!"
+    ],
+    "tired": [
+      "I've done enough today.",
+      "My arms ache.",
+      "Enough."
+    ],
+    "hungry": [
+      "The stores won't last.",
+      "Thin eating this winter.",
+      "We need more than this."
+    ],
+    "remark-gruff": [
+      "Bah.",
+      "It'll hold. Probably.",
+      "Nobody listens."
+    ],
+    "remark-whiny": [
+      "Why me, always?",
+      "I never get a moment.",
+      "This is too much for one man."
+    ],
+    "remark-sunny": [
+      "A good day for it!",
+      "Can't say I mind this.",
+      "Ha! Fine weather."
+    ],
+    "remark-kind": [
+      "Keep warm, friend.",
+      "You look tired. Rest.",
+      "Come by the fire later."
+    ],
+    "remark-stoic": [
+      "Aye.",
+      "It stands.",
+      "Work."
+    ],
+    "remark-sour": [
+      "Poorly done.",
+      "Someone will hear about this.",
+      "Useless."
+    ],
+    "greet-sunny": [
+      "Hail, friend!",
+      "Well met indeed!",
+      "Ha! Company!"
+    ],
+    "greet-stoic": [
+      "Hail.",
+      "Aye.",
+      "You."
+    ],
+    "greet-sour": [
+      "What.",
+      "Speak, then.",
+      "Hm."
+    ]
+  },
+  "wardrobe": {
+    "upperbody": [
+      "clothes-upperbody-hunter-shirt",
+      "clothes-upperbody-reindeer-herder-collared-shirt",
+      "clothes-upperbody-great-steppe-shirt",
+      "clothes-upperbody-earth-toned-robe"
+    ],
+    "lowerbody": [
+      "clothes-lowerbody-raw-hide-trousers",
+      "clothes-lowerbody-warm-woolen-pants",
+      "clothes-lowerbody-reindeer-herder-trousers",
+      "clothes-lowerbody-nomad-trousers"
+    ],
+    "foot": [
+      "clothes-foot-knee-high-fur-boots",
+      "clothes-foot-fur-lined-reindeer-herder-shoes",
+      "clothes-foot-shepherd-sandals",
+      "clothes-foot-high-leather-boots"
+    ]
+  }
+}

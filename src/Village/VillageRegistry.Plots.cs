@@ -31,7 +31,7 @@ namespace FoundriesFrontiers
             error = null;
             if (village == null) { error = "No village."; return null; }
 
-            var cfg = FFConfig.Current.Plots;
+            if (Refuses(village, kind, out string refusal)) { error = refusal; return null; }
 
             if (CountPlots(village) >= MaxPlotsFor(village))
             {
@@ -58,6 +58,42 @@ namespace FoundriesFrontiers
         /// it is a good one. This is what the test command uses, and what a hand-placed
         /// plot would use later. Still refuses to overlap another plot, because that is
         /// not a matter of taste.
+        /// </summary>
+        /// <summary>
+        /// Whether this village's culture will not work that kind of ground, with a line
+        /// that says so in the culture's own terms.
+        ///
+        /// Asked in two places, and both matter. Siting refuses to make one. Claiming
+        /// refuses to work one that exists anyway, which is what a plot made by the dev
+        /// command, or left behind by an edit to the culture file, or inherited when a
+        /// village changed culture, actually looks like. Guarding only the first left the
+        /// refusal as a door with no lock on the inside.
+        ///
+        /// A refusal, not an inability. The Woodfolk can quarry perfectly well and decline
+        /// to, so the message says "will not" and the village goes and does something else
+        /// rather than reporting a failure.
+        /// </summary>
+        public bool Refuses(Village village, EnumPlotKind kind, out string why)
+        {
+            why = null;
+            if (village == null) return false;
+
+            Culture culture = sapi.ModLoader.GetModSystem<CultureSystem>()?.Get(village.CultureCode);
+            if (culture == null || !culture.RefusesPlot(kind)) return false;
+
+            why = (culture.DisplayName ?? village.CultureCode) + " will not work a "
+                + kind.ToString().ToLowerInvariant() + ".";
+            return true;
+        }
+
+        /// <summary>
+        /// Creates a plot at a spot somebody has already chosen.
+        ///
+        /// Deliberately not guarded by <see cref="Refuses"/>. This is the hand-placement
+        /// path behind <c>/ff village plot add</c>, and an override that quietly refused
+        /// would be worse than one that obeys. The village still will not work the result:
+        /// <see cref="ClaimPlot"/> checks the refusal, so a quarry forced into a Woodfolk
+        /// village sits there unworked, which is the honest outcome.
         /// </summary>
         public VillagePlot PlacePlot(Village village, EnumPlotKind kind, BlockPos centre, int half, bool force = false)
         {
@@ -202,6 +238,12 @@ namespace FoundriesFrontiers
         public VillagePlot ClaimPlot(Village village, FFVillager villager, EnumPlotKind kind)
         {
             if (village == null || villager == null) return null;
+
+            // A culture that refuses this ground refuses to work it, not merely to site
+            // it. Without this a quarry made by the dev command, or one left standing
+            // after somebody edited the culture file, would be picked up and worked by the
+            // next quarrier along, and the refusal would mean nothing.
+            if (Refuses(village, kind, out string _)) return null;
 
             // Already assigned somewhere valid.
             VillagePlot held = PlotOf(village, villager.EntityId);

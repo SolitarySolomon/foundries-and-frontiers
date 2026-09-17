@@ -1,0 +1,220 @@
+{
+  "displayName": "Woodfolk",
+  "refusesPlots": [
+    "Quarry",
+    "ClayPit",
+    "MineHead"
+  ],
+  "maxTier": 3,
+  "maleNames": [
+    "Alder",
+    "Bram",
+    "Corrin",
+    "Dellow",
+    "Fenn",
+    "Garrick",
+    "Haskel",
+    "Linden",
+    "Marrow",
+    "Nesh",
+    "Orrin",
+    "Pell",
+    "Rowan",
+    "Sorrel",
+    "Thistle",
+    "Vell",
+    "Wick",
+    "Yarrow"
+  ],
+  "femaleNames": [
+    "Ashlin",
+    "Briar",
+    "Cressa",
+    "Elowen",
+    "Fern",
+    "Hazel",
+    "Linnet",
+    "Mallow",
+    "Nettle",
+    "Saffra",
+    "Tamsin",
+    "Vesper",
+    "Willa",
+    "Wren"
+  ],
+  "familyNames": [
+    "Underbough",
+    "Nettlefold",
+    "Greenwarden",
+    "Barkwright",
+    "Mosslin",
+    "of Ninebirches",
+    "Quietwater",
+    "Thornhallow",
+    "Reedmere",
+    "Alderkin",
+    "of the Long Grove",
+    "Deepglade"
+  ],
+  "villageNames": [
+    "Ninebirches",
+    "Alderhollow",
+    "Brackenmere",
+    "Chanterell",
+    "Deepglade",
+    "Elmwarden",
+    "Fernhallow",
+    "Greenmarch",
+    "Hazelrood",
+    "Longbough",
+    "Mosswell",
+    "Nettlefold",
+    "Quietwater",
+    "Reedmere",
+    "Sorrelhome",
+    "Thornhallow",
+    "Underbough",
+    "Willowmarch",
+    "Yarrowdene"
+  ],
+  "lines": {
+    "greet": [
+      "Well met, walker.",
+      "Mind the roots.",
+      "You've come a long way.",
+      "Quiet on you.",
+      "Morning."
+    ],
+    "remark": [
+      "It'll grow back, given time.",
+      "We don't take what we can't give back.",
+      "The grove's thick this year.",
+      "Slow is fine. Slow is how it lasts.",
+      "That stand wants thinning.",
+      "Nothing's in a hurry here."
+    ],
+    "laugh": [
+      "Ha! Now that's a tale.",
+      "You'd say that, wouldn't you.",
+      "Oh, that's good."
+    ],
+    "shrug": [
+      "The grove knows. I don't.",
+      "Ask an older head than mine.",
+      "Couldn't tell you."
+    ],
+    "complain": [
+      "The stores are thin.",
+      "Nobody's walked through in weeks.",
+      "We're stretched, and that's the truth of it."
+    ],
+    "rain": [
+      "Good. The roots want it.",
+      "Rain's a kindness.",
+      "Let it come."
+    ],
+    "snow": [
+      "The grove sleeps.",
+      "Cold, but it passes.",
+      "Snow means rest."
+    ],
+    "hot": [
+      "No air under the leaves today.",
+      "Even the birds have gone quiet.",
+      "Too warm for working."
+    ],
+    "night": [
+      "The wood's awake at this hour.",
+      "Quiet now.",
+      "Best be in before full dark."
+    ],
+    "dawn": [
+      "Light's through the canopy.",
+      "Early. Good.",
+      "The day's opening."
+    ],
+    "storm": [
+      "The trees don't like this.",
+      "Under cover. Now.",
+      "Something's coming."
+    ],
+    "hurt": [
+      "Ah! Enough!",
+      "Leave off!",
+      "Help, someone!"
+    ],
+    "tired": [
+      "I'm worn through.",
+      "Long day under the leaves.",
+      "My hands are done."
+    ],
+    "hungry": [
+      "Stores are low.",
+      "We'll be thin before the thaw.",
+      "Not much left."
+    ],
+    "remark-gruff": [
+      "Hm.",
+      "Someone's been careless.",
+      "That wasn't done right."
+    ],
+    "remark-whiny": [
+      "Why is it always me?",
+      "Nobody asks how I am.",
+      "My feet ache."
+    ],
+    "remark-sunny": [
+      "Good day to be out!",
+      "Look at that light.",
+      "Fine sort of morning."
+    ],
+    "remark-kind": [
+      "Keep well, won't you.",
+      "Anything you need, say so.",
+      "Mind how you go."
+    ],
+    "remark-stoic": [
+      "Aye.",
+      "It'll keep.",
+      "Work's work."
+    ],
+    "remark-sour": [
+      "Waste of a morning.",
+      "Should've been done days back.",
+      "Typical."
+    ],
+    "greet-sunny": [
+      "Hello there!",
+      "Good to see a face!",
+      "Well now!"
+    ],
+    "greet-stoic": [
+      "Aye.",
+      "Morning.",
+      "Hm."
+    ],
+    "greet-sour": [
+      "What do you want?",
+      "You again.",
+      "Aye, hello."
+    ]
+  },
+  "wardrobe": {
+    "upperbody": [
+      "clothes-upperbody-linen-tunic",
+      "clothes-upperbody-hunter-shirt",
+      "clothes-upperbody-earth-toned-robe",
+      "clothes-upperbody-peasent-shirt"
+    ],
+    "lowerbody": [
+      "clothes-lowerbody-nomad-trousers",
+      "clothes-lowerbody-raw-hide-trousers",
+      "clothes-lowerbody-dirty-linen-trousers"
+    ],
+    "foot": [
+      "clothes-foot-shepherd-sandals",
+      "clothes-foot-peasent-slippers",
+      "clothes-foot-high-leather-boots"
+    ]
+  }
+}

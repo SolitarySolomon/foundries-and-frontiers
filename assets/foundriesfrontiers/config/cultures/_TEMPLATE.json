@@ -1,0 +1,87 @@
+// A culture. Copy this file, rename it, and you have one.
+//
+// The file name is the culture's code. mycluture.json makes a culture called
+// "myculture", and that is the word you put in a building manifest's "cultures"
+// list and type into /ff village create myculture Somewhere.
+//
+// Anything starting with an underscore is skipped, so this file never loads.
+//
+// You do not need to fork this mod to add a culture. Vintage Story merges asset
+// folders across every mod that ships into a domain, so your own mod can put a
+// file in assets/foundriesfrontiers/config/cultures/ and it will be picked up
+// alongside the ones that ship here.
+{
+  // Shown in game and in log lines. Falls back to the file name.
+  "displayName": "My People",
+
+  // Optional. Overrides the file name as the code. Normally leave this out:
+  // hovel-norse-a reads well precisely because the file is called norse.json.
+  // "code": "myculture",
+
+  // --- what this culture refuses to do -------------------------------------
+  //
+  // Plot kinds this culture will not work, by name. Valid kinds:
+  //   Woodlot  Field  Pasture  Quarry  ClayPit  MineHead  Terrace
+  //
+  // This is a refusal, not an inability. A village of these people will be told
+  // no when it tries to site one and will go and do something else. Refusing
+  // Quarry, ClayPit and MineHead together means a culture that never works
+  // stone, clay or ore, and has to trade for all three.
+  //
+  // Be careful here. Refusing Field or Woodlot makes a culture that cannot feed
+  // or warm itself, and nothing will stop you shipping that.
+  "refusesPlots": [],
+
+  // The highest tier this culture will climb to. 0 means no ceiling.
+  // A ceiling is a choice the culture makes, not a punishment: their top tier
+  // buildings should look like somewhere a people decided to stop.
+  "maxTier": 0,
+
+  // --- who they are ---------------------------------------------------------
+  //
+  // Given names. A villager gets one of these plus, less than half the time, a
+  // family name. Twelve of each is plenty; more is better.
+  "maleNames": ["Aldric", "Bram"],
+  "femaleNames": ["Aveline", "Briar"],
+
+  // Bynames. "Carter", "of the Mill", "Underbough". Keep them in the culture's
+  // own voice, since this is most of what makes a name list feel like a people.
+  "familyNames": ["Carter", "of the Mill"],
+
+  // Settlement names. One is drawn per village, so run to fifteen or more or
+  // you will see repeats on one map.
+  "villageNames": ["Longfield", "Nettlefold"],
+
+  // --- what they say --------------------------------------------------------
+  //
+  // Utterance code to the lines they might say. All optional: a missing code
+  // means they stay quiet in that situation rather than saying something wrong.
+  //
+  // Codes the mod asks for:
+  //   greet remark laugh shrug complain rain snow hot night dawn storm
+  //   hurt tired hungry
+  //
+  // Any code can take a personality suffix, and the plain code is the fallback.
+  // So "remark-gruff" is used by gruff villagers and everyone else gets
+  // "remark". Suffixes: gruff whiny sunny kind stoic sour. You can write one
+  // toned line and leave the rest to the fallback.
+  "lines": {
+    "greet": ["Well met.", "Morning."],
+    "remark": ["Ground's hard this year.", "It'll hold another winter."],
+    "greet-sour": ["What do you want?"]
+  },
+
+  // --- what they wear -------------------------------------------------------
+  //
+  // Slot to the item codes they might wear. Villagers use Vintage Story's own
+  // seraph model, so these are ordinary clothing item codes from the game.
+  // A slot you leave out means nothing in that slot.
+  //
+  // Check any code you add actually exists, because one that does not resolves
+  // to nothing and the villager is simply missing a garment with no error.
+  "wardrobe": {
+    "upperbody": ["clothes-upperbody-linen-tunic"],
+    "lowerbody": ["clothes-lowerbody-dirty-linen-trousers"],
+    "foot": ["clothes-foot-peasent-slippers"]
+  }
+}

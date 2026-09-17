@@ -558,7 +558,11 @@ namespace FoundriesFrontiers
                 foreach (string code in wanted)
                 {
                     if (string.IsNullOrWhiteSpace(code)) continue;
-                    if (cultures.Get(code) != null) continue;
+                    // Has, not Get. Get falls back to the default culture for anything it
+                    // does not know, so it never returns null and this check never fired.
+                    // The whole point of it is to catch a typo like "norsee", which Get
+                    // would have quietly answered with Norman.
+                    if (cultures.Has(code)) continue;
 
                     complaints.Add(plan.Code + " is for a culture called '" + code
                         + "', which does not exist. No village will ever build it. Known cultures: "

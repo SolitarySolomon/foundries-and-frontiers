@@ -65,7 +65,7 @@ Rules that apply to every step, because retrofitting any of them is painful.
       day one. *Test:* `/ff goto`, villager walks around an obstacle without cheating.
 - [x] **A7 · Villager inventory, clothing and equipment:** the gear inventory, carry
       capacity, held items, tool slot. *Done:* villagers dress on spawn from a per-culture
-      wardrobe held in `cultures.json`; carried loads in the off hand with a capacity;
+      wardrobe held per culture in `config/cultures/`; carried loads in the off hand with a capacity;
       a tool in the working hand whose tier drives a work-rate multiplier read from the
       game's own `ToolTier`. *Test:* `/ff give <item>`, then `/ff dump`.
 

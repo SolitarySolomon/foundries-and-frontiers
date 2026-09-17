@@ -142,6 +142,18 @@ locks before and after each command. Use it for every git call; plain `git` will
   fertility and grows at a tenth speed while looking like the best soil in the game.
 - `Assets.GetMany(path, domain, loadAsset: false)` leaves assets unhydrated and `ToText()`
   returns empty.
+- **`GetMany` prefix-matches with no path boundary, and it recurses.** `AssetLocation.BeginsWith`
+  is an ordinal `StartsWith`, so `GetMany("config/cultures", ...)` also returns
+  `config/cultures.json` and `config/cultures-anything`. **Always pass the trailing slash.**
+  It walks subfolders and filters only `thumbs.db`, `*.psd` and dotfiles, so `.txt` files come
+  back too and the caller must check the extension itself. `asset.Name` is the bare file name,
+  and asset paths are lowercased at construction.
+- **Newtonsoft keeps a field initialiser for a missing key but not for an explicit `null`.**
+  A config file writing `"lines": null` leaves the field null where a file omitting `lines`
+  leaves it empty. Normalise at load, or every consumer needs a null check.
+- `CultureSystem.Get` falls back to the default culture rather than returning null, so it can
+  never be used to test whether a code exists. That is what `Has` is for, and using `Get`
+  made the building manifest's culture-typo check unreachable for a whole version.
 - `BreakBlock(pos, null, 0f)` suppresses drops and already triggers the neighbour update.
 - WorldEdit export, checked against the 1.22.7 assembly rather than remembered:
   `/we on`, `/we start` in the low corner, `/we end` in the high corner,
@@ -157,7 +169,7 @@ locks before and after each command. Use it for every git call; plain `git` will
 
 ## State of play
 
-Version **0.12.2**. Phases A and B are done. Phase C's machinery is done, and 0.12.1 is
+Version **0.13.0**. Phases A and B are done. Phase C's machinery is done, and 0.12.1 is
 the audit that went looking for the parts of it that only looked done. Five defects, listed
 in `docs/BUILD_ORDER.md` under *Bug hunt, 0.12.1*. The one worth remembering: **building
 only ever added blocks and never removed any**, so a house sited on a meadow was built
@@ -166,6 +178,18 @@ through the grass and a house with a sapling in it was built around the tree.
 **C5 terracing is genuinely not built**, and it is not a schematic problem. The digger cuts
 Terrace *plots*, which is Phase B work and a different thing from cutting the footprint of
 a queued building before it goes up.
+
+**0.13.0 made cultures data.** One file per culture in `config/cultures/`, loaded by folder
+so another mod can add one by shipping a file into that path with no patch and no fork.
+`_TEMPLATE.json` and `_README.txt` document the format and are skipped by name. Four ship:
+norman, norse, woodfolk, emberkin. A culture can now refuse plot kinds (`refusesPlots`) and
+cap its own tier (`maxTier`), both enforced: the refusal at siting **and** at claiming, since
+guarding only siting left a quarry made by the dev command free to be worked; the cap inside
+`SetTier`, which now reports the tier it actually reached because printing the requested one
+told a capped village it had moved to five. **Woodfolk** refuse quarry, clay pit and mine head
+and stop at tier 3. **Emberkin** carry no traits yet, because their rule is water as a resource
+and there is no water pool. Every villager still uses the seraph, so a culture is told apart by
+clothes, names, voice and architecture rather than by its face.
 
 **0.12.2 made variants worth drawing.** Ranking carries a per village preference seeded by
 village id and plan code, so two villages of one culture favour different variants and

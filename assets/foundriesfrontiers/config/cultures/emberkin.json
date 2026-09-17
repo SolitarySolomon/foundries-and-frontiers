@@ -1,0 +1,213 @@
+{
+  "displayName": "Emberkin",
+  "refusesPlots": [],
+  "maxTier": 0,
+  "maleNames": [
+    "Ashar",
+    "Bazan",
+    "Cindren",
+    "Dorrun",
+    "Fadrik",
+    "Haleth",
+    "Ignar",
+    "Jorrek",
+    "Kesh",
+    "Lorran",
+    "Marek",
+    "Nabor",
+    "Orrek",
+    "Pyrran",
+    "Tamur",
+    "Vurek",
+    "Zorek"
+  ],
+  "femaleNames": [
+    "Amara",
+    "Basira",
+    "Cyra",
+    "Dalia",
+    "Halra",
+    "Ishka",
+    "Kemra",
+    "Lirra",
+    "Mazra",
+    "Nura",
+    "Sadra",
+    "Talith",
+    "Vashti",
+    "Yenna",
+    "Zarine"
+  ],
+  "familyNames": [
+    "of the Deep Well",
+    "Sunward",
+    "Ashfoot",
+    "Kilnwright",
+    "of Red Mesa",
+    "Saltborn",
+    "Emberwright",
+    "of the Dry Reach",
+    "Stonecourt",
+    "Waterkeep",
+    "Duneward"
+  ],
+  "villageNames": [
+    "Ashreach",
+    "Bakhal",
+    "Cindral",
+    "Emberhold",
+    "Fadhar",
+    "Halvat",
+    "Kilncourt",
+    "Lowsun",
+    "Mazra",
+    "Nabhar",
+    "Redmesa",
+    "Sunhollow",
+    "Tamurat",
+    "Vashkal",
+    "Zorekhal",
+    "Deepwell",
+    "Dryreach"
+  ],
+  "lines": {
+    "greet": [
+      "Out of the sun, stranger.",
+      "Well met.",
+      "You've walked far.",
+      "Water's inside.",
+      "Morning, before it turns."
+    ],
+    "remark": [
+      "Water's low.",
+      "The well holds, for now.",
+      "Wall's warm through by noon.",
+      "Shade's that way.",
+      "Another dry one.",
+      "We build thick for a reason."
+    ],
+    "laugh": [
+      "Ha! That's a good one.",
+      "You'd say that.",
+      "Now that's worth hearing."
+    ],
+    "shrug": [
+      "Couldn't tell you.",
+      "That's the headman's business.",
+      "Who's to say."
+    ],
+    "complain": [
+      "We're short again.",
+      "Nobody's come through in weeks.",
+      "It's never enough."
+    ],
+    "rain": [
+      "Rain! Get the vessels out.",
+      "Not a drop wasted.",
+      "Now that's a gift."
+    ],
+    "snow": [
+      "Snow? Here?",
+      "Cold comes fast once the sun's down.",
+      "Strange weather."
+    ],
+    "hot": [
+      "Nobody works this hour.",
+      "Too hot to think.",
+      "Wait for the shade."
+    ],
+    "night": [
+      "Cold already. It turns quick.",
+      "Quiet out.",
+      "Roof's cooler than the room."
+    ],
+    "dawn": [
+      "Before the heat. Best hour there is.",
+      "Early start.",
+      "Light's coming."
+    ],
+    "storm": [
+      "Dust's coming. Get in.",
+      "Inside, now.",
+      "Shutter it."
+    ],
+    "hurt": [
+      "Ah! That hurt.",
+      "Off me!",
+      "Help here!"
+    ],
+    "tired": [
+      "I'm done in.",
+      "Long day in it.",
+      "Need shade and water."
+    ],
+    "hungry": [
+      "Stores are thin.",
+      "We'll be hungry before the rains.",
+      "Not much left."
+    ],
+    "remark-gruff": [
+      "Hm.",
+      "Someone's not pulling their weight.",
+      "Nothing's simple here."
+    ],
+    "remark-whiny": [
+      "Why is it always me?",
+      "My feet are burning.",
+      "Nobody asks how I am."
+    ],
+    "remark-sunny": [
+      "Good to be out early!",
+      "Fine morning, before it turns.",
+      "Can't complain."
+    ],
+    "remark-kind": [
+      "Keep out of the sun, won't you.",
+      "Drink something.",
+      "Anything you need."
+    ],
+    "remark-stoic": [
+      "Aye.",
+      "It'll keep.",
+      "Work's work."
+    ],
+    "remark-sour": [
+      "Waste of a morning.",
+      "Should've been done days ago.",
+      "Typical."
+    ],
+    "greet-sunny": [
+      "Hello there!",
+      "Good to see you!",
+      "Well now, hello!"
+    ],
+    "greet-stoic": [
+      "Aye.",
+      "Morning.",
+      "Hm."
+    ],
+    "greet-sour": [
+      "What do you want?",
+      "You again.",
+      "Aye, hello."
+    ]
+  },
+  "wardrobe": {
+    "upperbody": [
+      "clothes-upperbody-linen-tunic",
+      "clothes-upperbody-great-steppe-shirt",
+      "clothes-upperbody-earth-toned-robe",
+      "clothes-upperbody-merchant-shirt"
+    ],
+    "lowerbody": [
+      "clothes-lowerbody-nomad-trousers",
+      "clothes-lowerbody-fine-trousers",
+      "clothes-lowerbody-dirty-linen-trousers"
+    ],
+    "foot": [
+      "clothes-foot-shepherd-sandals",
+      "clothes-foot-peasent-slippers",
+      "clothes-foot-lackey-shoes"
+    ]
+  }
+}

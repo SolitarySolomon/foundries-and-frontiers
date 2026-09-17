@@ -1480,14 +1480,21 @@ namespace FoundriesFrontiers
             if (v == null) return TextCommandResult.Error(error);
 
             int was = v.Tier;
-            if (!Registry(sapi).SetTier(v, tier))
+
+            // Read what the village landed on rather than what was asked for. A culture
+            // can cap itself, so the two differ and printing the request told a Woodfolk
+            // village capped at three that it had moved to five.
+            if (!Registry(sapi).SetTier(v, tier, out int landedOn))
             {
-                return TextCommandResult.Success(v.Name + " is already tier " + tier + ".");
+                return TextCommandResult.Success(
+                    v.Name + " is already tier " + v.Tier
+                    + (landedOn != tier ? " and will climb no further." : "."));
             }
 
             return TextCommandResult.Success(
-                v.Name + " moved from tier " + was + " to " + tier
-                + ". Marker is now the " + VillageRegistry.StageForTier(tier)
+                v.Name + " moved from tier " + was + " to " + landedOn
+                + (landedOn != tier ? " (its culture will go no higher)" : "")
+                + ". Marker is now the " + VillageRegistry.StageForTier(landedOn)
                 + ", claim is " + v.ClaimRadius + " blocks.");
         }
 

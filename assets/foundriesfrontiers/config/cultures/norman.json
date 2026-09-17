@@ -1,0 +1,238 @@
+{
+  "displayName": "Norman",
+  "maleNames": [
+    "Aldric",
+    "Baldwin",
+    "Bertrand",
+    "Drogo",
+    "Everard",
+    "Fulk",
+    "Gilbert",
+    "Godfrey",
+    "Guy",
+    "Hamon",
+    "Herbert",
+    "Hugh",
+    "Ivo",
+    "Jocelyn",
+    "Lambert",
+    "Maurice",
+    "Miles",
+    "Odo",
+    "Osbert",
+    "Ralph",
+    "Reynold",
+    "Robert",
+    "Roger",
+    "Serlo",
+    "Thurstan",
+    "Waleran",
+    "Walter",
+    "Warin",
+    "William"
+  ],
+  "femaleNames": [
+    "Adela",
+    "Agnes",
+    "Alice",
+    "Aveline",
+    "Beatrix",
+    "Cecily",
+    "Constance",
+    "Edith",
+    "Eleanor",
+    "Emma",
+    "Gundred",
+    "Hawise",
+    "Isabel",
+    "Joan",
+    "Juliana",
+    "Mabel",
+    "Margery",
+    "Matilda",
+    "Maud",
+    "Millicent",
+    "Petronilla",
+    "Rohese",
+    "Sibyl"
+  ],
+  "familyNames": [
+    "of the Mill",
+    "Carter",
+    "Fletcher",
+    "Marchand",
+    "Beaumont",
+    "Aumary",
+    "Reeve",
+    "Tanner",
+    "of Longfield",
+    "Cordier",
+    "Mason",
+    "Chandler",
+    "Belhome",
+    "Fossard"
+  ],
+  "villageNames": [
+    "Aumale",
+    "Beaumont",
+    "Caillou",
+    "Denvers",
+    "Falaise",
+    "Grandcourt",
+    "Harcourt",
+    "Lisieux",
+    "Montfort",
+    "Neuville",
+    "Orbec",
+    "Percy",
+    "Rouvray",
+    "Saint-Clair",
+    "Tancarville",
+    "Valmont",
+    "Bricqueville",
+    "Coutances",
+    "Estouteville",
+    "Longueville"
+  ],
+  "lines": {
+    "greet": [
+      "Well met.",
+      "Good day to you.",
+      "You're a stranger here.",
+      "Mind how you go.",
+      "Morning."
+    ],
+    "remark": [
+      "Ground's hard this year.",
+      "The roof wants seeing to.",
+      "Aye, that's the way of it.",
+      "Not before the harvest, mind.",
+      "It'll hold another winter.",
+      "Same as it ever was."
+    ],
+    "laugh": [
+      "Ha! You would say so.",
+      "That's a good one.",
+      "Get on with you."
+    ],
+    "shrug": [
+      "Can't say I know.",
+      "That's the reeve's business, not mine.",
+      "Who's to say."
+    ],
+    "complain": [
+      "We're short again.",
+      "No one's come by in weeks.",
+      "It's never enough, is it."
+    ],
+    "rain": [
+      "Rain again.",
+      "This'll do the fields good.",
+      "Soaked through already."
+    ],
+    "snow": [
+      "Cold enough to split stone.",
+      "Winter's got its teeth in.",
+      "Snow's early this year."
+    ],
+    "hot": [
+      "No air in it today.",
+      "Too hot to be doing much.",
+      "I'd give a shilling for shade."
+    ],
+    "night": [
+      "Should be abed.",
+      "Quiet out here.",
+      "Dark comes quick this time of year."
+    ],
+    "dawn": [
+      "Early start.",
+      "Light's coming up.",
+      "Best get on."
+    ],
+    "storm": [
+      "The air's gone wrong.",
+      "Get inside. Now.",
+      "I don't like the feel of this."
+    ],
+    "hurt": [
+      "Ah! That hurt.",
+      "Get off me!",
+      "Someone help!"
+    ],
+    "tired": [
+      "I'm about done in.",
+      "Long day.",
+      "My back's not what it was."
+    ],
+    "hungry": [
+      "Stores are thin.",
+      "Not much left in the store.",
+      "We'll be hungry by spring."
+    ],
+    "remark-gruff": [
+      "Nothing's ever simple here.",
+      "Someone's not pulling their weight.",
+      "Hm."
+    ],
+    "remark-whiny": [
+      "Why is it always me?",
+      "My feet are killing me.",
+      "Nobody ever asks how I am."
+    ],
+    "remark-sunny": [
+      "Good to be out.",
+      "Fine sort of day, isn't it.",
+      "Can't complain."
+    ],
+    "remark-kind": [
+      "Hope you're keeping well.",
+      "Mind how you go.",
+      "Anything you need, just say."
+    ],
+    "remark-stoic": [
+      "Aye.",
+      "It'll keep.",
+      "Work's work."
+    ],
+    "remark-sour": [
+      "Waste of a morning.",
+      "Should've been done days ago.",
+      "Typical."
+    ],
+    "greet-sunny": [
+      "Hello there!",
+      "Good to see you!",
+      "Well now, hello!"
+    ],
+    "greet-stoic": [
+      "Aye.",
+      "Morning.",
+      "Hm."
+    ],
+    "greet-sour": [
+      "What do you want?",
+      "Aye, hello.",
+      "You again."
+    ]
+  },
+  "wardrobe": {
+    "upperbody": [
+      "clothes-upperbody-linen-tunic",
+      "clothes-upperbody-peasent-shirt",
+      "clothes-upperbody-lackey-shirt",
+      "clothes-upperbody-merchant-shirt"
+    ],
+    "lowerbody": [
+      "clothes-lowerbody-dirty-linen-trousers",
+      "clothes-lowerbody-lackey-breeches",
+      "clothes-lowerbody-fine-trousers",
+      "clothes-lowerbody-squire-pants"
+    ],
+    "foot": [
+      "clothes-foot-peasent-slippers",
+      "clothes-foot-lackey-shoes",
+      "clothes-foot-high-leather-boots"
+    ]
+  }
+}
