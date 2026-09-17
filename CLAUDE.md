@@ -157,7 +157,7 @@ locks before and after each command. Use it for every git call; plain `git` will
 
 ## State of play
 
-Version **0.12.1**. Phases A and B are done. Phase C's machinery is done, and 0.12.1 is
+Version **0.12.2**. Phases A and B are done. Phase C's machinery is done, and 0.12.1 is
 the audit that went looking for the parts of it that only looked done. Five defects, listed
 in `docs/BUILD_ORDER.md` under *Bug hunt, 0.12.1*. The one worth remembering: **building
 only ever added blocks and never removed any**, so a house sited on a meadow was built
@@ -166,6 +166,14 @@ through the grass and a house with a sapling in it was built around the tree.
 **C5 terracing is genuinely not built**, and it is not a schematic problem. The digger cuts
 Terrace *plots*, which is Phase B work and a different thing from cutting the footprint of
 a queued building before it goes up.
+
+**0.12.2 made variants worth drawing.** Ranking carries a per village preference seeded by
+village id and plan code, so two villages of one culture favour different variants and
+arrive at a different mix. It is worth less than the ten points a tier carries, so it never
+talks a village into a worse building, and small against the point each copy already built
+takes off, so a village leans on its favourite for the first few and then spreads. C1 is now
+thirty schematics: three variants of each housing tier per culture, one of everything else.
+Three variants of a well would be three times the work for something nobody sees twice.
 
 **Corey's outstanding jobs, not Claude's:**
 
